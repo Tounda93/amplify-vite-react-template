@@ -119,6 +119,68 @@ const schema = a.schema({
       allow.owner().to(['create', 'read', 'update', 'delete']),
     ]),
 
+  Auction: a
+    .model({
+      auctionHouse: a.string().required(),  // 'RM Sothebys', 'Bonhams', 'Broad Arrow'
+      lotNumber: a.string().required(),
+      title: a.string().required(),
+      description: a.string(),
+      imageUrl: a.string(),
+      estimateLow: a.integer(),
+      estimateHigh: a.integer(),
+      currency: a.string().default('USD'),
+      currentBid: a.integer(),
+      soldPrice: a.integer(),
+      reserveStatus: a.enum(['reserve', 'no_reserve', 'unknown']),
+      status: a.enum(['upcoming', 'live', 'sold', 'not_sold', 'withdrawn']),
+      auctionDate: a.datetime(),
+      auctionLocation: a.string(),
+      auctionName: a.string(),
+      lotUrl: a.string(),
+      lastUpdated: a.datetime(),
+    })
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read', 'create', 'update', 'delete']),
+    ]),
+
+  // Automotive Events (shows, meets, races, etc.)
+  Event: a
+    .model({
+      title: a.string().required(),
+      description: a.string(),
+      eventType: a.enum(['car_show', 'race', 'auction', 'meet', 'rally', 'festival', 'exhibition', 'track_day', 'other']),
+      
+      // Location
+      venue: a.string(),
+      address: a.string(),
+      city: a.string().required(),
+      region: a.string(),        // State/Province
+      country: a.string().required(),
+      latitude: a.float(),
+      longitude: a.float(),
+      
+      // Dates
+      startDate: a.datetime().required(),
+      endDate: a.datetime(),
+      
+      // Details
+      coverImage: a.string(),
+      website: a.string(),
+      ticketUrl: a.string(),
+      price: a.string(),         // "Free", "$50", "€25-€100"
+      
+      // Status
+      isPublished: a.boolean().default(true),
+      isFeatured: a.boolean().default(false),
+      
+      // Admin
+      createdBy: a.string(),
+    })
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read', 'create', 'update', 'delete']),
+    ]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
