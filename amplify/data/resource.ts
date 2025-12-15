@@ -181,6 +181,30 @@ const schema = a.schema({
       allow.guest().to(['read']),
       allow.authenticated().to(['read', 'create', 'update', 'delete']),
     ]),
+
+  WikiCarEntry: a
+    .model({
+      makeId: a.string().required(),
+      brandName: a.string().required(),
+      makeName: a.string().required(),
+      variant: a.string(),
+      heroImageUrl: a.string(),
+      sideImageUrl: a.string(),
+      brandLogoUrl: a.string(),
+      production: a.string(),
+      designer: a.string(),
+      kerbWeight: a.string(),
+      engine: a.string(),
+      transmission: a.string(),
+      power: a.string(),
+      fuel: a.string(),
+      summary: a.string(),
+      additionalFields: a.string(), // JSON encoded array of {label,value}
+    })
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read', 'create', 'update', 'delete']),
+    ]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

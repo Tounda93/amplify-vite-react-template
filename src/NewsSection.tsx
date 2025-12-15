@@ -1,24 +1,5 @@
 import { useState, useEffect } from 'react';
-
-interface NewsItem {
-  title: string;
-  link: string;
-  pubDate: string;
-  description: string;
-  thumbnail?: string;
-  source: string;
-}
-
-// RSS feeds from car magazines
-const RSS_FEEDS = [
-  { name: 'Top Gear', url: 'https://www.topgear.com/car-news/rss' },
-  { name: 'Classic Driver', url: 'https://www.classicdriver.com/en/rss.xml' },
-  { name: 'Motor1', url: 'https://www.motor1.com/rss/news/all/' },
-  { name: 'Car and Driver', url: 'https://www.caranddriver.com/rss/all.xml/' },
-];
-
-// We use rss2json.com API to convert RSS to JSON (handles CORS)
-const RSS_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
+import { NewsItem, RSS_FEEDS, fetchNewsFeedItems } from './utils/newsFeed';
 
 export function NewsSection() {
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -33,32 +14,12 @@ export function NewsSection() {
   const fetchAllNews = async () => {
     setLoading(true);
     setError(null);
-    const allNews: NewsItem[] = [];
-
-    for (const feed of RSS_FEEDS) {
-      try {
-        const response = await fetch(`${RSS_API}${encodeURIComponent(feed.url)}`);
-        const data = await response.json();
-        
-        if (data.status === 'ok' && data.items) {
-          const items = data.items.map((item: any) => ({
-            title: item.title,
-            link: item.link,
-            pubDate: item.pubDate,
-            description: item.description?.replace(/<[^>]*>/g, '').substring(0, 200) + '...',
-            thumbnail: item.thumbnail || item.enclosure?.link,
-            source: feed.name,
-          }));
-          allNews.push(...items);
-        }
-      } catch (err) {
-        console.error(`Error fetching ${feed.name}:`, err);
-      }
+    try {
+      const items = await fetchNewsFeedItems();
+      setNews(items);
+    } catch (err) {
+      setError('Unable to fetch news right now.');
     }
-
-    // Sort by date (newest first)
-    allNews.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
-    setNews(allNews);
     setLoading(false);
   };
 
