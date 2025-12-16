@@ -1,7 +1,80 @@
-import { Car } from 'lucide-react';
+import { Car, Home, MessageSquare, User } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
-export default function Footer() {
+interface FooterProps {
+  activeSection?: string;
+  onSectionChange?: (section: string) => void;
+}
+
+export default function Footer({ activeSection = 'home', onSectionChange }: FooterProps) {
   const currentYear = new Date().getFullYear();
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    const navItems = [
+      { id: 'home', label: 'Home', icon: Home },
+      { id: 'garage', label: 'My Garage', icon: Car },
+      { id: 'chat', label: 'Chat', icon: MessageSquare },
+      { id: 'profile', label: 'Profile', icon: User },
+    ];
+
+    return (
+      <footer style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        width: '100%',
+        padding: '8px 12px',
+        background: 'rgba(15,23,42,0.55)',
+        borderTop: '1px solid rgba(255,255,255,0.12)',
+        boxShadow: '0 -25px 55px rgba(15, 23, 42, 0.45)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        zIndex: 1400
+      }}>
+        <nav style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '6px'
+        }}>
+          {navItems.map(({ id, label, icon: IconComponent }) => {
+            const isActive = activeSection === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onSectionChange?.(id)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  padding: '8px 4px',
+                  borderRadius: '16px',
+                  border: 'none',
+                  backgroundColor: isActive ? 'rgba(255,255,255,0.22)' : 'transparent',
+                  color: '#f9fafb',
+                  boxShadow: isActive ? '0 10px 30px rgba(15,23,42,0.65)' : undefined,
+                  backdropFilter: isActive ? 'blur(6px)' : undefined,
+                  WebkitBackdropFilter: isActive ? 'blur(6px)' : undefined,
+                  cursor: onSectionChange ? 'pointer' : 'default',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <IconComponent size={20} strokeWidth={isActive ? 2.4 : 1.8} />
+                <span style={{ fontSize: '11px', fontWeight: 500 }}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      </footer>
+    );
+  }
 
   return (
     <footer style={{

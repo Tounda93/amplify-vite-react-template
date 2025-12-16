@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Edit, Play, Pause, SkipForward } from 'lucide-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // YouTube IFrame API type declarations
 interface YTPlayer {
@@ -73,6 +74,8 @@ export default function HeroCarousel() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [editing, setEditing] = useState(false);
   const [formState, setFormState] = useState<HeroContent>(DEFAULT_CONTENT);
+  const isMobile = useIsMobile();
+  const [isHeroExpanded, setHeroExpanded] = useState(false);
 
   const playerRef = useRef<YTPlayer | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
@@ -238,10 +241,11 @@ export default function HeroCarousel() {
         <div
           style={{
             position: 'absolute',
-            bottom: '50px',
+            bottom: isMobile ? '24px' : '50px',
             left: '5%',
             color: 'white',
-            maxWidth: '520px',
+            width: isMobile ? '50vw' : undefined,
+            maxWidth: isMobile ? '50vw' : '520px',
             zIndex: 2,
           }}
         >
@@ -250,7 +254,7 @@ export default function HeroCarousel() {
               style={{
                 textTransform: 'uppercase',
                 letterSpacing: '0.15em',
-                fontSize: '12px',
+                fontSize: isMobile ? '9px' : '12px',
                 fontWeight: 600,
                 color: 'rgba(255,255,255,0.8)',
                 marginBottom: '20px',
@@ -259,12 +263,38 @@ export default function HeroCarousel() {
               {heroContent.todaysHighlight}
             </div>
           )}
-          <h1 style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.1, marginBottom: '16px' }}>
+          <h1 style={{ fontSize: isMobile ? '26px' : '40px', fontWeight: 700, lineHeight: 1.1, marginBottom: '16px' }}>
             {heroContent.title}
           </h1>
-          <p style={{ fontSize: '18px', marginBottom: '20px', color: 'rgba(255,255,255,0.85)' }}>
+          <p style={{
+            fontSize: isMobile ? '14px' : '18px',
+            marginBottom: '20px',
+            color: 'rgba(255,255,255,0.85)',
+            display: isMobile && !isHeroExpanded ? '-webkit-box' : 'block',
+            WebkitLineClamp: isMobile && !isHeroExpanded ? 3 : 'unset',
+            WebkitBoxOrient: isMobile && !isHeroExpanded ? 'vertical' : undefined,
+            overflow: isMobile && !isHeroExpanded ? 'hidden' : undefined
+          }}>
             {heroContent.subtitle}
           </p>
+          {isMobile && !isHeroExpanded && (
+            <button
+              type="button"
+              onClick={() => setHeroExpanded(true)}
+              style={{
+                border: '1px solid rgba(255,255,255,0.5)',
+                backgroundColor: 'rgba(15,23,42,0.45)',
+                color: '#ffffff',
+                padding: '8px 16px',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                marginBottom: '18px'
+              }}
+            >
+              Read more
+            </button>
+          )}
           {heroContent.ctaText && heroContent.ctaLink && (
             <a
               href={heroContent.ctaLink}

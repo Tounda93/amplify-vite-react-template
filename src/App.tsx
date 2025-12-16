@@ -33,6 +33,8 @@ import WikiCarsSection from './components/WikiCarsSection';
 import Header from './components/Header';
 import HeroCarousel from './components/HeroCarousel';
 import HomePage from './components/HomePage';
+import Footer from './components/Footer';
+import { useIsMobile } from './hooks/useIsMobile';
 import { NewsItem, fetchNewsFeedItems } from './utils/newsFeed';
 import { SearchResultItem, SearchResultGroups } from './types/search';
 
@@ -133,6 +135,8 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [wikiSelectedMake, setWikiSelectedMake] = useState<Make | null>(null);
   const [pendingMakeId, setPendingMakeId] = useState<string | undefined>(initialState.makeId);
+  const isMobile = useIsMobile();
+  const horizontalPadding = isMobile ? '2rem' : '5rem';
 
   useEffect(() => {
     loadAllMakes();
@@ -501,7 +505,8 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       backgroundColor: '#ffffffff',
       overflowX: 'visible',
       width: '100%',
-      position: 'relative'
+      position: 'relative',
+      paddingTop: isMobile ? '8rem' : undefined
     }}>
       <Header
         user={user}
@@ -527,10 +532,9 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'news' && (
         <div style={{
           width: '100%',
-          padding: '2rem 5rem',
+          padding: `2rem ${horizontalPadding}`,
           backgroundColor: '#ffffff'
         }}>
-          <h2>🗞️ Latest Car News</h2>
           <NewsSection />
         </div>
       )}
@@ -539,10 +543,9 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'auctions' && (
         <div style={{
           width: '100%',
-          padding: '2rem 5rem',
+          padding: `2rem ${horizontalPadding}`,
           backgroundColor: '#ffffff'
         }}>
-          <h2>🔨 Car Auctions</h2>
           <AuctionsSection />
         </div>
       )}
@@ -551,10 +554,9 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'events' && (
         <div style={{
           width: '100%',
-          padding: '2rem 5rem',
+          padding: `2rem ${horizontalPadding}`,
           backgroundColor: '#ffffff'
         }}>
-          <h2>🏁 Automotive Events</h2>
           <EventsSection />
         </div>
       )}
@@ -563,7 +565,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'community' && (
         <div style={{
           width: '100%',
-          padding: '2rem 5rem',
+          padding: `2rem ${horizontalPadding}`,
           backgroundColor: '#ffffff'
         }}>
           <CommunitySection />
@@ -574,7 +576,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'chat' && (
         <div style={{
           width: '100%',
-          padding: '2rem 5rem',
+          padding: `2rem ${horizontalPadding}`,
           backgroundColor: '#ffffff'
         }}>
           <ChatSection />
@@ -585,7 +587,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'garage' && (
         <div style={{
           width: '100%',
-          padding: '2rem 5rem',
+          padding: `2rem ${horizontalPadding}`,
           backgroundColor: '#ffffff'
         }}>
           <MyGarageSection />
@@ -596,7 +598,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'profile' && (
         <div style={{
           width: '100%',
-          padding: '2rem 5rem',
+          padding: `2rem ${horizontalPadding}`,
           backgroundColor: '#ffffff'
         }}>
           <ProfileSection user={user} />
@@ -682,6 +684,11 @@ function CarSearch({ user, signOut }: CarSearchProps) {
           )}
         </div>
       )}
+
+      <Footer
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+      />
     </div>
   );
 }
