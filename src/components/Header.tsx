@@ -8,7 +8,8 @@ import {
   Car,
   MessageSquare,
   LogOut,
-  BookOpen
+  BookOpen,
+  LucideIcon
 } from "lucide-react";
 import { SearchResultGroups, SearchResultItem } from '../types/search';
 
@@ -16,10 +17,10 @@ import { SearchResultGroups, SearchResultItem } from '../types/search';
  * =====================================================
  * HEADER COMPONENT
  * =====================================================
- * 
+ *
  * This header matches your Figma design and integrates
  * with your existing Car Encyclopedia app.
- * 
+ *
  * PROPS:
  * - user: The authenticated user object from Amplify
  * - signOut: Function to sign out the user
@@ -27,13 +28,20 @@ import { SearchResultGroups, SearchResultItem } from '../types/search';
  * - onSectionChange: Function to call when a category is clicked
  * - searchTerm: Current search text
  * - onSearchChange: Function to update search text
- * 
+ *
  * =====================================================
  */
 
+interface AmplifyUser {
+  signInDetails?: {
+    loginId?: string;
+  };
+  username?: string;
+}
+
 // Define types for the component props
 interface HeaderProps {
-  user: any; // Amplify user object
+  user: AmplifyUser | undefined;
   signOut: () => void;
   activeSection: string;
   onSectionChange: (section: string) => void;
@@ -49,7 +57,7 @@ interface HeaderProps {
 interface Category {
   id: string;
   label: string;
-  icon: any;
+  icon: LucideIcon;
 }
 
 export default function Header({
@@ -89,15 +97,10 @@ export default function Header({
   const showSearchDropdown = searchTerm.trim().length >= 2;
   const headerIsTransparent = !!showHeroCarousel;
 
-  const baseTextColor = headerIsTransparent ? "#f8fafc" : "#111827";
-  const mutedTextColor = headerIsTransparent ? "rgba(248,250,252,0.7)" : "#6b7280";
-  const iconColor = headerIsTransparent ? "#ffffff" : "#111827";
-
   return (
     <header style={{
       width: "100%",
-      backgroundColor: headerIsTransparent ? "rgba(15,23,42,0.45)" : "#ffffff",
-      backdropFilter: headerIsTransparent ? "blur(18px)" : undefined,
+      backgroundColor: headerIsTransparent ? "transparent" : "#ffffff",
       boxShadow: headerIsTransparent ? "none" : "0 2px 4px rgba(0, 0, 0, 0.1)",
       position: headerIsTransparent ? "absolute" : "sticky",
       top: 0,
@@ -114,8 +117,7 @@ export default function Header({
         alignItems: "center",
         justifyContent: "space-between",
         position: "relative",
-        padding: "12px 5rem",
-        color: baseTextColor
+        padding: "12px 5rem"
       }}>
 
         {/* Search Bar - Positioned to the left */}
@@ -127,7 +129,7 @@ export default function Header({
                 left: "16px",
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: headerIsTransparent ? "rgba(248,250,252,0.7)" : "#9ca3af"
+                color: "#9ca3af"
               }}
               size={18}
             />
@@ -142,13 +144,12 @@ export default function Header({
                 paddingRight: "16px",
                 paddingTop: "10px",
                 paddingBottom: "10px",
-                border: headerIsTransparent ? "1px solid rgba(248,250,252,0.35)" : "1px solid #e5e7eb",
+                border: "1px solid #e5e7eb",
                 borderRadius: "9999px",
-                color: baseTextColor,
+                color: "#374151",
                 fontSize: "14px",
                 outline: "none",
-                boxSizing: "border-box",
-                backgroundColor: headerIsTransparent ? "rgba(15,23,42,0.35)" : "#ffffff"
+                boxSizing: "border-box"
               }}
             />
           </div>
@@ -194,12 +195,12 @@ export default function Header({
                       alignItems: "center",
                       gap: "8px",
                       padding: "10px 16px 6px 16px",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: headerIsTransparent ? "rgba(248,250,252,0.65)" : "#6b7280",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase"
-                }}>
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: "#6b7280",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase"
+                    }}>
                       <span style={{
                         width: "8px",
                         height: "8px",
@@ -286,21 +287,17 @@ export default function Header({
                   border: "none",
                   cursor: "pointer",
                   transition: "all 0.2s",
-                  backgroundColor: isActive
-                    ? (headerIsTransparent ? "rgba(248,250,252,0.15)" : "#f3f4f6")
-                    : "transparent",
-                  color: isActive ? baseTextColor : (headerIsTransparent ? mutedTextColor : "#6b7280")
+                  backgroundColor: isActive ? "#f3f4f6" : "transparent",
+                  color: isActive ? "#111827" : "#6b7280"
                 }}
               >
                 <IconComponent
                   size={22}
                   strokeWidth={isActive ? 2 : 1.5}
-                  color={iconColor}
                 />
                 <span style={{
                   fontSize: "12px",
-                  fontWeight: isActive ? 500 : 400,
-                  color: isActive ? baseTextColor : (headerIsTransparent ? mutedTextColor : "#6b7280")
+                  fontWeight: isActive ? 500 : 400
                 }}>
                   {category.label}
                 </span>
@@ -313,8 +310,7 @@ export default function Header({
         <div style={{
           display: "flex",
           alignItems: "center",
-          gap: "20px",
-          color: baseTextColor
+          gap: "20px"
         }}>
 
           {/* My Garage button */}
@@ -325,14 +321,14 @@ export default function Header({
               flexDirection: "column",
               alignItems: "center",
               gap: "4px",
-              color: headerIsTransparent ? baseTextColor : "#4b5563",
+              color: "#4b5563",
               background: "none",
               border: "none",
               cursor: "pointer",
               padding: "4px"
             }}
           >
-            <Car size={22} strokeWidth={1.5} color={iconColor} />
+            <Car size={22} strokeWidth={1.5} />
             <span style={{ fontSize: "11px" }}>My Garage</span>
           </button>
 
@@ -344,14 +340,14 @@ export default function Header({
               flexDirection: "column",
               alignItems: "center",
               gap: "4px",
-              color: headerIsTransparent ? baseTextColor : "#4b5563",
+              color: "#4b5563",
               background: "none",
               border: "none",
               cursor: "pointer",
               padding: "4px"
             }}
           >
-            <MessageSquare size={22} strokeWidth={1.5} color={iconColor} />
+            <MessageSquare size={22} strokeWidth={1.5} />
             <span style={{ fontSize: "11px" }}>Chat</span>
           </button>
 
@@ -373,8 +369,8 @@ export default function Header({
               width: "32px",
               height: "32px",
               borderRadius: "50%",
-              background: headerIsTransparent ? "rgba(15,23,42,0.35)" : "linear-gradient(135deg, #000000ff, #313131ff)",
-              border: headerIsTransparent ? "2px solid rgba(248,250,252,0.4)" : "2px solid #f3f4f6",
+              background: "linear-gradient(135deg, #000000ff, #313131ff)",
+              border: "2px solid #f3f4f6",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -385,7 +381,7 @@ export default function Header({
               {/* Show first letter of user email */}
               {user?.signInDetails?.loginId?.charAt(0).toUpperCase() || "U"}
             </div>
-            <span style={{ fontSize: "11px", color: headerIsTransparent ? baseTextColor : "#4b5563" }}>Profile</span>
+            <span style={{ fontSize: "11px", color: "#4b5563" }}>Profile</span>
           </button>
 
           {/* Sign Out button */}
@@ -404,7 +400,7 @@ export default function Header({
             }}
             title="Sign Out"
           >
-            <LogOut size={22} strokeWidth={1.5} color={iconColor} />
+            <LogOut size={22} strokeWidth={1.5} />
             <span style={{ fontSize: "11px" }}>Sign Out</span>
           </button>
         </div>

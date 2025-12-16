@@ -191,6 +191,7 @@ const schema = a.schema({
       heroImageUrl: a.string(),
       sideImageUrl: a.string(),
       brandLogoUrl: a.string(),
+      heroGallery: a.string(),
       production: a.string(),
       designer: a.string(),
       kerbWeight: a.string(),
@@ -198,6 +199,7 @@ const schema = a.schema({
       transmission: a.string(),
       power: a.string(),
       fuel: a.string(),
+      topSpeed: a.string(),
       summary: a.string(),
       additionalFields: a.string(), // JSON encoded array of {label,value}
     })

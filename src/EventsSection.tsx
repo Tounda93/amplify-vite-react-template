@@ -87,6 +87,7 @@ export function EventsSection() {
   // Apply filters when events or filters change
   useEffect(() => {
     applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events, filterCountry, filterType, filterTimeframe, filterDistance, searchQuery, userLocation]);
 
   const checkAdminStatus = async () => {

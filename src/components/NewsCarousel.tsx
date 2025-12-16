@@ -68,7 +68,7 @@ export default function NewsCarousel() {
         const data = await response.json();
 
         if (data.status === 'ok' && data.items) {
-          const items = data.items.slice(0, 6).map((item: any) => ({
+          const items = data.items.slice(0, 6).map((item: { title: string; link: string; pubDate: string; description?: string; thumbnail?: string; enclosure?: { link?: string } }) => ({
             title: item.title,
             link: item.link,
             pubDate: item.pubDate,

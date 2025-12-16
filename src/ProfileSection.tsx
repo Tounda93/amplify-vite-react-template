@@ -2,8 +2,15 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Calendar, MapPin, Edit, Camera, Shield } from 'lucide-react';
 import WikiCarAdminPanel from './components/WikiCarAdminPanel';
 
+interface AmplifyUser {
+  signInDetails?: {
+    loginId?: string;
+  };
+  username?: string;
+}
+
 interface ProfileSectionProps {
-  user: any;
+  user: AmplifyUser | undefined;
 }
 
 export function ProfileSection({ user }: ProfileSectionProps) {

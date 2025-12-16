@@ -41,6 +41,7 @@ export function AuctionsSection() {
       },
     });
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update selected event when auctions change (for live updates)
@@ -49,6 +50,7 @@ export function AuctionsSection() {
       const updated = auctionEvents.find(e => e.id === selectedEvent.id);
       if (updated) setSelectedEvent(updated);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auctionEvents]);
 
   const loadAuctions = async () => {

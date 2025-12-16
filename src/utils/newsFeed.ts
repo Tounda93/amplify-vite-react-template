@@ -25,7 +25,7 @@ export async function fetchNewsFeedItems(): Promise<NewsItem[]> {
       const data = await response.json();
 
       if (data.status === 'ok' && data.items) {
-        const items = data.items.map((item: any) => ({
+        const items = data.items.map((item: { title: string; link: string; pubDate: string; description?: string; thumbnail?: string; enclosure?: { link?: string } }) => ({
           title: item.title as string,
           link: item.link as string,
           pubDate: item.pubDate as string,

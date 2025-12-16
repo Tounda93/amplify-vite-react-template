@@ -78,8 +78,15 @@ const getEmptySearchResults = (): SearchResultGroups => ({
 // CarSearch Component Props
 // Added props so the Header can control this component
 // =====================================================
+interface AmplifyUser {
+  signInDetails?: {
+    loginId?: string;
+  };
+  username?: string;
+}
+
 interface CarSearchProps {
-  user: any;
+  user: AmplifyUser | undefined;
   signOut: () => void;
 }
 
@@ -391,6 +398,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, allMakes, allModels]);
 
   const handleSelectMake = async (make: Make) => {
@@ -448,7 +456,8 @@ function CarSearch({ user, signOut }: CarSearchProps) {
         selectedMakeId = make.makeId;
         clearInput = false;
       } else if (result.data?.type === 'model' && result.data.model) {
-        const targetMake = makeById.get(result.data.model.makeId);
+        const model = result.data.model as Model;
+        const targetMake = makeById.get(model.makeId);
         if (targetMake) {
           setWikiSelectedMake(targetMake);
           selectedMakeId = targetMake.makeId;

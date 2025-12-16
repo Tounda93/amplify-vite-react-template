@@ -214,10 +214,11 @@ export async function importAllData(
       await client.models.Make.create(make);
       makesImported++;
       onProgress(`Added: ${make.makeName}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Skip if already exists
-      if (!error.message?.includes('already exists')) {
-        errors.push(`Make ${make.makeName}: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage?.includes('already exists')) {
+        errors.push(`Make ${make.makeName}: ${errorMessage}`);
       }
     }
   }
@@ -230,9 +231,10 @@ export async function importAllData(
       await client.models.Model.create(model);
       modelsImported++;
       onProgress(`Added: ${model.fullName}`);
-    } catch (error: any) {
-      if (!error.message?.includes('already exists')) {
-        errors.push(`Model ${model.fullName}: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage?.includes('already exists')) {
+        errors.push(`Model ${model.fullName}: ${errorMessage}`);
       }
     }
   }

@@ -7,7 +7,7 @@ export interface SearchResultItem {
   subtitle?: string;
   description?: string;
   url?: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export type SearchResultGroups = Record<SearchCategory, SearchResultItem[]>;

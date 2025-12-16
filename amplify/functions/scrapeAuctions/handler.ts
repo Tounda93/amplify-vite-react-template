@@ -57,8 +57,6 @@ async function scrapeRMSothebys(): Promise<AuctionLot[]> {
     
     // Extract auction links - look for upcoming auctions
     const auctionPattern = /<a[^>]*href="(\/en\/auctions\/[^"]+)"[^>]*>([^<]*)<\/a>/gi;
-    const datePattern = /(\d{1,2}\s+\w+\s+\d{4})/;
-    const locationPattern = /([A-Z][a-z]+(?:,\s*[A-Z][a-z]+)*)/;
     
     let match;
     const auctionUrls: string[] = [];
@@ -86,10 +84,10 @@ async function scrapeRMSothebys(): Promise<AuctionLot[]> {
         let lotNum = 1;
         
         while ((lotMatch = lotPattern.exec(auctionHtml)) !== null && lotNum <= 20) {
-          const [_, lotUrl, imageUrl, title, estimate] = lotMatch;
+          const [, lotUrl, imageUrl, title, estimate] = lotMatch;
           
           // Parse estimate (e.g., "$500,000 - $600,000")
-          const estimateMatch = estimate.match(/[\$€£]?([\d,]+)\s*[-–]\s*[\$€£]?([\d,]+)/);
+          const estimateMatch = estimate.match(/[$€£]?([\d,]+)\s*[-–]\s*[$€£]?([\d,]+)/);
           let estimateLow, estimateHigh;
           if (estimateMatch) {
             estimateLow = parseInt(estimateMatch[1].replace(/,/g, ''));
@@ -135,7 +133,7 @@ async function scrapeBonhams(): Promise<AuctionLot[]> {
     let lotNum = 1;
     
     while ((match = auctionPattern.exec(html)) !== null && lotNum <= 20) {
-      const [_, lotUrl, imageUrl, title, dateStr] = match;
+      const [, lotUrl, imageUrl, title] = match;
       
       lots.push({
         auctionHouse: 'Bonhams',
@@ -170,7 +168,7 @@ async function scrapeBroadArrow(): Promise<AuctionLot[]> {
     let lotNum = 1;
     
     while ((match = vehiclePattern.exec(html)) !== null && lotNum <= 20) {
-      const [_, lotUrl, imageUrl, title, estimate] = match;
+      const [, lotUrl, imageUrl, title, estimate] = match;
       
       const estimateMatch = estimate.match(/\$([\d,]+)\s*[-–]\s*\$([\d,]+)/);
       let estimateLow, estimateHigh;
@@ -201,7 +199,7 @@ async function scrapeBroadArrow(): Promise<AuctionLot[]> {
 }
 
 // Main handler
-export const handler: Handler = async (event) => {
+export const handler: Handler = async () => {
   console.log('Starting auction scrape...');
   
   const results = {

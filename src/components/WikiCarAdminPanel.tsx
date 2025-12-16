@@ -6,6 +6,7 @@ import type { Schema } from '../../amplify/data/resource';
 const client = generateClient<Schema>();
 
 type WikiCarEntry = Schema['WikiCarEntry']['type'];
+const MAX_GALLERY_IMAGES = 10;
 
 const INITIAL_FORM = {
   makeId: '',
@@ -23,6 +24,7 @@ const INITIAL_FORM = {
   transmission: '',
   power: '',
   fuel: '',
+  topSpeed: '',
 };
 
 type ExtraField = { label: string; value: string };
@@ -48,9 +50,36 @@ const formatAdditionalFields = (fields: ExtraField[]): string | undefined => {
   return JSON.stringify(filtered);
 };
 
+const parseHeroGallery = (value?: string | null): string[] => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+    }
+  } catch {
+    return [];
+  }
+  return [];
+};
+
+const formatHeroGallery = (images: string[]): string | undefined => {
+  const cleaned = images
+    .map((image) => image.trim())
+    .filter((image) => image.length > 0)
+    .slice(0, MAX_GALLERY_IMAGES);
+  return cleaned.length ? JSON.stringify(cleaned) : undefined;
+};
+
+const ensureGalleryState = (images: string[]) => {
+  const trimmed = images.slice(0, MAX_GALLERY_IMAGES);
+  return trimmed.length > 0 ? trimmed : [''];
+};
+
 const WikiCarAdminPanel = () => {
   const [form, setForm] = useState(INITIAL_FORM);
   const [extraFields, setExtraFields] = useState<ExtraField[]>([]);
+  const [galleryImages, setGalleryImages] = useState<string[]>(['']);
   const [entries, setEntries] = useState<WikiCarEntry[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -76,8 +105,8 @@ const WikiCarAdminPanel = () => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleUpload = async (file: File | null, field: 'heroImageUrl' | 'sideImageUrl' | 'brandLogoUrl') => {
-    if (!file) return;
+  const uploadImageFile = async (file: File | null): Promise<string | null> => {
+    if (!file) return null;
     setStatusMessage('Uploading image...');
     try {
       const uploadKey = await uploadData({
@@ -88,17 +117,55 @@ const WikiCarAdminPanel = () => {
         },
       }).result;
 
-      setForm((prev) => ({ ...prev, [field]: uploadKey.path }));
       setStatusMessage('Image uploaded successfully.');
+      return uploadKey.path;
     } catch (error) {
       console.error('Image upload failed', error);
       setStatusMessage('Image upload failed. Please try again.');
+      return null;
     }
+  };
+
+  const handleUpload = async (file: File | null, field: 'heroImageUrl' | 'sideImageUrl' | 'brandLogoUrl') => {
+    const path = await uploadImageFile(file);
+    if (!path) return;
+    setForm((prev) => ({ ...prev, [field]: path }));
+  };
+
+  const handleGalleryImageUpload = async (file: File | null, index: number) => {
+    const path = await uploadImageFile(file);
+    if (!path) return;
+    setGalleryImages((prev) => {
+      const next = [...prev];
+      next[index] = path;
+      return next;
+    });
+  };
+
+  const handleGalleryInputChange = (index: number, value: string) => {
+    setGalleryImages((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  const handleAddGalleryImage = () => {
+    if (galleryImages.length >= MAX_GALLERY_IMAGES) return;
+    setGalleryImages((prev) => [...prev, '']);
+  };
+
+  const handleRemoveGalleryImage = (index: number) => {
+    setGalleryImages((prev) => {
+      const next = prev.filter((_, idx) => idx !== index);
+      return next.length > 0 ? next : [''];
+    });
   };
 
   const resetForm = () => {
     setForm(INITIAL_FORM);
     setExtraFields([]);
+    setGalleryImages(['']);
     setEditingId(null);
   };
 
@@ -127,9 +194,11 @@ const WikiCarAdminPanel = () => {
         transmission: form.transmission.trim() || undefined,
         power: form.power.trim() || undefined,
         fuel: form.fuel.trim() || undefined,
+        topSpeed: form.topSpeed.trim() || undefined,
         heroImageUrl: form.heroImageUrl || undefined,
         sideImageUrl: form.sideImageUrl || undefined,
         brandLogoUrl: form.brandLogoUrl || undefined,
+        heroGallery: formatHeroGallery(galleryImages),
         additionalFields: formatAdditionalFields(extraFields),
       };
 
@@ -172,8 +241,10 @@ const WikiCarAdminPanel = () => {
       transmission: entry.transmission || '',
       power: entry.power || '',
       fuel: entry.fuel || '',
+      topSpeed: entry.topSpeed || '',
     });
     setExtraFields(parseAdditionalFields(entry.additionalFields));
+    setGalleryImages(ensureGalleryState(parseHeroGallery(entry.heroGallery)));
     setStatusMessage(`Editing entry for ${entry.brandName || entry.makeName}`);
   };
 
@@ -193,7 +264,10 @@ const WikiCarAdminPanel = () => {
   };
 
   const displayedEntries = useMemo(
-    () => entries.sort((a, b) => a.brandName.localeCompare(b.brandName)),
+    () =>
+      [...entries].sort((a, b) =>
+        (a.brandName || a.makeName || '').localeCompare(b.brandName || b.makeName || '')
+      ),
     [entries]
   );
 
@@ -316,6 +390,66 @@ const WikiCarAdminPanel = () => {
             ))}
           </div>
 
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>Carousel images ({MAX_GALLERY_IMAGES} max)</h3>
+              <button
+                type="button"
+                onClick={handleAddGalleryImage}
+                disabled={galleryImages.length >= MAX_GALLERY_IMAGES}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: '999px',
+                  border: '1px solid #cbd5f5',
+                  background: '#f8fafc',
+                  cursor: galleryImages.length >= MAX_GALLERY_IMAGES ? 'not-allowed' : 'pointer',
+                  opacity: galleryImages.length >= MAX_GALLERY_IMAGES ? 0.6 : 1,
+                }}
+              >
+                + Add image
+              </button>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
+              Provide up to {MAX_GALLERY_IMAGES} image URLs. Leave blank if you only want to use the hero/secondary images.
+            </p>
+            {galleryImages.map((image, index) => (
+              <div
+                key={`${index}-${image}`}
+                style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}
+              >
+                <input
+                  type="text"
+                  value={image}
+                  onChange={(e) => handleGalleryInputChange(index, e.target.value)}
+                  placeholder="https://..."
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5f5' }}
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleGalleryImageUpload(e.target.files?.[0] ?? null, index)}
+                  style={{ width: '100%', padding: '0.4rem', borderRadius: '8px', border: '1px solid #cbd5f5' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveGalleryImage(index)}
+                  disabled={galleryImages.length === 1}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #fee2e2',
+                    background: '#fee2e2',
+                    color: '#b91c1c',
+                    cursor: galleryImages.length === 1 ? 'not-allowed' : 'pointer',
+                    opacity: galleryImages.length === 1 ? 0.5 : 1,
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+
           {/* Technical fields */}
           <div
             style={{
@@ -332,12 +466,13 @@ const WikiCarAdminPanel = () => {
               { field: 'transmission', label: 'Transmission' },
               { field: 'power', label: 'Power' },
               { field: 'fuel', label: 'Fuel' },
+              { field: 'topSpeed', label: 'Top speed' },
             ].map(({ field, label }) => (
               <div key={field}>
                 <label style={{ fontSize: '0.85rem', color: '#475569' }}>{label}</label>
                 <input
                   type="text"
-                  value={(form as any)[field]}
+                  value={form[field as keyof typeof form] as string}
                   onChange={(e) => handleInputChange(field as keyof typeof INITIAL_FORM, e.target.value)}
                   style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5f5' }}
                 />
@@ -373,7 +508,7 @@ const WikiCarAdminPanel = () => {
 
             {extraFields.length === 0 && (
               <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                Add optional label/value pairs (e.g., "Top speed / 220 km/h").
+                Add optional label/value pairs (e.g., "Chassis code / 111S").
               </p>
             )}
 
