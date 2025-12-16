@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Edit, Play, Pause, SkipForward } from 'lucide-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { isAdminEmail } from '../constants/admins';
 
 // YouTube IFrame API type declarations
 interface YTPlayer {
@@ -46,7 +47,6 @@ declare global {
   }
 }
 
-const ADMIN_EMAILS = ['onlinewebspacejunk@gmail.com'];
 const HERO_STORAGE_KEY = 'collectible_hero_content';
 
 interface HeroContent {
@@ -85,8 +85,8 @@ export default function HeroCarousel() {
     const checkAdmin = async () => {
       try {
         const session = await fetchAuthSession();
-        const email = session.tokens?.idToken?.payload?.email as string;
-        setIsAdmin(email ? ADMIN_EMAILS.includes(email) : false);
+        const email = session.tokens?.idToken?.payload?.email as string | undefined;
+        setIsAdmin(isAdminEmail(email));
       } catch {
         setIsAdmin(false);
       }

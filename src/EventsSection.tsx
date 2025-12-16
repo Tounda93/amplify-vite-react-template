@@ -2,13 +2,11 @@ import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../amplify/data/resource';
+import { isAdminEmail } from './constants/admins';
 
 const client = generateClient<Schema>();
 
 type Event = Schema['Event']['type'];
-
-// Admin emails - add your email here
-const ADMIN_EMAILS = ['onlinewebspacejunk@gmail.com'];
 
 const EVENT_TYPES = [
   { value: 'car_show', label: '🚗 Car Show' },
@@ -91,17 +89,18 @@ export function EventsSection() {
   }, [events, filterCountry, filterType, filterTimeframe, filterDistance, searchQuery, userLocation]);
 
   const checkAdminStatus = async () => {
-  try {
-    const session = await fetchAuthSession();
-    const email = session.tokens?.idToken?.payload?.email as string;
-    console.log('User email:', email); // Debug log
-    console.log('Is admin:', ADMIN_EMAILS.includes(email?.toLowerCase()));
-    setIsAdmin(ADMIN_EMAILS.includes(email?.toLowerCase()));
-  } catch (error) {
-    console.log('Not logged in:', error);
-    setIsAdmin(false);
-  }
-};
+    try {
+      const session = await fetchAuthSession();
+      const email = session.tokens?.idToken?.payload?.email as string | undefined;
+      const admin = isAdminEmail(email);
+      console.log('User email:', email); // Debug log
+      console.log('Is admin:', admin);
+      setIsAdmin(admin);
+    } catch (error) {
+      console.log('Not logged in:', error);
+      setIsAdmin(false);
+    }
+  };
 
   const loadEvents = async () => {
     try {

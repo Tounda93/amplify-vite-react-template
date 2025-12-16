@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { SearchResultGroups, SearchResultItem } from '../types/search';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useEffect, useState } from 'react';
 
 /**
  * =====================================================
@@ -74,6 +75,22 @@ export default function Header({
   showHeroCarousel = false
 }: HeaderProps) {
   const isMobile = useIsMobile();
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window === 'undefined' ? 0 : window.innerWidth
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const mobileIconSize = isMobile
+    ? Math.max(14, Math.min(20, viewportWidth ? viewportWidth / 22 : 18))
+    : 22;
 
   // ============================================
   // CATEGORY DATA
@@ -283,8 +300,9 @@ export default function Header({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: "8px",
-            flexWrap: "wrap"
+            gap: "6px",
+            flexWrap: "nowrap",
+            width: "100%"
           }}>
             {mobileCategories.map((category) => {
               const IconComponent = category.icon;
@@ -294,14 +312,14 @@ export default function Header({
                   key={category.id}
                   onClick={() => onSectionChange(category.id)}
                   style={{
-                    flex: "1 1 calc(20% - 8px)",
-                    minWidth: "72px",
+                    flex: "1 1 0",
+                    minWidth: 0,
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "4px",
-                    padding: "8px 4px",
+                    padding: "6px 2px",
                     borderRadius: "16px",
                     border: "none",
                     cursor: "pointer",
@@ -314,10 +332,13 @@ export default function Header({
                   }}
                 >
                   <IconComponent
-                    size={20}
+                    size={mobileIconSize}
                     strokeWidth={isActive ? 2.4 : 1.8}
                   />
-                  <span style={{ fontSize: "11px", fontWeight: 500 }}>
+                  <span style={{
+                    fontSize: isMobile ? "clamp(9px, 2.7vw, 11px)" : "12px",
+                    fontWeight: 500
+                  }}>
                     {category.label}
                   </span>
                 </button>

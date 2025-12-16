@@ -35,6 +35,8 @@ import HeroCarousel from './components/HeroCarousel';
 import HomePage from './components/HomePage';
 import Footer from './components/Footer';
 import { useIsMobile } from './hooks/useIsMobile';
+import { importAllData } from './importData';
+import { isAdminEmail } from './constants/admins';
 import { NewsItem, fetchNewsFeedItems } from './utils/newsFeed';
 import { SearchResultItem, SearchResultGroups } from './types/search';
 
@@ -137,6 +139,45 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [pendingMakeId, setPendingMakeId] = useState<string | undefined>(initialState.makeId);
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '2rem' : '5rem';
+  const [hasEnsuredSeedData, setHasEnsuredSeedData] = useState(false);
+  const adminEmail = user?.signInDetails?.loginId?.toLowerCase();
+
+  useEffect(() => {
+    if (hasEnsuredSeedData || !adminEmail) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const migrateInitialData = async () => {
+      if (!isAdminEmail(adminEmail)) {
+        if (!cancelled) {
+          setHasEnsuredSeedData(true);
+        }
+        return;
+      }
+
+      try {
+        const { data } = await client.models.Make.list({ limit: 1 });
+        if (!data || data.length === 0) {
+          console.info('[Collectible] Seeding base car makes/models into production backend...');
+          await importAllData((message) => console.info(`[Import] ${message}`));
+        }
+      } catch (error) {
+        console.error('Failed to seed base car data', error);
+      } finally {
+        if (!cancelled) {
+          setHasEnsuredSeedData(true);
+        }
+      }
+    };
+
+    migrateInitialData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [adminEmail, hasEnsuredSeedData]);
 
   useEffect(() => {
     loadAllMakes();
