@@ -729,6 +729,11 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       <Footer
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
+        searchTerm={searchTerm}
+        onSearchChange={handleSearchChange}
+        searchResults={searchResults}
+        searchLoading={searchLoading}
+        onSearchResultSelect={handleSearchResultSelect}
       />
     </div>
   );

@@ -1,5 +1,4 @@
 import {
-  Search,
   Home,
   Newspaper,
   Users,
@@ -14,6 +13,7 @@ import {
 import { SearchResultGroups, SearchResultItem } from '../types/search';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useEffect, useState } from 'react';
+import SearchBar from './SearchBar';
 
 /**
  * =====================================================
@@ -105,15 +105,6 @@ export default function Header({
     { id: "wikicars", label: "WikiCars", icon: BookOpen },
   ];
 
-  const searchSections: Array<{ key: keyof SearchResultGroups; label: string; accent: string }> = [
-    { key: 'wikicars', label: 'WikiCars', accent: '#1d4ed8' },
-    { key: 'news', label: 'News', accent: '#dc2626' },
-    { key: 'events', label: 'Events', accent: '#059669' },
-    { key: 'auctions', label: 'Auctions', accent: '#b45309' },
-    { key: 'community', label: 'Community', accent: '#7c3aed' },
-  ];
-
-  const showSearchDropdown = searchTerm.trim().length >= 2;
   const headerIsTransparent = !!showHeroCarousel;
   const showGlassEffect = headerIsTransparent || isMobile;
 
@@ -121,157 +112,6 @@ export default function Header({
   const mobileCategories = mobileCategoryOrder
     .map(id => categories.find(category => category.id === id))
     .filter((category): category is Category => Boolean(category));
-
-  const searchBar = (
-    <div style={{
-      width: isMobile ? "100%" : "300px",
-      position: "relative"
-    }}>
-      <div style={{ position: "relative" }}>
-        <Search
-          style={{
-            position: "absolute",
-            left: "16px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: isMobile ? "#d1d5db" : "#9ca3af"
-          }}
-          size={18}
-        />
-        <input
-          type="text"
-          placeholder="Search"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          style={{
-            width: "100%",
-            paddingLeft: "44px",
-            paddingRight: "16px",
-            paddingTop: "10px",
-            paddingBottom: "10px",
-            border: isMobile ? "1px solid rgba(255,255,255,0.25)" : "1px solid #e5e7eb",
-            backgroundColor: isMobile ? "rgba(15,23,42,0.4)" : "#ffffff",
-            borderRadius: "9999px",
-            color: isMobile ? "#f9fafb" : "#374151",
-            fontSize: "14px",
-            outline: "none",
-            boxSizing: "border-box",
-            boxShadow: isMobile ? "0 15px 35px rgba(15, 23, 42, 0.35)" : undefined,
-            backdropFilter: isMobile ? "blur(8px)" : undefined,
-            WebkitBackdropFilter: isMobile ? "blur(8px)" : undefined
-          }}
-        />
-      </div>
-
-      {showSearchDropdown && (
-        <div style={{
-          position: "absolute",
-          top: isMobile ? "56px" : "48px",
-          left: 0,
-          width: "100%",
-          backgroundColor: isMobile ? "rgba(15,23,42,0.95)" : "#ffffff",
-          border: isMobile ? "1px solid rgba(255,255,255,0.08)" : "1px solid #e5e7eb",
-          borderRadius: "16px",
-          boxShadow: isMobile ? "0 25px 55px rgba(15, 23, 42, 0.55)" : "0 20px 40px rgba(0, 0, 0, 0.12)",
-          maxHeight: "420px",
-          overflowY: "auto",
-          zIndex: 2000,
-          backdropFilter: isMobile ? "blur(16px)" : undefined,
-          WebkitBackdropFilter: isMobile ? "blur(16px)" : undefined
-        }}>
-          {searchLoading && (
-            <div style={{
-              padding: "12px 16px",
-              fontSize: "13px",
-              color: isMobile ? "#f3f4f6" : "#6b7280",
-              borderBottom: isMobile ? "1px solid rgba(255,255,255,0.08)" : "1px solid #f3f4f6"
-            }}>
-              Searching across encyclopedia, news, events, and more...
-            </div>
-          )}
-
-          {searchSections.map((section, index) => {
-            const resultsForSection = searchResults[section.key] || [];
-            const isLast = index === searchSections.length - 1;
-            return (
-              <div
-                key={section.key}
-                style={{
-                  borderBottom: isLast ? "none" : (isMobile ? "1px solid rgba(255,255,255,0.08)" : "1px solid #f3f4f6"),
-                  paddingBottom: "4px"
-                }}
-              >
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "10px 16px 6px 16px",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: isMobile ? "#e5e7eb" : "#6b7280",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase"
-                }}>
-                  <span style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    backgroundColor: section.accent
-                  }} />
-                  {section.label}
-                </div>
-
-                {resultsForSection.length === 0 && !searchLoading && (
-                  <div style={{
-                    padding: "6px 16px 14px 36px",
-                    fontSize: "13px",
-                    color: isMobile ? "#cbd5f5" : "#9ca3af"
-                  }}>
-                    No matches yet
-                  </div>
-                )}
-
-                {resultsForSection.map((result) => (
-                  <button
-                    key={result.id}
-                    type="button"
-                    onClick={() => onSearchResultSelect(result)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "10px 16px 12px 36px",
-                      background: "none",
-                      border: "none",
-                      borderRadius: 0,
-                      cursor: "pointer",
-                      transition: "background 0.2s",
-                      color: isMobile ? "#f9fafb" : undefined
-                    }}
-                    onMouseOver={(e) => { e.currentTarget.style.background = isMobile ? "rgba(255,255,255,0.05)" : "#f9fafb"; }}
-                    onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; }}
-                  >
-                    <div style={{ fontSize: "14px", fontWeight: 600, color: isMobile ? "#ffffff" : "#111827" }}>
-                      {result.title}
-                    </div>
-                    {result.subtitle && (
-                      <div style={{ fontSize: "12px", color: isMobile ? "#cbd5f5" : "#6b7280", marginTop: "2px" }}>
-                        {result.subtitle}
-                      </div>
-                    )}
-                    {result.description && (
-                      <div style={{ fontSize: "12px", color: isMobile ? "#d1d5db" : "#4b5563", marginTop: "4px" }}>
-                        {result.description}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 
   if (isMobile) {
     return (
@@ -294,8 +134,6 @@ export default function Header({
           flexDirection: "column",
           gap: "12px"
         }}>
-          {searchBar}
-
           <nav style={{
             display: "flex",
             alignItems: "center",
@@ -318,17 +156,16 @@ export default function Header({
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "4px",
-                    padding: "6px 2px",
+                  gap: "4px",
+                    padding: "6px 2px 12px 2px",
                     borderRadius: "16px",
                     border: "none",
                     cursor: "pointer",
                     color: "#f9fafb",
-                    backgroundColor: isActive ? "rgba(255,255,255,0.25)" : "transparent",
-                    boxShadow: isActive ? "0 15px 35px rgba(15,23,42,0.55)" : undefined,
-                    transition: "background 0.2s, transform 0.2s",
-                    backdropFilter: isActive ? "blur(6px)" : undefined,
-                    WebkitBackdropFilter: isActive ? "blur(6px)" : undefined
+                    backgroundColor: "transparent",
+                    boxShadow: "none",
+                    transition: "color 0.2s",
+                    position: "relative"
                   }}
                 >
                   <IconComponent
@@ -341,6 +178,18 @@ export default function Header({
                   }}>
                     {category.label}
                   </span>
+                  <div style={{
+                    position: "absolute",
+                    bottom: "2px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "50%",
+                    height: "3px",
+                    borderRadius: "999px",
+                    backgroundColor: "#ffffff",
+                    opacity: isActive ? 1 : 0,
+                    transition: "opacity 0.2s"
+                  }} />
                 </button>
               );
             })}
@@ -376,7 +225,14 @@ export default function Header({
       }}>
 
         {/* Search Bar - Positioned to the left */}
-        {searchBar}
+        <SearchBar
+          searchTerm={searchTerm}
+          onSearchChange={onSearchChange}
+          searchResults={searchResults}
+          searchLoading={searchLoading}
+          onSearchResultSelect={onSearchResultSelect}
+          isMobile={false}
+        />
 
         {/* Category Navigation - Centered */}
         <nav style={{

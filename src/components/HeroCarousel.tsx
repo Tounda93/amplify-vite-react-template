@@ -76,6 +76,12 @@ export default function HeroCarousel() {
   const [formState, setFormState] = useState<HeroContent>(DEFAULT_CONTENT);
   const isMobile = useIsMobile();
   const [isHeroExpanded, setHeroExpanded] = useState(false);
+  const heroHeight = '80vh';
+  const controlButtonWidth = isMobile ? 60 : 100;
+  const controlButtonHeight = isMobile ? 28 : 42;
+  const controlIconSize = isMobile ? 12 : 18;
+  const showReadMore = isMobile && !isHeroExpanded;
+  const hasCTA = Boolean(heroContent.ctaText && heroContent.ctaLink);
 
   const playerRef = useRef<YTPlayer | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
@@ -206,8 +212,8 @@ export default function HeroCarousel() {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
-      <div style={{ position: 'relative', width: '100%', minHeight: '100vh', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', height: heroHeight }}>
+      <div style={{ position: 'relative', width: '100%', minHeight: heroHeight, height: heroHeight, maxHeight: heroHeight, overflow: 'hidden' }}>
         {heroContent.videoUrl ? (
           <div style={{ width: '100%', height: '100%' }}>
             <div id="hero-video-player" style={{ width: '100%', height: '100%' }} />
@@ -242,10 +248,10 @@ export default function HeroCarousel() {
           style={{
             position: 'absolute',
             bottom: isMobile ? '24px' : '50px',
-            left: '5%',
+            left: isMobile ? '1rem' : '5%',
+            right: isMobile ? '1rem' : undefined,
             color: 'white',
-            width: isMobile ? '50vw' : undefined,
-            maxWidth: isMobile ? '50vw' : '520px',
+            maxWidth: isMobile ? 'calc(100% - 2rem)' : '520px',
             zIndex: 2,
           }}
         >
@@ -277,41 +283,50 @@ export default function HeroCarousel() {
           }}>
             {heroContent.subtitle}
           </p>
-          {isMobile && !isHeroExpanded && (
-            <button
-              type="button"
-              onClick={() => setHeroExpanded(true)}
-              style={{
-                border: '1px solid rgba(255,255,255,0.5)',
-                backgroundColor: 'rgba(15,23,42,0.45)',
-                color: '#ffffff',
-                padding: '8px 16px',
-                borderRadius: '999px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                marginBottom: '18px'
-              }}
-            >
-              Read more
-            </button>
-          )}
-          {heroContent.ctaText && heroContent.ctaLink && (
-            <a
-              href={heroContent.ctaLink}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '12px 28px',
-                borderRadius: '999px',
-                backgroundColor: '#737373ff',
-                color: 'white',
-                fontWeight: 600,
-                textDecoration: 'none',
-              }}
-            >
-              {heroContent.ctaText}
-            </a>
+          {(showReadMore || hasCTA) && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: showReadMore && hasCTA ? '1rem' : 0
+            }}>
+              {showReadMore && (
+                <button
+                  type="button"
+                  onClick={() => setHeroExpanded(true)}
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.5)',
+                    backgroundColor: 'rgba(15,23,42,0.45)',
+                    color: '#ffffff',
+                    padding: '8px 16px',
+                    borderRadius: '999px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  Read more
+                </button>
+              )}
+              {hasCTA && (
+                <a
+                  href={heroContent.ctaLink}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '12px 28px',
+                    borderRadius: '999px',
+                    backgroundColor: '#737373ff',
+                    color: 'white',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    fontSize: isMobile ? '12px' : '14px'
+                  }}
+                >
+                  {heroContent.ctaText}
+                </a>
+              )}
+            </div>
           )}
         </div>
 
@@ -319,18 +334,18 @@ export default function HeroCarousel() {
           <div
             style={{
               position: 'absolute',
-              bottom: '20px',
-              right: '20px',
+              bottom: isMobile ? '12px' : '20px',
+              right: isMobile ? '12px' : '20px',
               zIndex: 3,
               display: 'flex',
-              gap: '0.5rem',
+              gap: isMobile ? '0.35rem' : '0.5rem',
             }}
           >
             <button
               onClick={handlePlayPause}
               style={{
-                width: '100px',
-                height: '42px',
+                width: `${controlButtonWidth}px`,
+                height: `${controlButtonHeight}px`,
                 borderRadius: '999px',
                 border: '1px solid rgba(255,255,255,0.5)',
                 backgroundColor: 'rgba(15,23,42,0.55)',
@@ -341,13 +356,13 @@ export default function HeroCarousel() {
                 cursor: 'pointer',
               }}
             >
-              {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+              {isPlaying ? <Pause size={controlIconSize} /> : <Play size={controlIconSize} />}
             </button>
             <button
               onClick={handleSkip}
               style={{
-                width: '100px',
-                height: '42px',
+                width: `${controlButtonWidth}px`,
+                height: `${controlButtonHeight}px`,
                 borderRadius: '999px',
                 border: '1px solid rgba(255,255,255,0.5)',
                 backgroundColor: 'rgba(15, 23, 42, 0.15)',
@@ -358,7 +373,7 @@ export default function HeroCarousel() {
                 cursor: 'pointer',
               }}
             >
-              <SkipForward size={18} />
+              <SkipForward size={controlIconSize} />
             </button>
           </div>
         )}
