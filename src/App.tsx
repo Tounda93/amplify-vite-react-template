@@ -139,6 +139,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [pendingMakeId, setPendingMakeId] = useState<string | undefined>(initialState.makeId);
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '2rem' : '5rem';
+  const topPadding = isMobile ? (activeSection === 'home' ? '0' : '5.5rem') : undefined;
   const [hasEnsuredSeedData, setHasEnsuredSeedData] = useState(false);
   const adminEmail = user?.signInDetails?.loginId?.toLowerCase();
 
@@ -547,7 +548,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       overflowX: 'visible',
       width: '100%',
       position: 'relative',
-      paddingTop: isMobile ? '5.5rem' : undefined
+      paddingTop: topPadding
     }}>
       <Header
         user={user}
@@ -662,7 +663,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
       {/* HOME SECTION - New HomePage component with all sections */}
       {activeSection === 'home' && !selectedMake && makes.length === 0 && (
-        <HomePage onSelectMake={handleSelectMake} />
+        <HomePage />
       )}
 
       {/* Search Results or Selected Make View */}

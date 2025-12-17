@@ -1,23 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { fetchNewsFeedItems, type NewsItem } from '../utils/newsFeed';
 
-interface NewsItem {
-  title: string;
-  link: string;
-  pubDate: string;
-  description: string;
-  thumbnail?: string;
-  source: string;
-}
-
-const RSS_FEEDS = [
-  { name: 'Top Gear', url: 'https://www.topgear.com/car-news/rss' },
-  { name: 'Classic Driver', url: 'https://www.classicdriver.com/en/rss.xml' },
-];
-
-const RSS_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80';
-const ENABLE_RSS_FETCH = import.meta.env.VITE_ENABLE_NEWS_RSS === 'true';
 
 const FALLBACK_NEWS: NewsItem[] = [
   {
@@ -26,6 +11,7 @@ const FALLBACK_NEWS: NewsItem[] = [
     pubDate: new Date().toISOString(),
     description: 'Lightweight British roadsters continue to attract collectors with their analog feel.',
     source: 'Collectible',
+    thumbnail: FALLBACK_IMAGE,
   },
   {
     title: 'Porsche 911 SC market snapshot',
@@ -33,6 +19,7 @@ const FALLBACK_NEWS: NewsItem[] = [
     pubDate: new Date().toISOString(),
     description: 'Values hold firm as buyers look for well-documented examples from the late seventies.',
     source: 'Collectible',
+    thumbnail: FALLBACK_IMAGE,
   },
   {
     title: 'Classic rally events returning across Europe',
@@ -40,6 +27,7 @@ const FALLBACK_NEWS: NewsItem[] = [
     pubDate: new Date().toISOString(),
     description: 'Historic rally championships announce updated schedules for 2025.',
     source: 'Collectible',
+    thumbnail: FALLBACK_IMAGE,
   },
 ];
 
@@ -49,45 +37,23 @@ export default function NewsCarousel() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!ENABLE_RSS_FETCH) {
-      setNews(FALLBACK_NEWS);
-      setLoading(false);
-      return;
-    }
-    fetchNews();
-  }, []);
-
-  const fetchNews = async () => {
-    if (!ENABLE_RSS_FETCH) return;
-    setLoading(true);
-    const allNews: NewsItem[] = [];
-
-    for (const feed of RSS_FEEDS) {
+    const loadNews = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(`${RSS_API}${encodeURIComponent(feed.url)}`);
-        const data = await response.json();
-
-        if (data.status === 'ok' && data.items) {
-          const items = data.items.slice(0, 6).map((item: { title: string; link: string; pubDate: string; description?: string; thumbnail?: string; enclosure?: { link?: string } }) => ({
-            title: item.title,
-            link: item.link,
-            pubDate: item.pubDate,
-            description: item.description?.replace(/<[^>]*>/g, '').substring(0, 150) + '...',
-            thumbnail: item.thumbnail || item.enclosure?.link,
-            source: feed.name,
-          }));
-          allNews.push(...items);
+        const items = await fetchNewsFeedItems();
+        if (items.length > 0) {
+          setNews(items.slice(0, 12));
+        } else {
+          setNews(FALLBACK_NEWS);
         }
       } catch (error) {
-        console.warn(`Unable to fetch ${feed.name}. Using fallback content.`, error);
+        console.warn('Unable to fetch news feed for homepage. Using fallback content.', error);
+        setNews(FALLBACK_NEWS);
       }
-    }
-
-    // Sort by date and take the latest 12
-    allNews.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
-    setNews(allNews.slice(0, 12));
-    setLoading(false);
-  };
+      setLoading(false);
+    };
+    loadNews();
+  }, []);
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return;

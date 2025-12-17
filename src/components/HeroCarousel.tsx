@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Edit, Play, Pause, SkipForward, X } from 'lucide-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -76,7 +76,7 @@ export default function HeroCarousel() {
   const [formState, setFormState] = useState<HeroContent>(DEFAULT_CONTENT);
   const isMobile = useIsMobile();
   const [isHeroExpanded, setHeroExpanded] = useState(false);
-  const heroHeight = '80vh';
+  const heroHeight = '100vh';
   const controlButtonWidth = isMobile ? 60 : 100;
   const controlButtonHeight = isMobile ? 28 : 42;
   const controlIconSize = isMobile ? 12 : 18;
@@ -87,6 +87,7 @@ export default function HeroCarousel() {
   const playerRef = useRef<YTPlayer | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -212,6 +213,29 @@ export default function HeroCarousel() {
     playerRef.current.playVideo();
   };
 
+  const handlePhotoUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setFormState((prev) => ({
+        ...prev,
+        imageUrl: base64
+      }));
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div style={{ position: 'relative', width: '100%', height: heroHeight }}>
       <div style={{ position: 'relative', width: '100%', minHeight: heroHeight, height: heroHeight, maxHeight: heroHeight, overflow: 'hidden' }}>
@@ -284,42 +308,50 @@ export default function HeroCarousel() {
           }}>
             {heroContent.subtitle}
           </p>
-          {showReadMore && (
-            <button
-              type="button"
-              onClick={() => setHeroExpanded(true)}
-              style={{
-                border: '1px solid rgba(255,255,255,0.5)',
-                backgroundColor: 'rgba(15,23,42,0.45)',
-                color: '#ffffff',
-                padding: '8px 16px',
-                borderRadius: '999px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                marginBottom: '18px'
-              }}
-            >
-              Read more
-            </button>
-          )}
-          {hasCTA && (
-            <a
-              href={heroContent.ctaLink}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '12px 28px',
-                borderRadius: '999px',
-                backgroundColor: '#737373ff',
-                color: 'white',
-                fontWeight: 600,
-                textDecoration: 'none',
-                fontSize: isMobile ? '12px' : '14px'
-              }}
-            >
-              {heroContent.ctaText}
-            </a>
+          {(showReadMore || hasCTA) && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '1rem'
+            }}>
+              {showReadMore && (
+                <button
+                  type="button"
+                  onClick={() => setHeroExpanded(true)}
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.5)',
+                    backgroundColor: 'rgba(15,23,42,0.45)',
+                    color: '#ffffff',
+                    padding: '8px 16px',
+                    borderRadius: '999px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  Read more
+                </button>
+              )}
+              {hasCTA && (
+                <a
+                  href={heroContent.ctaLink}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '12px 28px',
+                    borderRadius: '999px',
+                    backgroundColor: '#737373ff',
+                    color: 'white',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    fontSize: isMobile ? '12px' : '14px'
+                  }}
+                >
+                  {heroContent.ctaText}
+                </a>
+              )}
+            </div>
           )}
         </div>
 
@@ -373,7 +405,12 @@ export default function HeroCarousel() {
       </div>
 
       {isAdmin && (
-        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 4 }}>
+        <div style={{
+          position: 'absolute',
+          right: '20px',
+          bottom: isMobile ? '110px' : '40px',
+          zIndex: 4
+        }}>
           <button
             onClick={() => {
               setFormState(heroContent);
@@ -462,13 +499,37 @@ export default function HeroCarousel() {
                 onChange={(e) => setFormState({ ...formState, videoUrl: e.target.value })}
                 style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
               />
-              <input
-                type="text"
-                placeholder="Fallback image URL"
-                value={formState.imageUrl}
-                onChange={(e) => setFormState({ ...formState, imageUrl: e.target.value })}
-                style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-              />
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
+                <input
+                  type="text"
+                  placeholder="Fallback image URL"
+                  value={formState.imageUrl}
+                  onChange={(e) => setFormState({ ...formState, imageUrl: e.target.value })}
+                  style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db', flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={handlePhotoUploadClick}
+                  style={{
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    backgroundColor: '#f3f4f6',
+                    color: '#111827',
+                    fontWeight: 600,
+                    padding: '0.7rem 1rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Upload photo
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handlePhotoFileChange}
+                />
+              </div>
               <input
                 type="text"
                 placeholder="Hero title"

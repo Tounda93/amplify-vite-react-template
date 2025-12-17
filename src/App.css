@@ -40,3 +40,8 @@
 .read-the-docs {
   color: #888;
 }
+
+.collectible-search-input::placeholder {
+  color: inherit;
+  opacity: 0.7;
+}

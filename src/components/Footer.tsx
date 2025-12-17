@@ -57,7 +57,7 @@ export default function Footer({
         bottom: '1rem',
         left: '1rem',
         right: '1rem',
-        padding: '8px 14px',
+        padding: '4px 14px',
         background: 'rgba(15,23,42,0.55)',
         border: '1px solid rgba(255,255,255,0.15)',
         borderRadius: '999px',
@@ -86,6 +86,7 @@ export default function Footer({
               isMobile
               style={{ width: '100%' }}
               dropdownDirection="up"
+              onDismiss={() => setIsSearchOpen(false)}
             />
           </div>
         )}
@@ -115,7 +116,7 @@ export default function Footer({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '4px',
-                  padding: '1px 4px 14px 4px',
+                  padding: '2px 4px 10px 4px',
                   borderRadius: '16px',
                   border: 'none',
                   backgroundColor: 'transparent',
@@ -132,11 +133,11 @@ export default function Footer({
                 </span>
                 <div style={{
                   position: 'absolute',
-                  bottom: '8px',
+                  bottom: '3px',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: '35%',
-                  height: '1.5px',
+                  width: '40%',
+                  height: '2px',
                   borderRadius: '999px',
                   backgroundColor: '#ffffff',
                   opacity: isActive ? 1 : 0,
@@ -161,50 +162,52 @@ export default function Footer({
         margin: '0 auto',
         padding: '3rem 2rem',
       }}>
-        {/* Coming Soon Message */}
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '2rem',
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            marginBottom: '16px',
-          }}>
-            <Car size={32} color="#3498db" />
-            <h3 style={{
-              margin: 0,
-              fontSize: '24px',
-              fontWeight: '700',
-              color: '#111827',
+        {activeSection !== 'home' && (
+          <>
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '2rem',
             }}>
-              Collectible
-            </h3>
-          </div>
-          <p style={{
-            color: '#6b7280',
-            fontSize: '15px',
-            marginBottom: '8px',
-          }}>
-            Your Ultimate Classic Car Encyclopedia
-          </p>
-          <p style={{
-            color: '#9ca3af',
-            fontSize: '13px',
-            fontStyle: 'italic',
-          }}>
-            More content coming soon...
-          </p>
-        </div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                marginBottom: '16px',
+              }}>
+                <Car size={32} color="#3498db" />
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: '#111827',
+                }}>
+                  Collectible
+                </h3>
+              </div>
+              <p style={{
+                color: '#6b7280',
+                fontSize: '15px',
+                marginBottom: '8px',
+              }}>
+                Your Ultimate Classic Car Encyclopedia
+              </p>
+              <p style={{
+                color: '#9ca3af',
+                fontSize: '13px',
+                fontStyle: 'italic',
+              }}>
+                More content coming soon...
+              </p>
+            </div>
 
-        {/* Divider */}
-        <div style={{
-          height: '1px',
-          backgroundColor: '#e5e7eb',
-          margin: '2rem 0',
-        }} />
+            <div style={{
+              height: '1px',
+              backgroundColor: '#e5e7eb',
+              margin: '2rem 0',
+            }} />
+          </>
+        )}
 
         {/* Bottom Section */}
         <div style={{

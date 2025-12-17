@@ -107,6 +107,28 @@ export default function Header({
 
   const headerIsTransparent = !!showHeroCarousel;
   const showGlassEffect = headerIsTransparent || isMobile;
+  const headerBackground = headerIsTransparent ? 'rgba(15,23,42,0.4)' : 'rgba(15,23,42,0.85)';
+  const headerBorderColor = '1px solid rgba(255,255,255,0.2)';
+  const headerShadow = headerIsTransparent ? '0 25px 55px rgba(15, 23, 42, 0.45)' : '0 20px 45px rgba(15,23,42,0.55)';
+  const navInactiveColor = 'rgba(255,255,255,0.65)';
+
+  const computeProfileInitials = () => {
+    const loginId = user?.signInDetails?.loginId || user?.username || '';
+    if (!loginId) {
+      return 'UU';
+    }
+    const cleaned = loginId.replace(/@.*/, '');
+    const segments = cleaned.split(/[\s._-]+/).filter(Boolean);
+    if (segments.length >= 2) {
+      return `${segments[0][0]}${segments[segments.length - 1][0]}`.toUpperCase();
+    }
+    if (segments.length === 1) {
+      const segment = segments[0];
+      return (segment.slice(0, 2)).toUpperCase();
+    }
+    return loginId.slice(0, 2).toUpperCase();
+  };
+  const profileInitials = computeProfileInitials();
 
   const mobileCategoryOrder = ["events", "news", "auctions", "community", "wikicars"];
   const mobileCategories = mobileCategoryOrder
@@ -121,18 +143,18 @@ export default function Header({
         top: 0,
         left: 0,
         right: 0,
-        padding: "12px 16px 18px 16px",
+        padding: "4px 16px 8px 16px",
         zIndex: 1500,
-        background: "rgba(15,23,42,0.55)",
+        background: "rgba(15,23,42,0.65)",
         borderBottom: "1px solid rgba(255,255,255,0.12)",
         boxShadow: "0 25px 55px rgba(15, 23, 42, 0.45)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)"
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)"
       }}>
         <div style={{
           display: "flex",
           flexDirection: "column",
-          gap: "12px"
+          gap: "4px"
         }}>
           <nav style={{
             display: "flex",
@@ -202,52 +224,47 @@ export default function Header({
   return (
     <header style={{
       width: "100%",
-      backgroundColor: headerIsTransparent ? "rgba(15,23,42,0.25)" : "#ffffff",
-      boxShadow: headerIsTransparent ? "0 15px 35px rgba(15, 23, 42, 0.2)" : "0 2px 4px rgba(0, 0, 0, 0.1)",
+      backgroundColor: headerBackground,
+      boxShadow: headerShadow,
       position: headerIsTransparent ? "absolute" : "sticky",
       top: 0,
-      left: headerIsTransparent ? 0 : undefined,
-      zIndex: headerIsTransparent ? 20 : 1000,
-      borderBottom: headerIsTransparent ? "1px solid rgba(255,255,255,0.15)" : "1px solid #e5e7eb",
+      left: 0,
+      zIndex: 1000,
+      borderBottom: headerBorderColor,
+      color: "#ffffff",
       backdropFilter: showGlassEffect ? "blur(18px)" : undefined,
       WebkitBackdropFilter: showGlassEffect ? "blur(18px)" : undefined
     }}>
-
-      {/* ============================================
-          SINGLE ROW: Search Bar + Categories + User Actions
-          ============================================ */}
       <div style={{
         display: "flex",
         alignItems: "center",
+        padding: "12px 5rem",
+        gap: "24px",
         justifyContent: "space-between",
-        position: "relative",
-        padding: "12px 5rem"
+        flexWrap: "nowrap"
       }}>
+        <div style={{ flex: "0 0 auto" }}>
+          <SearchBar
+            searchTerm={searchTerm}
+            onSearchChange={onSearchChange}
+            searchResults={searchResults}
+            searchLoading={searchLoading}
+            onSearchResultSelect={onSearchResultSelect}
+            isMobile={false}
+          />
+        </div>
 
-        {/* Search Bar - Positioned to the left */}
-        <SearchBar
-          searchTerm={searchTerm}
-          onSearchChange={onSearchChange}
-          searchResults={searchResults}
-          searchLoading={searchLoading}
-          onSearchResultSelect={onSearchResultSelect}
-          isMobile={false}
-        />
+        <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+          <nav style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px"
+          }}>
+            {categories.map((category) => {
+              const IconComponent = category.icon;
+              const isActive = activeSection === category.id;
 
-        {/* Category Navigation - Centered */}
-        <nav style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          position: "absolute",
-          left: "50%",
-          transform: "translateX(-50%)"
-        }}>
-          {categories.map((category) => {
-            const IconComponent = category.icon;
-            const isActive = activeSection === category.id;
-
-            return (
+              return (
               <button
                 key={category.id}
                 onClick={() => onSectionChange(category.id)}
@@ -262,7 +279,7 @@ export default function Header({
                   cursor: "pointer",
                   transition: "color 0.2s",
                   backgroundColor: "transparent",
-                  color: isActive ? "#111827" : "#6b7280",
+                  color: isActive ? "#ffffff" : navInactiveColor,
                   position: "relative"
                 }}
               >
@@ -284,22 +301,23 @@ export default function Header({
                   width: "45%",
                   height: "1.5px",
                   borderRadius: "999px",
-                  backgroundColor: "#111827",
+                  backgroundColor: "#ffffff",
                   opacity: isActive ? 1 : 0,
                   transition: "opacity 0.2s"
                 }} />
               </button>
             );
           })}
-        </nav>
+          </nav>
+        </div>
 
-        {/* User Actions - Positioned to the right */}
         <div style={{
           display: "flex",
           alignItems: "center",
-          gap: "20px"
+          gap: "20px",
+          flex: "0 0 auto",
+          color: "#ffffff"
         }}>
-
           {/* My Garage button */}
           <button
             onClick={() => onSectionChange("garage")}
@@ -308,7 +326,7 @@ export default function Header({
               flexDirection: "column",
               alignItems: "center",
               gap: "4px",
-              color: "#4b5563",
+              color: "#ffffff",
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -327,7 +345,7 @@ export default function Header({
               flexDirection: "column",
               alignItems: "center",
               gap: "4px",
-              color: "#4b5563",
+              color: "#ffffff",
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -356,8 +374,8 @@ export default function Header({
               width: "32px",
               height: "32px",
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #000000ff, #313131ff)",
-              border: "2px solid #f3f4f6",
+              background: "linear-gradient(135deg, #111827, #1f2937)",
+              border: "2px solid rgba(255,255,255,0.85)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -365,10 +383,9 @@ export default function Header({
               fontSize: "14px",
               fontWeight: "bold"
             }}>
-              {/* Show first letter of user email */}
-              {user?.signInDetails?.loginId?.charAt(0).toUpperCase() || "U"}
+              {profileInitials}
             </div>
-            <span style={{ fontSize: "11px", color: "#4b5563" }}>Profile</span>
+            <span style={{ fontSize: "11px", color: "#f9fafb" }}>Profile</span>
           </button>
 
           {/* Sign Out button */}
@@ -379,7 +396,7 @@ export default function Header({
               flexDirection: "column",
               alignItems: "center",
               gap: "4px",
-              color: "#ef4444",
+              color: "#f87171",
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -392,7 +409,7 @@ export default function Header({
           </button>
         </div>
       </div>
-      
+
     </header>
   );
 }

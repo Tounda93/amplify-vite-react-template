@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { SearchResultGroups, SearchResultItem } from '../types/search';
 
 interface SearchBarProps {
@@ -11,6 +11,7 @@ interface SearchBarProps {
   isMobile: boolean;
   style?: CSSProperties;
   dropdownDirection?: 'up' | 'down';
+  onDismiss?: () => void;
 }
 
 const searchSections: Array<{ key: keyof SearchResultGroups; label: string; accent: string }> = [
@@ -29,7 +30,8 @@ export default function SearchBar({
   onSearchResultSelect,
   isMobile,
   style,
-  dropdownDirection = 'down'
+  dropdownDirection = 'down',
+  onDismiss
 }: SearchBarProps) {
   const showSearchDropdown = searchTerm.trim().length >= 2;
 
@@ -48,7 +50,7 @@ export default function SearchBar({
             left: '16px',
             top: '50%',
             transform: 'translateY(-50%)',
-            color: isMobile ? '#d1d5db' : '#9ca3af'
+            color: isMobile ? '#d1d5db' : '#ffffff'
           }}
           size={18}
         />
@@ -60,21 +62,47 @@ export default function SearchBar({
           style={{
             width: '100%',
             paddingLeft: '44px',
-            paddingRight: '16px',
+            paddingRight: onDismiss ? '44px' : '16px',
             paddingTop: '10px',
             paddingBottom: '10px',
-            border: isMobile ? '1px solid rgba(255,255,255,0.25)' : '1px solid #e5e7eb',
-            backgroundColor: isMobile ? 'rgba(15,23,42,0.4)' : '#ffffff',
+            border: isMobile ? '1px solid rgba(255,255,255,0.25)' : '1px solid rgba(255,255,255,0.35)',
+            backgroundColor: isMobile ? 'rgba(15,23,42,0.1)' : 'rgba(15,23,42,0.8)',
             borderRadius: '9999px',
-            color: isMobile ? '#f9fafb' : '#374151',
+            color: isMobile ? '#f9fafb' : '#ffffff',
             fontSize: isMobile ? '16px' : '14px',
             outline: 'none',
             boxSizing: 'border-box',
-            boxShadow: isMobile ? '0 15px 35px rgba(15, 23, 42, 0.35)' : undefined,
-            backdropFilter: isMobile ? 'blur(8px)' : undefined,
-            WebkitBackdropFilter: isMobile ? 'blur(8px)' : undefined
+            boxShadow: isMobile ? '0 15px 35px rgba(15, 23, 42, 0.35)' : '0 15px 35px rgba(15,23,42,0.45)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)'
           }}
+          className="collectible-search-input"
         />
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Close search"
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              border: 'none',
+              background: 'none',
+              color: '#ffffff',
+              cursor: 'pointer',
+              padding: 0,
+              width: '24px',
+              height: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {showSearchDropdown && (
