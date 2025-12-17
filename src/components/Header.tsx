@@ -155,14 +155,14 @@ export default function Header({
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    justifyContent: "center",
+                  justifyContent: "center",
                   gap: "4px",
-                    padding: "6px 2px 12px 2px",
-                    borderRadius: "16px",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "#f9fafb",
-                    backgroundColor: "transparent",
+                  padding: "8px 4px 14px 4px",
+                  borderRadius: "16px",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#f9fafb",
+                  backgroundColor: "transparent",
                     boxShadow: "none",
                     transition: "color 0.2s",
                     position: "relative"
@@ -173,18 +173,18 @@ export default function Header({
                     strokeWidth={isActive ? 2.4 : 1.8}
                   />
                   <span style={{
-                    fontSize: isMobile ? "clamp(9px, 2.7vw, 11px)" : "12px",
-                    fontWeight: 500
+                    fontSize: "11px",
+                    fontWeight: 400
                   }}>
                     {category.label}
                   </span>
                   <div style={{
                     position: "absolute",
-                    bottom: "2px",
+                    bottom: "6px",
                     left: "50%",
                     transform: "translateX(-50%)",
-                    width: "50%",
-                    height: "3px",
+                    width: "35%",
+                    height: "1.5px",
                     borderRadius: "999px",
                     backgroundColor: "#ffffff",
                     opacity: isActive ? 1 : 0,
@@ -238,7 +238,7 @@ export default function Header({
         <nav style={{
           display: "flex",
           alignItems: "center",
-          gap: "8px",
+          gap: "12px",
           position: "absolute",
           left: "50%",
           transform: "translateX(-50%)"
@@ -256,13 +256,14 @@ export default function Header({
                   flexDirection: "column",
                   alignItems: "center",
                   gap: "4px",
-                  padding: "8px 24px",
-                  borderRadius: "8px",
+                  padding: "8px 12px 14px 12px",
+                  borderRadius: "12px",
                   border: "none",
                   cursor: "pointer",
-                  transition: "all 0.2s",
-                  backgroundColor: isActive ? "#f3f4f6" : "transparent",
-                  color: isActive ? "#111827" : "#6b7280"
+                  transition: "color 0.2s",
+                  backgroundColor: "transparent",
+                  color: isActive ? "#111827" : "#6b7280",
+                  position: "relative"
                 }}
               >
                 <IconComponent
@@ -270,11 +271,23 @@ export default function Header({
                   strokeWidth={isActive ? 2 : 1.5}
                 />
                 <span style={{
-                  fontSize: "12px",
-                  fontWeight: isActive ? 500 : 400
+                  fontSize: "11px",
+                  fontWeight: 400
                 }}>
                   {category.label}
                 </span>
+                <div style={{
+                  position: "absolute",
+                  bottom: "6px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: "45%",
+                  height: "1.5px",
+                  borderRadius: "999px",
+                  backgroundColor: "#111827",
+                  opacity: isActive ? 1 : 0,
+                  transition: "opacity 0.2s"
+                }} />
               </button>
             );
           })}

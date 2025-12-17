@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Edit, Play, Pause, SkipForward } from 'lucide-react';
+import { Edit, Play, Pause, SkipForward, X } from 'lucide-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { isAdminEmail } from '../constants/admins';
@@ -82,6 +82,7 @@ export default function HeroCarousel() {
   const controlIconSize = isMobile ? 12 : 18;
   const showReadMore = isMobile && !isHeroExpanded;
   const hasCTA = Boolean(heroContent.ctaText && heroContent.ctaLink);
+  const drawerWidth = isMobile ? '100%' : '420px';
 
   const playerRef = useRef<YTPlayer | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
@@ -276,57 +277,49 @@ export default function HeroCarousel() {
             fontSize: isMobile ? '14px' : '18px',
             marginBottom: '20px',
             color: 'rgba(255,255,255,0.85)',
-            display: isMobile && !isHeroExpanded ? '-webkit-box' : 'block',
-            WebkitLineClamp: isMobile && !isHeroExpanded ? 3 : 'unset',
-            WebkitBoxOrient: isMobile && !isHeroExpanded ? 'vertical' : undefined,
-            overflow: isMobile && !isHeroExpanded ? 'hidden' : undefined
+            display: showReadMore ? '-webkit-box' : 'block',
+            WebkitLineClamp: showReadMore ? 3 : 'unset',
+            WebkitBoxOrient: showReadMore ? 'vertical' : undefined,
+            overflow: showReadMore ? 'hidden' : undefined
           }}>
             {heroContent.subtitle}
           </p>
-          {(showReadMore || hasCTA) && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: showReadMore && hasCTA ? '1rem' : 0
-            }}>
-              {showReadMore && (
-                <button
-                  type="button"
-                  onClick={() => setHeroExpanded(true)}
-                  style={{
-                    border: '1px solid rgba(255,255,255,0.5)',
-                    backgroundColor: 'rgba(15,23,42,0.45)',
-                    color: '#ffffff',
-                    padding: '8px 16px',
-                    borderRadius: '999px',
-                    cursor: 'pointer',
-                    fontSize: '12px'
-                  }}
-                >
-                  Read more
-                </button>
-              )}
-              {hasCTA && (
-                <a
-                  href={heroContent.ctaLink}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '12px 28px',
-                    borderRadius: '999px',
-                    backgroundColor: '#737373ff',
-                    color: 'white',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    fontSize: isMobile ? '12px' : '14px'
-                  }}
-                >
-                  {heroContent.ctaText}
-                </a>
-              )}
-            </div>
+          {showReadMore && (
+            <button
+              type="button"
+              onClick={() => setHeroExpanded(true)}
+              style={{
+                border: '1px solid rgba(255,255,255,0.5)',
+                backgroundColor: 'rgba(15,23,42,0.45)',
+                color: '#ffffff',
+                padding: '8px 16px',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                marginBottom: '18px'
+              }}
+            >
+              Read more
+            </button>
+          )}
+          {hasCTA && (
+            <a
+              href={heroContent.ctaLink}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '12px 28px',
+                borderRadius: '999px',
+                backgroundColor: '#737373ff',
+                color: 'white',
+                fontWeight: 600,
+                textDecoration: 'none',
+                fontSize: isMobile ? '12px' : '14px'
+              }}
+            >
+              {heroContent.ctaText}
+            </a>
           )}
         </div>
 
@@ -380,7 +373,7 @@ export default function HeroCarousel() {
       </div>
 
       {isAdmin && (
-        <div style={{ position: 'absolute', top: '110px', right: '20px', zIndex: 4 }}>
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 4 }}>
           <button
             onClick={() => {
               setFormState(heroContent);
@@ -404,104 +397,148 @@ export default function HeroCarousel() {
         </div>
       )}
 
-      {isAdmin && editing && (
-        <div
-          style={{
-            margin: '1.5rem auto 0 auto',
-            padding: '1.5rem',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            backgroundColor: '#ffffff',
-            boxShadow: '0 20px 40px rgba(15,23,42,0.12)',
-            maxWidth: '960px',
-            width: '94%',
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>Hero media configuration</h3>
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
-            <input
-              type="text"
-              placeholder="YouTube URL"
-              value={formState.videoUrl}
-              onChange={(e) => setFormState({ ...formState, videoUrl: e.target.value })}
-              style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-            />
-            <input
-              type="text"
-              placeholder="Fallback image URL"
-              value={formState.imageUrl}
-              onChange={(e) => setFormState({ ...formState, imageUrl: e.target.value })}
-              style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-            />
-            <input
-              type="text"
-              placeholder="Hero title"
-              value={formState.title}
-              onChange={(e) => setFormState({ ...formState, title: e.target.value })}
-              style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-            />
-            <input
-              type="text"
-              placeholder="Today's pick label"
-              value={formState.todaysHighlight || ''}
-              onChange={(e) => setFormState({ ...formState, todaysHighlight: e.target.value })}
-              style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-            />
-            <textarea
-              placeholder="Subtitle / description"
-              value={formState.subtitle}
-              onChange={(e) => setFormState({ ...formState, subtitle: e.target.value })}
-              rows={3}
-              style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db', resize: 'vertical' }}
-            />
-            <input
-              type="text"
-              placeholder="CTA text"
-              value={formState.ctaText}
-              onChange={(e) => setFormState({ ...formState, ctaText: e.target.value })}
-              style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-            />
-            <input
-              type="text"
-              placeholder="CTA link"
-              value={formState.ctaLink}
-              onChange={(e) => setFormState({ ...formState, ctaLink: e.target.value })}
-              style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-            />
+      {isAdmin && (
+        <>
+          <div
+            onClick={() => setEditing(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0,0,0,0.45)',
+              opacity: editing ? 1 : 0,
+              pointerEvents: editing ? 'auto' : 'none',
+              transition: 'opacity 0.3s ease',
+              zIndex: 1800
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              height: '100vh',
+              width: drawerWidth,
+              maxWidth: '100%',
+              backgroundColor: '#ffffff',
+              boxShadow: '-24px 0 45px rgba(15,23,42,0.35)',
+              transform: editing ? 'translateX(0)' : 'translateX(110%)',
+              transition: 'transform 0.35s ease',
+              zIndex: 1801,
+              display: 'flex',
+              flexDirection: 'column',
+              padding: isMobile ? '1.25rem' : '2rem',
+              pointerEvents: editing ? 'auto' : 'none'
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1rem'
+            }}>
+              <h3 style={{ margin: 0 }}>Hero media configuration</h3>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  padding: '0.3rem',
+                  borderRadius: '8px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <input
+                type="text"
+                placeholder="YouTube URL"
+                value={formState.videoUrl}
+                onChange={(e) => setFormState({ ...formState, videoUrl: e.target.value })}
+                style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+              />
+              <input
+                type="text"
+                placeholder="Fallback image URL"
+                value={formState.imageUrl}
+                onChange={(e) => setFormState({ ...formState, imageUrl: e.target.value })}
+                style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+              />
+              <input
+                type="text"
+                placeholder="Hero title"
+                value={formState.title}
+                onChange={(e) => setFormState({ ...formState, title: e.target.value })}
+                style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+              />
+              <input
+                type="text"
+                placeholder="Today's pick label"
+                value={formState.todaysHighlight || ''}
+                onChange={(e) => setFormState({ ...formState, todaysHighlight: e.target.value })}
+                style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+              />
+              <textarea
+                placeholder="Subtitle / description"
+                value={formState.subtitle}
+                onChange={(e) => setFormState({ ...formState, subtitle: e.target.value })}
+                rows={3}
+                style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db', resize: 'vertical' }}
+              />
+              <input
+                type="text"
+                placeholder="CTA text"
+                value={formState.ctaText}
+                onChange={(e) => setFormState({ ...formState, ctaText: e.target.value })}
+                style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+              />
+              <input
+                type="text"
+                placeholder="CTA link"
+                value={formState.ctaLink}
+                onChange={(e) => setFormState({ ...formState, ctaLink: e.target.value })}
+                style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+              />
+            </div>
+            <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={handleSave}
+                style={{
+                  padding: '0.65rem 1.5rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#111827',
+                  color: 'white',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Save hero
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                style={{
+                  padding: '0.65rem 1.5rem',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  color: '#111827',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-          <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem' }}>
-            <button
-              type="button"
-              onClick={handleSave}
-              style={{
-                padding: '0.65rem 1.5rem',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: '#111827',
-                color: 'white',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Save hero
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              style={{
-                padding: '0.65rem 1.5rem',
-                borderRadius: '8px',
-                border: '1px solid #d1d5db',
-                backgroundColor: 'white',
-                color: '#111827',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

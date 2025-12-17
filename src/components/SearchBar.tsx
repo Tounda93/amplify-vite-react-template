@@ -67,7 +67,7 @@ export default function SearchBar({
             backgroundColor: isMobile ? 'rgba(15,23,42,0.4)' : '#ffffff',
             borderRadius: '9999px',
             color: isMobile ? '#f9fafb' : '#374151',
-            fontSize: '14px',
+            fontSize: isMobile ? '16px' : '14px',
             outline: 'none',
             boxSizing: 'border-box',
             boxShadow: isMobile ? '0 15px 35px rgba(15, 23, 42, 0.35)' : undefined,

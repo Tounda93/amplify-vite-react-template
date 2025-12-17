@@ -547,7 +547,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       overflowX: 'visible',
       width: '100%',
       position: 'relative',
-      paddingTop: isMobile ? '8rem' : undefined
+      paddingTop: isMobile ? '5.5rem' : undefined
     }}>
       <Header
         user={user}
