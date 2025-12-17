@@ -2,12 +2,13 @@ import EventsCarousel from './EventsCarousel';
 import NewsCarousel from './NewsCarousel';
 import AuctionsCarousel from './AuctionsCarousel';
 import { useIsMobile } from '../hooks/useIsMobile';
+import './HomePage.css';
 export default function HomePage() {
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '2rem' : '5rem';
 
   return (
-    <div style={{ width: '100%', overflowX: 'hidden' }}>
+    <div className="home-page" style={{ width: '100%', overflowX: 'hidden' }}>
       {/* Events Carousel */}
       <div style={{
         width: '100%',

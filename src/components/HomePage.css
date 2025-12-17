@@ -1,0 +1,7 @@
+.home-page {
+  color: #ffffff;
+}
+
+.home-page * {
+  color: #ffffff !important;
+}

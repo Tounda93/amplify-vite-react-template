@@ -544,7 +544,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#ffffffff',
+      backgroundColor: '#010312ff',
       overflowX: 'visible',
       width: '100%',
       position: 'relative',

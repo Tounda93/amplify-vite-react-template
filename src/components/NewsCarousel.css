@@ -1,0 +1,150 @@
+.news-card {
+  position: relative;
+  overflow: visible;
+  background-color: transparent;
+  transition: transform 0.2s ease;
+}
+
+.news-card__content {
+  position: relative;
+  background-color: rgb(26, 26, 27);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 0px solid #e5e7eb;
+  transition: box-shadow 0.2s ease;
+  z-index: 1;
+}
+
+.news-card--active {
+  z-index: 1;
+}
+
+.news-card-frame-text {
+  --frame-thickness: 8px;
+  --frame-speed: 20s;
+  --frame-font-size: 11px;
+  position: absolute;
+  inset: calc(var(--frame-thickness) * -1);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.frame-strip {
+  position: absolute;
+  display: flex;
+  gap: 0.5rem;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: var(--frame-font-size);
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: white;
+  line-height: var(--frame-thickness);
+  height: var(--frame-thickness);
+}
+
+.frame-strip span {
+  display: inline-block;
+  padding: 0 0.25rem;
+  animation-duration: var(--frame-speed);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.frame-strip span:nth-child(2) {
+  animation-delay: calc(var(--frame-speed) / -2);
+}
+
+.frame-strip-top,
+.frame-strip-bottom {
+  left: 0;
+  right: 0;
+}
+
+.frame-strip-top {
+  top: 0;
+}
+
+.frame-strip-bottom {
+  bottom: 0;
+}
+
+.frame-strip-right,
+.frame-strip-left {
+  top: 0;
+  bottom: 0;
+  width: var(--frame-thickness);
+  writing-mode: vertical-rl;
+}
+
+.frame-strip-right {
+  right: 0;
+}
+
+.frame-strip-left {
+  left: 0;
+  transform: rotate(180deg);
+}
+
+.frame-strip-top span {
+  animation-name: frame-horizontal-forward;
+}
+
+.frame-strip-bottom span {
+  animation-name: frame-horizontal-backward;
+}
+
+.frame-strip-right span {
+  animation-name: frame-vertical-forward;
+}
+
+.frame-strip-left span {
+  animation-name: frame-vertical-backward;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .news-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .news-card:hover .news-card__content {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+}
+
+@keyframes frame-horizontal-forward {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes frame-horizontal-backward {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes frame-vertical-forward {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes frame-vertical-backward {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-100%);
+  }
+}

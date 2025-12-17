@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { NewsItem, RSS_FEEDS, fetchNewsFeedItems } from './utils/newsFeed';
+import { useIsMobile } from './hooks/useIsMobile';
 
 export function NewsSection() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<string>('all');
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchAllNews();
@@ -58,7 +60,16 @@ export function NewsSection() {
   return (
     <div>
       {/* Source Filter */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div style={{
+        marginBottom: '1.5rem',
+        display: 'flex',
+        gap: '0.5rem',
+        flexWrap: isMobile ? 'nowrap' : 'wrap',
+        overflowX: isMobile ? 'auto' : undefined,
+        paddingBottom: isMobile ? '0.25rem' : undefined,
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}>
         <button
           onClick={() => setSelectedSource('all')}
           style={{
@@ -68,6 +79,8 @@ export function NewsSection() {
             border: 'none',
             borderRadius: '20px',
             cursor: 'pointer',
+            flexShrink: 0,
+            whiteSpace: 'nowrap'
           }}
         >
           All Sources
@@ -83,6 +96,8 @@ export function NewsSection() {
               border: 'none',
               borderRadius: '20px',
               cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap'
             }}
           >
             {feed.name}

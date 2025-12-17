@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { fetchNewsFeedItems, type NewsItem } from '../utils/newsFeed';
+import './NewsCarousel.css';
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80';
+const FRAME_TEXT = 'Collectible Collectible Collectible Collectible Collectible Collectible Collectible';
 
 const FALLBACK_NEWS: NewsItem[] = [
   {
@@ -34,6 +36,9 @@ const FALLBACK_NEWS: NewsItem[] = [
 export default function NewsCarousel() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
+  const [allowHoverEffects, setAllowHoverEffects] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,6 +59,59 @@ export default function NewsCarousel() {
     };
     loadNews();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+    const mediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const updateHoverCapability = (event?: MediaQueryListEvent) => {
+      setAllowHoverEffects(event ? event.matches : mediaQuery.matches);
+    };
+    updateHoverCapability();
+    mediaQuery.addEventListener('change', updateHoverCapability);
+    return () => mediaQuery.removeEventListener('change', updateHoverCapability);
+  }, []);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || news.length === 0) {
+      return;
+    }
+
+    const updateActiveCard = () => {
+      const cards = Array.from(container.children) as HTMLElement[];
+      if (cards.length === 0) {
+        return;
+      }
+
+      const viewportCenter = window.innerWidth / 2;
+      let closestIndex = 0;
+      let minDistance = Number.POSITIVE_INFINITY;
+
+      cards.forEach((card, index) => {
+        const rect = card.getBoundingClientRect();
+        const cardCenter = rect.left + rect.width / 2;
+        const distance = Math.abs(viewportCenter - cardCenter);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      setActiveCardIndex(closestIndex);
+    };
+
+    updateActiveCard();
+    container.addEventListener('scroll', updateActiveCard);
+    window.addEventListener('resize', updateActiveCard);
+
+    return () => {
+      container.removeEventListener('scroll', updateActiveCard);
+      window.removeEventListener('resize', updateActiveCard);
+    };
+  }, [news]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -111,114 +169,150 @@ export default function NewsCarousel() {
           display: 'flex',
           gap: '20px',
           overflowX: 'auto',
+          overflowY: 'visible',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          padding: '0 5rem 10px 5rem',
+          padding: '10px 5rem 10px 5rem',
           marginLeft: '-5rem',
           marginRight: '-5rem'
         }}
       >
-        {news.map((item, index) => (
-          <div
-            key={index}
-            style={{
-              minWidth: '320px',
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              border: '1px solid #e5e7eb',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
-              e.currentTarget.style.transform = 'translateY(-4px)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-            onClick={() => window.open(item.link, '_blank')}
-          >
-            {/* News Image */}
-            <div style={{
-              width: '100%',
-              height: '180px',
-              backgroundColor: '#f3f4f6',
-              backgroundImage: `url(${item.thumbnail || FALLBACK_IMAGE})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              position: 'relative',
-            }}>
-              {/* Source Badge */}
-              <div style={{
-                position: 'absolute',
-                top: '12px',
-                left: '12px',
-                padding: '4px 12px',
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                color: 'white',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: '600',
-              }}>
-                {item.source}
+        {news.map((item, index) => {
+          const shouldShowFrame = allowHoverEffects
+            ? hoveredCardIndex === index
+            : index === activeCardIndex;
+          return (
+            <div
+              key={index}
+              className={`news-card${shouldShowFrame ? ' news-card--active' : ''}`}
+              style={{
+                minWidth: '320px',
+                marginTop: '20px',
+                marginBottom: '12px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease',
+                position: 'relative',
+                overflow: 'visible',
+                backgroundColor: 'transparent',
+                boxShadow: shouldShowFrame ? '0 0 0 8px red' : 'none',
+              }}
+              onMouseEnter={() => {
+                if (allowHoverEffects) {
+                  setHoveredCardIndex(index);
+                }
+              }}
+              onMouseLeave={() => {
+                if (allowHoverEffects) {
+                  setHoveredCardIndex(null);
+                }
+              }}
+              onClick={() => window.open(item.link, '_blank')}
+            >
+              {shouldShowFrame && (
+                <div className="news-card-frame-text" aria-hidden="true">
+                  <div className="frame-strip frame-strip-top">
+                    <span>{FRAME_TEXT}</span>
+                    <span>{FRAME_TEXT}</span>
+                  </div>
+                  <div className="frame-strip frame-strip-right">
+                    <span>{FRAME_TEXT}</span>
+                    <span>{FRAME_TEXT}</span>
+                  </div>
+                  <div className="frame-strip frame-strip-bottom">
+                    <span>{FRAME_TEXT}</span>
+                    <span>{FRAME_TEXT}</span>
+                  </div>
+                  <div className="frame-strip frame-strip-left">
+                    <span>{FRAME_TEXT}</span>
+                    <span>{FRAME_TEXT}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="news-card__content">
+                {/* News Image */}
+                <div style={{
+                  width: '100%',
+                  height: '310px',
+                  backgroundColor: '#f3f4f6',
+                  backgroundImage: `url(${item.thumbnail || FALLBACK_IMAGE})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  position: 'relative',
+                }}>
+                  {/* Source Badge */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    padding: '4px 12px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    color: 'white',
+                    borderRadius: '5px',
+                    fontSize: '12px',
+                    fontWeight: '400',
+                  }}>
+                    {item.source}
+                  </div>
+                </div>
+
+                {/* News Details */}
+                <div style={{ padding: '13px' }}>
+                <div style={{
+                  fontSize: '12px',
+                  color: 'white',
+                  marginBottom: '10px',
+                  fontWeight: '400',
+                }}>
+                  {formatDate(item.pubDate)}
+                </div>
+
+                  <h3 style={{
+                    margin: '0 0 10px 0',
+                    fontSize: '23px',
+                    fontWeight: '200',
+                    color: 'white',
+                    lineHeight: '1.2',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                  }}>
+                    {item.title}
+                  </h3>
+
+                  <p style={{
+                    margin: '0 0 12px 0',
+                    fontSize: '12px',
+                    color: 'white',
+                    fontWeight: '300',
+                    lineHeight: '1.3',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                  }}>
+                    {item.description}
+                  </p>
+
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: 'white',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                  }}>
+                    Read More <ExternalLink size={13} />
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* News Details */}
-            <div style={{ padding: '16px' }}>
-              <div style={{
-                fontSize: '11px',
-                color: '#9ca3af',
-                marginBottom: '8px',
-                fontWeight: '600',
-              }}>
-                {formatDate(item.pubDate)}
-              </div>
-
-              <h3 style={{
-                margin: '0 0 10px 0',
-                fontSize: '15px',
-                fontWeight: '700',
-                color: '#111827',
-                lineHeight: '1.4',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-              }}>
-                {item.title}
-              </h3>
-
-              <p style={{
-                margin: '0 0 12px 0',
-                fontSize: '13px',
-                color: '#6b7280',
-                lineHeight: '1.5',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical',
-              }}>
-                {item.description}
-              </p>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                color: '#3498db',
-                fontSize: '13px',
-                fontWeight: '600',
-              }}>
-                Read More <ExternalLink size={13} />
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
