@@ -404,11 +404,11 @@ export default function HeroCarousel() {
         )}
       </div>
 
-      {isAdmin && (
+      {isAdmin && !isMobile && (
         <div style={{
           position: 'absolute',
           right: '20px',
-          bottom: isMobile ? '110px' : '40px',
+          bottom: '40px',
           zIndex: 4
         }}>
           <button

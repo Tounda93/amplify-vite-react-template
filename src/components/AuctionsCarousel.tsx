@@ -175,7 +175,9 @@ export default function AuctionsCarousel() {
           overflowX: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          paddingBottom: '10px',
+          padding: '0 5rem 10px 5rem',
+          marginLeft: '-5rem',
+          marginRight: '-5rem'
         }}
       >
         {auctions.map((auction) => (

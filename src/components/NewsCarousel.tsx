@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { fetchNewsFeedItems, type NewsItem } from '../utils/newsFeed';
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80';
@@ -55,15 +55,6 @@ export default function NewsCarousel() {
     loadNews();
   }, []);
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (!scrollRef.current) return;
-    const scrollAmount = 350;
-    scrollRef.current.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
-    });
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -102,7 +93,6 @@ export default function NewsCarousel() {
 
   return (
     <div style={{ marginBottom: '3rem', position: 'relative' }}>
-      {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -112,40 +102,6 @@ export default function NewsCarousel() {
         <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '700' }}>
           Latest News
         </h2>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => scroll('left')}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              border: '1px solid #e5e7eb',
-              backgroundColor: 'white',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <ChevronLeft size={20} color="#666" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              border: '1px solid #e5e7eb',
-              backgroundColor: 'white',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <ChevronRight size={20} color="#666" />
-          </button>
-        </div>
       </div>
 
       {/* Carousel */}
@@ -157,7 +113,9 @@ export default function NewsCarousel() {
           overflowX: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          paddingBottom: '10px',
+          padding: '0 5rem 10px 5rem',
+          marginLeft: '-5rem',
+          marginRight: '-5rem'
         }}
       >
         {news.map((item, index) => (
