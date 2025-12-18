@@ -25,6 +25,106 @@ const AUCTION_HOUSES = [
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80';
 
+const parseMoneyValue = (value: string | null | undefined): number | undefined => {
+  if (!value) return undefined;
+  const cleaned = value.replace(/[^0-9.]/g, '');
+  if (!cleaned) return undefined;
+  const parsed = parseFloat(cleaned);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+const parseEstimateRange = (estimate: string | null | undefined): { low?: number; high?: number } => {
+  if (!estimate) return {};
+  const matches = estimate.match(/[\d,.]+/g);
+  if (!matches || matches.length === 0) return {};
+  const low = parseMoneyValue(matches[0]);
+  const high = matches[1] ? parseMoneyValue(matches[1]) : undefined;
+  return { low, high };
+};
+
+const detectAuctionHouseFromUrl = (url?: string): string => {
+  if (!url) return 'Unknown';
+  const value = url.toLowerCase();
+  if (value.includes('broadarrow')) return 'Broad Arrow';
+  if (value.includes('bonhams')) return 'Bonhams';
+  if (value.includes('rmsothebys') || value.includes('rmauction')) return "RM Sotheby's";
+  return 'Unknown';
+};
+
+const normalizeStatus = (status?: string | null): string => {
+  const value = (status || '').toLowerCase();
+  if (value.includes('sold')) return 'sold';
+  if (value.includes('live')) return 'live';
+  if (value.includes('pass') || value.includes('unsold')) return 'not_sold';
+  return 'upcoming';
+};
+
+const flattenExtensionPayload = (payload: any): any[] => {
+  console.log('[flattenExtensionPayload] Input type:', typeof payload, Array.isArray(payload) ? 'array' : '');
+
+  if (!payload) {
+    console.log('[flattenExtensionPayload] payload is falsy');
+    return [];
+  }
+  if (Array.isArray(payload)) {
+    console.log('[flattenExtensionPayload] payload is array with', payload.length, 'items');
+    return payload;
+  }
+
+  console.log('[flattenExtensionPayload] payload keys:', Object.keys(payload));
+
+  const auctionsById = new Map<string, any>();
+  if (Array.isArray(payload.auctions)) {
+    console.log('[flattenExtensionPayload] Found', payload.auctions.length, 'auctions');
+    payload.auctions.forEach((auction: any) => {
+      if (auction?.auctionId) {
+        auctionsById.set(auction.auctionId, auction);
+      }
+    });
+  }
+
+  const lotsById = payload.lotsByAuctionId || {};
+  const lotsByIdKeys = Object.keys(lotsById);
+  console.log('[flattenExtensionPayload] lotsByAuctionId keys:', lotsByIdKeys);
+
+  const lots: any[] = [];
+  Object.entries(lotsById).forEach(([auctionId, lotArray]) => {
+    console.log('[flattenExtensionPayload] Processing auctionId:', auctionId, 'isArray:', Array.isArray(lotArray), 'length:', Array.isArray(lotArray) ? lotArray.length : 'N/A');
+
+    if (!Array.isArray(lotArray)) {
+      console.log('[flattenExtensionPayload] Skipping', auctionId, '- not an array');
+      return;
+    }
+
+    const meta = auctionsById.get(auctionId);
+    lotArray.forEach((lot: any, index: number) => {
+      const { low, high } = parseEstimateRange(lot.estimate);
+      lots.push({
+        auctionHouse: lot.auctionHouse || detectAuctionHouseFromUrl(meta?.auctionUrl || lot.lotUrl),
+        lotNumber: lot.lotNumber || String(index + 1),
+        title: lot.lotTitle || lot.title || 'Unknown Vehicle',
+        description: lot.description || '',
+        imageUrl: lot.lotCoverImageUrl || lot.imageUrl,
+        estimateLow: low,
+        estimateHigh: high,
+        currency: lot.currency || 'USD',
+        currentBid: parseMoneyValue(lot.currentBid),
+        soldPrice: lot.statusLabel?.toLowerCase() === 'sold' ? parseMoneyValue(lot.currentBid) : undefined,
+        reserveStatus: lot.reserveStatus || 'unknown',
+        status: normalizeStatus(lot.statusLabel),
+        auctionDate: meta?.biddingStartDateTime?.iso || null,
+        auctionLocation: meta?.location || '',
+        auctionName: meta?.title || auctionId,
+        lotUrl: lot.lotUrl,
+        lastUpdated: new Date().toISOString(),
+      });
+    });
+  });
+
+  console.log('[flattenExtensionPayload] Total lots processed:', lots.length);
+  return lots;
+};
+
 export function AuctionsSection() {
   const [auctionEvents, setAuctionEvents] = useState<AuctionEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<AuctionEvent | null>(null);
@@ -105,13 +205,39 @@ export function AuctionsSection() {
   const handleImportFromExtension = async () => {
     try {
       const data = JSON.parse(importJson);
-      if (!Array.isArray(data)) {
-        alert('Invalid data format. Expected an array of auction lots.');
+      console.log('Parsed JSON data:', data);
+      console.log('lotsByAuctionId keys:', data.lotsByAuctionId ? Object.keys(data.lotsByAuctionId) : 'none');
+
+      const normalizedLots = flattenExtensionPayload(data);
+      console.log('Normalized lots count:', normalizedLots?.length || 0);
+
+      if (!normalizedLots || normalizedLots.length === 0) {
+        // Provide more helpful error message
+        let errorMsg = 'Invalid data format.\n\n';
+        if (!data) {
+          errorMsg += 'No data found in JSON.';
+        } else if (Array.isArray(data) && data.length === 0) {
+          errorMsg += 'Empty array provided.';
+        } else if (data.lotsByAuctionId) {
+          const auctionIds = Object.keys(data.lotsByAuctionId);
+          if (auctionIds.length === 0) {
+            errorMsg += 'No auctions found in lotsByAuctionId.';
+          } else {
+            const totalLots = auctionIds.reduce((sum, id) => {
+              const lots = data.lotsByAuctionId[id];
+              return sum + (Array.isArray(lots) ? lots.length : 0);
+            }, 0);
+            errorMsg += `Found ${auctionIds.length} auction(s) but ${totalLots} lots could not be processed.`;
+          }
+        } else {
+          errorMsg += 'Expected { auctions: [], lotsByAuctionId: { ... } } format.';
+        }
+        alert(errorMsg);
         return;
       }
       
       let imported = 0;
-      for (const lot of data) {
+      for (const lot of normalizedLots) {
         try {
           await client.models.Auction.create({
             auctionHouse: lot.auctionHouse || 'Unknown',
