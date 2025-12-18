@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Car, Home, MessageSquare, Search, User } from 'lucide-react';
+import { Car, MessageSquare, Search, User } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import SearchBar from './SearchBar';
 import { SearchResultGroups, SearchResultItem } from '../types/search';
@@ -44,7 +44,6 @@ export default function Footer({
 
   if (isMobile) {
     const navItems = [
-      { id: 'home', label: 'Home', icon: Home },
       { id: 'search', label: 'Search', icon: Search, isSearch: true },
       { id: 'garage', label: 'My Garage', icon: Car },
       { id: 'chat', label: 'Chat', icon: MessageSquare },

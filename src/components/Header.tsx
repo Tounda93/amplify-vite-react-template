@@ -3,11 +3,9 @@ import {
   Newspaper,
   Users,
   Calendar,
-  Gavel,
   Car,
   MessageSquare,
   LogOut,
-  BookOpen,
   LucideIcon
 } from "lucide-react";
 import { SearchResultGroups, SearchResultItem } from '../types/search';
@@ -100,9 +98,7 @@ export default function Header({
     { id: "home", label: "Home", icon: Home },
     { id: "events", label: "Events", icon: Calendar },
     { id: "news", label: "News", icon: Newspaper },
-    { id: "auctions", label: "Auctions", icon: Gavel },
     { id: "community", label: "Community", icon: Users },
-    { id: "wikicars", label: "WikiCars", icon: BookOpen },
   ];
 
   const headerIsTransparent = !!showHeroCarousel;
@@ -130,7 +126,7 @@ export default function Header({
   };
   const profileInitials = computeProfileInitials();
 
-  const mobileCategoryOrder = ["events", "news", "auctions", "community", "wikicars"];
+  const mobileCategoryOrder = ["home", "events", "news", "community"];
   const mobileCategories = mobileCategoryOrder
     .map(id => categories.find(category => category.id === id))
     .filter((category): category is Category => Boolean(category));
