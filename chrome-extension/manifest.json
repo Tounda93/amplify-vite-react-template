@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Collectible Tracker Scraper",
+  "version": "0.1.0",
+  "description": "Scrape auction lot title/estimate/cover image from supported auction sites.",
+  "action": {
+    "default_title": "Scrape This Page",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting", "clipboardWrite"],
+  "host_permissions": ["https://rmsothebys.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://rmsothebys.com/*"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
+
