@@ -526,10 +526,10 @@ export default function EventsCarousel() {
                 alignItems: 'center',
                 gap: '8px',
                 marginBottom: '12px',
-                color: '#4b5563',
+                color: '#000000',
                 fontSize: '14px',
               }}>
-                <Calendar size={18} color="#6b7280" />
+                <Calendar size={18} color="#000000" />
                 <span style={{ fontWeight: '500' }}>
                   {formatDate(selectedEvent.startDate!)}
                   {selectedEvent.endDate && selectedEvent.endDate !== selectedEvent.startDate && (
@@ -544,10 +544,10 @@ export default function EventsCarousel() {
                 alignItems: 'flex-start',
                 gap: '8px',
                 marginBottom: '16px',
-                color: '#4b5563',
+                color: '#000000',
                 fontSize: '14px',
               }}>
-                <MapPin size={18} color="#6b7280" style={{ marginTop: '2px', flexShrink: 0 }} />
+                <MapPin size={18} color="#000000" style={{ marginTop: '2px', flexShrink: 0 }} />
                 <div>
                   {selectedEvent.venue && <div style={{ fontWeight: '500' }}>{selectedEvent.venue}</div>}
                   {selectedEvent.address && <div>{selectedEvent.address}</div>}
@@ -564,7 +564,7 @@ export default function EventsCarousel() {
                   borderRadius: '6px',
                   fontSize: '14px',
                   fontWeight: '600',
-                  color: '#374151',
+                  color: '#000000',
                   marginBottom: '16px',
                 }}>
                   {selectedEvent.price}
@@ -575,7 +575,7 @@ export default function EventsCarousel() {
               {selectedEvent.description && (
                 <div style={{
                   marginBottom: '24px',
-                  color: '#4b5563',
+                  color: '#000000',
                   fontSize: '14px',
                   lineHeight: '1.6',
                 }}>
@@ -631,14 +631,14 @@ export default function EventsCarousel() {
                     gap: '8px',
                     marginBottom: '12px',
                   }}>
-                    <Car size={18} color="#374151" />
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                    <Car size={18} color="#000000" />
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#000000' }}>
                       RSVP - Which car will you bring?
                     </span>
                   </div>
 
                   {!isAuthenticated ? (
-                    <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                    <p style={{ fontSize: '13px', color: '#000000', margin: 0 }}>
                       Sign in to RSVP with a car from your garage.
                     </p>
                   ) : rsvpStatus === 'success' ? (
@@ -653,11 +653,11 @@ export default function EventsCarousel() {
                       You're all set! We'll see you and your {userCars.find(c => c.id === selectedCarId)?.year} {userCars.find(c => c.id === selectedCarId)?.make} {userCars.find(c => c.id === selectedCarId)?.model} at the event!
                     </div>
                   ) : loadingCars ? (
-                    <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                    <p style={{ fontSize: '13px', color: '#000000', margin: 0 }}>
                       Loading your garage...
                     </p>
                   ) : userCars.length === 0 ? (
-                    <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                    <p style={{ fontSize: '13px', color: '#000000', margin: 0 }}>
                       No cars in your garage yet. Add a car to RSVP to events.
                     </p>
                   ) : (
@@ -679,7 +679,7 @@ export default function EventsCarousel() {
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            color: selectedCarId ? '#111827' : '#6b7280',
+                            color: selectedCarId ? '#000000' : '#374151',
                           }}
                         >
                           {selectedCarId ? (
@@ -690,7 +690,7 @@ export default function EventsCarousel() {
                           ) : (
                             'Select a car from your garage'
                           )}
-                          <ChevronDown size={18} color="#6b7280" style={{
+                          <ChevronDown size={18} color="#000000" style={{
                             transform: showCarDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
                             transition: 'transform 0.2s',
                           }} />
@@ -738,7 +738,7 @@ export default function EventsCarousel() {
                                   {car.year} {car.make} {car.model}
                                 </div>
                                 {car.color && (
-                                  <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                                  <div style={{ fontSize: '12px', color: '#374151', marginTop: '2px' }}>
                                     {car.color}
                                   </div>
                                 )}
