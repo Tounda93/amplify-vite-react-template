@@ -2,20 +2,40 @@ import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, MapPin, ArrowRight } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import './NewsCarousel.css';
 
 const client = generateClient<Schema>();
 
 type Event = Schema['Event']['type'];
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
+const FRAME_TEXT = 'Collectible Collectible Collectible Collectible Collectible Collectible Collectible';
 
 export default function EventsCarousel() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
+  const [allowHoverEffects, setAllowHoverEffects] = useState(false);
 
   useEffect(() => {
     loadEvents();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const updateHoverCapability = (event?: MediaQueryListEvent) => {
+      setAllowHoverEffects(event ? event.matches : mediaQuery.matches);
+    };
+
+    updateHoverCapability();
+    mediaQuery.addEventListener('change', updateHoverCapability);
+
+    return () => mediaQuery.removeEventListener('change', updateHoverCapability);
   }, []);
 
   const loadEvents = async () => {
@@ -159,25 +179,33 @@ export default function EventsCarousel() {
           marginRight: '-5rem'
         }}
       >
-        {events.map((event) => (
+        {events.map((event, index) => {
+          const shouldShowFrame = allowHoverEffects ? hoveredCardIndex === index : false;
+          return (
           <div
             key={event.id}
+            className={`news-card${shouldShowFrame ? ' news-card--active' : ''}`}
             style={{
               minWidth: '320px',
-              backgroundColor: 'white',
+              marginTop: '20px',
+              marginBottom: '12px',
               borderRadius: '12px',
-              overflow: 'hidden',
-              border: '1px solid #e5e7eb',
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: 'transform 0.2s ease',
+              position: 'relative',
+              overflow: 'visible',
+              backgroundColor: 'transparent',
+              boxShadow: shouldShowFrame ? '0 0 0 8px red' : 'none',
             }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
-              e.currentTarget.style.transform = 'translateY(-4px)';
+            onMouseEnter={() => {
+              if (allowHoverEffects) {
+                setHoveredCardIndex(index);
+              }
             }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.transform = 'translateY(0)';
+            onMouseLeave={() => {
+              if (allowHoverEffects) {
+                setHoveredCardIndex(null);
+              }
             }}
             onClick={() => {
               if (event.website) {
@@ -185,124 +213,150 @@ export default function EventsCarousel() {
               }
             }}
           >
-            {/* Event Image */}
-            <div style={{
-              width: '100%',
-              height: '180px',
-              backgroundColor: '#f3f4f6',
-              backgroundImage: `url(${event.coverImage || FALLBACK_IMAGE})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              position: 'relative',
-            }}>
-              {/* Event Type Badge */}
-              <div style={{
-                position: 'absolute',
-                top: '12px',
-                left: '12px',
-                padding: '4px 12px',
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                color: 'white',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: '600',
-              }}>
-                {getEventTypeEmoji(event.eventType)} {event.eventType?.replace('_', ' ').toUpperCase()}
+            {shouldShowFrame && (
+              <div className="news-card-frame-text" aria-hidden="true">
+                <div className="frame-strip frame-strip-top">
+                  <span>{FRAME_TEXT}</span>
+                  <span>{FRAME_TEXT}</span>
+                </div>
+                <div className="frame-strip frame-strip-right">
+                  <span>{FRAME_TEXT}</span>
+                  <span>{FRAME_TEXT}</span>
+                </div>
+                <div className="frame-strip frame-strip-bottom">
+                  <span>{FRAME_TEXT}</span>
+                  <span>{FRAME_TEXT}</span>
+                </div>
+                <div className="frame-strip frame-strip-left">
+                  <span>{FRAME_TEXT}</span>
+                  <span>{FRAME_TEXT}</span>
+                </div>
               </div>
+            )}
 
-              {/* Featured Badge */}
-              {event.isFeatured && (
+            <div className="news-card__content">
+              {/* Event Image */}
+              <div style={{
+                width: '100%',
+                height: '310px',
+                backgroundColor: '#f3f4f6',
+                backgroundImage: `url(${event.coverImage || FALLBACK_IMAGE})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                position: 'relative',
+              }}>
+                {/* Event Type Badge */}
                 <div style={{
                   position: 'absolute',
                   top: '12px',
-                  right: '12px',
+                  left: '12px',
                   padding: '4px 12px',
-                  backgroundColor: '#f59e0b',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
                   color: 'white',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: '700',
+                  borderRadius: '5px',
+                  fontSize: '12px',
+                  fontWeight: '500',
                 }}>
-                  FEATURED
+                  {getEventTypeEmoji(event.eventType)} {event.eventType?.replace('_', ' ').toUpperCase()}
                 </div>
-              )}
-            </div>
 
-            {/* Event Details */}
-            <div style={{ padding: '16px' }}>
-              <h3 style={{
-                margin: '0 0 12px 0',
-                fontSize: '16px',
-                fontWeight: '700',
-                color: '#111827',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-              }}>
-                {event.title}
-              </h3>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginBottom: '8px',
-                color: '#6b7280',
-                fontSize: '13px',
-              }}>
-                <Calendar size={14} />
-                <span>{formatDate(event.startDate!)}</span>
-                {event.endDate && event.endDate !== event.startDate && (
-                  <span>- {formatDate(event.endDate)}</span>
+                {/* Featured Badge */}
+                {event.isFeatured && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    padding: '4px 12px',
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    borderRadius: '5px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                  }}>
+                    FEATURED
+                  </div>
                 )}
               </div>
 
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginBottom: '12px',
-                color: '#6b7280',
-                fontSize: '13px',
-              }}>
-                <MapPin size={14} />
-                <span style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {event.city}, {event.country}
-                </span>
-              </div>
-
-              {event.price && (
-                <div style={{
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  color: '#3498db',
-                  marginBottom: '12px',
-                }}>
-                  {event.price}
-                </div>
-              )}
-
-              {event.website && (
+              {/* Event Details */}
+              <div style={{ padding: '13px' }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  color: '#3498db',
-                  fontSize: '13px',
-                  fontWeight: '600',
+                  gap: '6px',
+                  fontSize: '12px',
+                  color: 'white',
+                  marginBottom: '10px',
+                  fontWeight: '400',
                 }}>
-                  Learn More <ArrowRight size={14} />
+                  <Calendar size={14} color="white" />
+                  <span>{formatDate(event.startDate!)}</span>
+                  {event.endDate && event.endDate !== event.startDate && (
+                    <span>- {formatDate(event.endDate)}</span>
+                  )}
                 </div>
-              )}
+
+                <h3 style={{
+                  margin: '0 0 10px 0',
+                  fontSize: '23px',
+                  fontWeight: '200',
+                  color: 'white',
+                  lineHeight: '1.2',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                }}>
+                  {event.title}
+                </h3>
+
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  marginBottom: '12px',
+                  color: 'white',
+                  fontSize: '13px',
+                  fontWeight: '300',
+                }}>
+                  <MapPin size={14} color="white" />
+                  <span style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {event.city}, {event.country}
+                  </span>
+                </div>
+
+                {event.price && (
+                  <div style={{
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: 'white',
+                    marginBottom: '12px',
+                  }}>
+                    {event.price}
+                  </div>
+                )}
+
+                {event.website && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: 'white',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                  }}>
+                    Learn More <ArrowRight size={14} color="white" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        ))}
+        );})}
       </div>
     </div>
   );
