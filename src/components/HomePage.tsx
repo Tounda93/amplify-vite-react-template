@@ -1,6 +1,5 @@
 import EventsCarousel from './EventsCarousel';
 import NewsCarousel from './NewsCarousel';
-import AuctionsCarousel from './AuctionsCarousel';
 import { useIsMobile } from '../hooks/useIsMobile';
 import './HomePage.css';
 export default function HomePage() {
@@ -23,14 +22,6 @@ export default function HomePage() {
         padding: `0 ${horizontalPadding}`,
       }}>
         <NewsCarousel />
-      </div>
-
-      {/* Auctions Carousel */}
-      <div style={{
-        width: '100%',
-        padding: `0 ${horizontalPadding} 3rem ${horizontalPadding}`,
-      }}>
-        <AuctionsCarousel />
       </div>
 
     </div>
