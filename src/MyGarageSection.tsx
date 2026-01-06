@@ -1,13 +1,46 @@
 import { useState, useEffect } from 'react';
-import { Car, Plus, Heart, Settings } from 'lucide-react';
+import { Car, Plus, Heart, Settings, User, LogOut } from 'lucide-react';
 
-export function MyGarageSection() {
+interface AmplifyUser {
+  signInDetails?: {
+    loginId?: string;
+  };
+  username?: string;
+}
+
+interface MyGarageSectionProps {
+  user?: AmplifyUser;
+  signOut?: () => void;
+  onSectionChange?: (section: string) => void;
+}
+
+export function MyGarageSection({ user, signOut, onSectionChange }: MyGarageSectionProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Simulate loading
     setTimeout(() => setLoading(false), 500);
   }, []);
+
+  const computeProfileInitials = () => {
+    const loginId = user?.signInDetails?.loginId || user?.username || '';
+    if (!loginId) {
+      return 'UU';
+    }
+    const cleaned = loginId.replace(/@.*/, '');
+    const segments = cleaned.split(/[\s._-]+/).filter(Boolean);
+    if (segments.length >= 2) {
+      return `${segments[0][0]}${segments[segments.length - 1][0]}`.toUpperCase();
+    }
+    if (segments.length === 1) {
+      const segment = segments[0];
+      return (segment.slice(0, 2)).toUpperCase();
+    }
+    return loginId.slice(0, 2).toUpperCase();
+  };
+
+  const profileInitials = computeProfileInitials();
+  const userEmail = user?.signInDetails?.loginId || user?.username || 'User';
 
   if (loading) {
     return (
@@ -19,6 +52,79 @@ export function MyGarageSection() {
 
   return (
     <div style={{ width: '100vw' }}>
+      {/* Account Section - Profile & Sign Out */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: '1rem',
+        padding: '1rem 2rem',
+        borderBottom: '1px solid #e5e7eb',
+        backgroundColor: '#f9fafb'
+      }}>
+        {/* Profile Button */}
+        <button
+          onClick={() => onSectionChange?.('profile')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.5rem 1rem',
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #1a1a2e, #2d2d44)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }}>
+            {profileInitials}
+          </div>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111' }}>
+              {userEmail.split('@')[0]}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#666' }}>View Profile</div>
+          </div>
+          <User size={16} style={{ color: '#666' }} />
+        </button>
+
+        {/* Sign Out Button */}
+        {signOut && (
+          <button
+            onClick={signOut}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.625rem 1rem',
+              backgroundColor: '#fef2f2',
+              color: '#dc2626',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              transition: 'all 0.2s'
+            }}
+          >
+            <LogOut size={16} />
+            Sign Out
+          </button>
+        )}
+      </div>
+
       {/* Garage Header */}
       <div style={{
         textAlign: 'center',

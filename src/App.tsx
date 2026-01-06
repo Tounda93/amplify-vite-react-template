@@ -31,7 +31,6 @@ import WikiCarsSection from './components/WikiCarsSection';
 
 // NEW: Import the Header component
 import Header from './components/Header';
-import HeroCarousel from './components/HeroCarousel';
 import HomePage from './components/HomePage';
 import Footer from './components/Footer';
 import { useIsMobile } from './hooks/useIsMobile';
@@ -139,7 +138,8 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [pendingMakeId, setPendingMakeId] = useState<string | undefined>(initialState.makeId);
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '2rem' : '5rem';
-  const topPadding = isMobile ? (activeSection === 'home' ? '0' : '5.5rem') : undefined;
+  // Only add top padding on home page for mobile
+  const topPadding = isMobile && activeSection === 'home' ? '5rem' : '0';
   const [hasEnsuredSeedData, setHasEnsuredSeedData] = useState(false);
   const adminEmail = user?.signInDetails?.loginId?.toLowerCase();
 
@@ -541,41 +541,29 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     setSearchResults(getEmptySearchResults());
   };
 
+  // Use the same background color for all pages
+  const mainBackgroundColor = '#EFEFEF';
+
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#010312ff',
+      backgroundColor: mainBackgroundColor,
       overflowX: 'visible',
       width: '100%',
       position: 'relative',
       paddingTop: topPadding
     }}>
       <Header
-        user={user}
-        signOut={signOut}
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
-        searchResults={searchResults}
-        searchLoading={searchLoading}
-        onSearchResultSelect={handleSearchResultSelect}
-        showHeroCarousel={activeSection === 'home'}
       />
-
-      {activeSection === 'home' && (
-        <div style={{ width: '100%', position: 'relative' }}>
-          <HeroCarousel />
-        </div>
-      )}
 
 
       {/* NEWS SECTION */}
       {activeSection === 'news' && (
         <div style={{
           width: '100%',
-          padding: `2rem ${horizontalPadding}`,
-          backgroundColor: '#ffffff'
+          padding: `2rem ${horizontalPadding}`
         }}>
           <NewsSection />
         </div>
@@ -585,8 +573,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'auctions' && (
         <div style={{
           width: '100%',
-          padding: `2rem ${horizontalPadding}`,
-          backgroundColor: '#ffffff'
+          padding: `2rem ${horizontalPadding}`
         }}>
           <AuctionsSection />
         </div>
@@ -596,8 +583,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'events' && (
         <div style={{
           width: '100%',
-          padding: `2rem ${horizontalPadding}`,
-          backgroundColor: '#ffffff'
+          padding: `2rem ${horizontalPadding}`
         }}>
           <EventsSection />
         </div>
@@ -607,8 +593,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'community' && (
         <div style={{
           width: '100%',
-          padding: `2rem ${horizontalPadding}`,
-          backgroundColor: '#ffffff'
+          padding: `2rem ${horizontalPadding}`
         }}>
           <CommunitySection />
         </div>
@@ -618,8 +603,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'chat' && (
         <div style={{
           width: '100%',
-          padding: `2rem ${horizontalPadding}`,
-          backgroundColor: '#ffffff'
+          padding: `2rem ${horizontalPadding}`
         }}>
           <ChatSection />
         </div>
@@ -629,10 +613,13 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'garage' && (
         <div style={{
           width: '100%',
-          padding: `2rem ${horizontalPadding}`,
-          backgroundColor: '#ffffff'
+          padding: `2rem ${horizontalPadding}`
         }}>
-          <MyGarageSection />
+          <MyGarageSection
+            user={user}
+            signOut={signOut}
+            onSectionChange={handleSectionChange}
+          />
         </div>
       )}
 
@@ -640,8 +627,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       {activeSection === 'profile' && (
         <div style={{
           width: '100%',
-          padding: `2rem ${horizontalPadding}`,
-          backgroundColor: '#ffffff'
+          padding: `2rem ${horizontalPadding}`
         }}>
           <ProfileSection user={user} />
         </div>
@@ -649,7 +635,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
       {/* WIKICARS SECTION */}
       {activeSection === 'wikicars' && (
-        <div style={{ width: '100%', backgroundColor: '#f5f7fb' }}>
+        <div style={{ width: '100%' }}>
           <WikiCarsSection
             makes={allMakes}
             selectedMake={wikiSelectedMake}

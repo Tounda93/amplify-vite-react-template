@@ -4,7 +4,7 @@
 
 .home-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: #EFEFEF;
 }
 
 .home-page__content {
@@ -51,7 +51,7 @@
 }
 
 .home-page__end-message {
-  color: #999 !important;
+  color: #888 !important;
   font-style: italic;
 }
 

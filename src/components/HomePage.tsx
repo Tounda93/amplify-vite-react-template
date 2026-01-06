@@ -3,6 +3,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
 import { Card } from './Card';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { NewsItem, fetchNewsFeedItems } from '../utils/newsFeed';
 import './HomePage.css';
 
 const client = generateClient<Schema>();
@@ -19,7 +20,8 @@ interface FeedItem {
   title2: string;
   separatorText?: string;
   requirement?: string;
-  data: Event | WikiCarEntry;
+  url?: string;
+  data?: Event | WikiCarEntry | NewsItem;
 }
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
@@ -34,6 +36,7 @@ export default function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -71,7 +74,11 @@ export default function HomePage() {
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      const items = await fetchFeedItems(0);
+      // Fetch news items first and store them
+      const news = await fetchNewsFeedItems();
+      setNewsItems(news);
+
+      const items = await fetchFeedItems(0, news);
       setFeedItems(items);
       setHasMore(items.length >= ITEMS_PER_PAGE);
       setPage(1);
@@ -86,7 +93,7 @@ export default function HomePage() {
 
     setLoadingMore(true);
     try {
-      const newItems = await fetchFeedItems(page);
+      const newItems = await fetchFeedItems(page, newsItems);
       if (newItems.length === 0) {
         setHasMore(false);
       } else {
@@ -98,9 +105,18 @@ export default function HomePage() {
       console.error('Error loading more items:', error);
     }
     setLoadingMore(false);
-  }, [page, loadingMore, hasMore]);
+  }, [page, loadingMore, hasMore, newsItems]);
 
-  const fetchFeedItems = async (pageNum: number): Promise<FeedItem[]> => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const fetchFeedItems = async (pageNum: number, news: NewsItem[]): Promise<FeedItem[]> => {
     const items: FeedItem[] = [];
 
     // Fetch events
@@ -141,6 +157,21 @@ export default function HomePage() {
       });
     });
 
+    // Transform news to feed items
+    news.forEach((newsItem, index) => {
+      items.push({
+        id: `news-${index}-${newsItem.link}`,
+        type: 'news',
+        imageUrl: newsItem.thumbnail || FALLBACK_IMAGE,
+        title1: newsItem.source,
+        title2: newsItem.title,
+        separatorText: formatDate(newsItem.pubDate),
+        requirement: undefined,
+        url: newsItem.link,
+        data: newsItem,
+      });
+    });
+
     // Shuffle items for variety (in production, you'd want proper pagination)
     const shuffled = items.sort(() => Math.random() - 0.5);
 
@@ -152,8 +183,12 @@ export default function HomePage() {
   };
 
   const handleCardClick = (item: FeedItem) => {
-    // TODO: Navigate to detail page or open popup based on item type
-    console.log('Card clicked:', item);
+    if (item.type === 'news' && item.url) {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
+    } else {
+      // TODO: Navigate to detail page or open popup based on item type
+      console.log('Card clicked:', item);
+    }
   };
 
   if (loading) {
