@@ -1,0 +1,144 @@
+/* ===========================================
+   NewsSection Styles
+   =========================================== */
+
+.news-section {
+  width: 100%;
+  background-color: #EFEFEF;
+}
+
+/* ===========================================
+   Filter Buttons
+   =========================================== */
+
+.news-section__filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.news-section__filters::-webkit-scrollbar {
+  display: none;
+}
+
+.news-section__filter-btn {
+  padding: 0.5rem 1rem;
+  background: #ecf0f1;
+  color: black;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.news-section__filter-btn:hover {
+  background: #ddd;
+}
+
+.news-section__filter-btn--active {
+  background: #e74c3c;
+  color: white;
+}
+
+.news-section__filter-btn--active:hover {
+  background: #c0392b;
+}
+
+/* ===========================================
+   Card Grid - 5 columns with 13px spacing
+   =========================================== */
+
+.news-section__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.8125rem; /* 13px */
+  justify-items: center;
+}
+
+/* ===========================================
+   Loading & Error States
+   =========================================== */
+
+.news-section__loading,
+.news-section__error,
+.news-section__empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 30vh;
+  text-align: center;
+}
+
+.news-section__loading p,
+.news-section__empty p {
+  color: #666;
+  font-size: 1rem;
+}
+
+.news-section__error p {
+  color: #e74c3c;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.news-section__retry-btn {
+  padding: 0.5rem 1rem;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.news-section__retry-btn:hover {
+  background: #c0392b;
+}
+
+/* ===========================================
+   Responsive Grid Adjustments
+   =========================================== */
+
+/* Large tablets / small desktops - 4 columns */
+@media (max-width: 1400px) {
+  .news-section__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Tablets - 3 columns */
+@media (max-width: 1100px) {
+  .news-section__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Small tablets / large mobile - 2 columns */
+@media (max-width: 768px) {
+  .news-section__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem; /* 10px */
+  }
+}
+
+/* Mobile - 2 columns with tighter spacing */
+@media (max-width: 480px) {
+  .news-section__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem; /* 8px */
+  }
+}
+
+/* Very small mobile - still 2 columns */
+@media (max-width: 360px) {
+  .news-section__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.375rem; /* 6px */
+  }
+}

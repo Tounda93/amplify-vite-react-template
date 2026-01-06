@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { uploadData } from 'aws-amplify/storage';
 import Header from './Header';
-import { SearchResultGroups } from '../types/search';
 
 export type CarOverview = {
   production: string;
@@ -213,14 +212,6 @@ interface DetailPageProps {
   onRequestEdit?: (payload: CarEditPayload) => Promise<void>;
   editingEnabled?: boolean;
 }
-
-const EmptyResults: SearchResultGroups = {
-  wikicars: [],
-  news: [],
-  events: [],
-  auctions: [],
-  community: [],
-};
 
 const MAX_GALLERY_IMAGES = 10;
 const MAX_GALLERY_BYTES = 850 * 1024;
@@ -922,16 +913,8 @@ export default function CarEncyclopediaDetailPage({
   return (
     <div className="min-h-screen bg-white">
       <Header
-        user={{ signInDetails: { loginId: 'collector@collectible.com' } }}
-        signOut={() => {}}
         activeSection="wikicars"
         onSectionChange={() => {}}
-        searchTerm=""
-        onSearchChange={() => {}}
-        searchResults={EmptyResults}
-        searchLoading={false}
-        onSearchResultSelect={() => {}}
-        showHeroCarousel={false}
       />
       {detail}
     </div>

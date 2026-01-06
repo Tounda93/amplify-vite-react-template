@@ -1,7 +1,120 @@
+/* ===========================================
+   HomePage Styles
+   =========================================== */
+
 .home-page {
-  color: #ffffff;
+  min-height: 100vh;
+  background-color: #EFEFEF;
 }
 
-.home-page * {
-  color: #ffffff !important;
+.home-page__content {
+  max-width: 100%;
+}
+
+/* ===========================================
+   Card Grid - 5 columns with 13px spacing
+   =========================================== */
+
+.home-page__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.8125rem; /* 13px */
+  justify-items: center;
+}
+
+/* ===========================================
+   Loading States
+   =========================================== */
+
+.home-page__loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+}
+
+.home-page__loading p {
+  color: #666;
+  font-size: 1rem;
+}
+
+.home-page__load-more {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+  min-height: 3rem;
+}
+
+.home-page__load-more p {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.home-page__end-message {
+  color: #888 !important;
+  font-style: italic;
+}
+
+.home-page__empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 30vh;
+}
+
+.home-page__empty p {
+  color: #666;
+  font-size: 1rem;
+}
+
+/* ===========================================
+   Responsive Grid Adjustments
+   =========================================== */
+
+/* Large tablets / small desktops - 4 columns */
+@media (max-width: 1400px) {
+  .home-page__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Tablets - 3 columns */
+@media (max-width: 1100px) {
+  .home-page__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Small tablets / large mobile - 2 columns */
+@media (max-width: 768px) {
+  .home-page__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem; /* 10px */
+  }
+}
+
+/* Mobile - 2 columns with tighter spacing */
+@media (max-width: 480px) {
+  .home-page__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem; /* 8px */
+  }
+}
+
+/* Very small mobile - still 2 columns */
+@media (max-width: 360px) {
+  .home-page__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.375rem; /* 6px */
+  }
+}
+
+/* ===========================================
+   Override white text from previous styles
+   Cards should have black text
+   =========================================== */
+
+.home-page__grid .card,
+.home-page__grid .card * {
+  color: inherit;
 }

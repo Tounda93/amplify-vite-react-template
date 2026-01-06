@@ -1,27 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { uploadData, getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../amplify/data/resource';
 import { isAdminEmail } from './constants/admins';
+import { Card } from './components/Card';
+import { useIsMobile } from './hooks/useIsMobile';
+import { Upload, X } from 'lucide-react';
+import './EventsSection.css';
 
 const client = generateClient<Schema>();
 
 type Event = Schema['Event']['type'];
 
-const EVENT_TYPES = [
-  { value: 'car_show', label: '🚗 Car Show' },
-  { value: 'race', label: '🏎️ Race' },
-  { value: 'auction', label: '🔨 Auction' },
-  { value: 'meet', label: '🤝 Car Meet' },
-  { value: 'rally', label: '🏁 Rally' },
-  { value: 'festival', label: '🎉 Festival' },
-  { value: 'exhibition', label: '🏛️ Exhibition' },
-  { value: 'track_day', label: '🛞 Track Day' },
-  { value: 'other', label: '📅 Other' },
-];
-
 const COUNTRIES = [
-  'United States', 'United Kingdom', 'Germany', 'France', 'Italy', 'Spain', 
+  'United States', 'United Kingdom', 'Germany', 'France', 'Italy', 'Spain',
   'Belgium', 'Netherlands', 'Switzerland', 'Austria', 'Japan', 'Australia',
   'Canada', 'United Arab Emirates', 'Monaco', 'Portugal', 'Sweden', 'Norway',
 ];
@@ -29,72 +22,54 @@ const COUNTRIES = [
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
 export function EventsSection() {
+  const isMobile = useIsMobile();
+  const horizontalPadding = isMobile ? '1rem' : '5rem';
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [events, setEvents] = useState<Event[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  
-  // Filters
-  const [filterCountry, setFilterCountry] = useState<string>('all');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterTimeframe, setFilterTimeframe] = useState<string>('upcoming');
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // User location for distance filter
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [filterDistance, setFilterDistance] = useState<number>(0); // 0 = no distance filter
-  
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   // New event form
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
-    eventType: 'car_show' as Event['eventType'],
     venue: '',
-    address: '',
     city: '',
-    region: '',
     country: '',
-    latitude: '',
-    longitude: '',
     startDate: '',
     endDate: '',
     coverImage: '',
     website: '',
     ticketUrl: '',
     price: '',
-    isFeatured: false,
   });
 
   useEffect(() => {
     checkAdminStatus();
     loadEvents();
-    getUserLocation();
-    
+
     const subscription = client.models.Event.observeQuery().subscribe({
       next: ({ items }) => {
         const published = items.filter(e => e.isPublished !== false);
         setEvents(published);
+        filterUpcomingEvents(published);
         setLoading(false);
       },
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  // Apply filters when events or filters change
-  useEffect(() => {
-    applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events, filterCountry, filterType, filterTimeframe, filterDistance, searchQuery, userLocation]);
-
   const checkAdminStatus = async () => {
     try {
       const session = await fetchAuthSession();
       const email = session.tokens?.idToken?.payload?.email as string | undefined;
       const admin = isAdminEmail(email);
-      console.log('User email:', email); // Debug log
-      console.log('Is admin:', admin);
       setIsAdmin(admin);
     } catch (error) {
       console.log('Not logged in:', error);
@@ -107,128 +82,108 @@ export function EventsSection() {
       const { data } = await client.models.Event.list({ limit: 500 });
       const published = (data || []).filter(e => e.isPublished !== false);
       setEvents(published);
+      filterUpcomingEvents(published);
     } catch (error) {
       console.error('Error loading events:', error);
     }
     setLoading(false);
   };
 
-  const getUserLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => console.log('Location not available:', error)
-      );
-    }
-  };
-
-  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  };
-
-  const applyFilters = () => {
-    let filtered = [...events];
+  const filterUpcomingEvents = (allEvents: Event[]) => {
     const now = new Date();
+    const upcoming = allEvents
+      .filter(e => new Date(e.startDate) >= now)
+      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    setUpcomingEvents(upcoming);
+  };
 
-    // Timeframe filter
-    if (filterTimeframe === 'upcoming') {
-      filtered = filtered.filter(e => new Date(e.startDate) >= now);
-    } else if (filterTimeframe === 'past') {
-      filtered = filtered.filter(e => new Date(e.startDate) < now);
-    } else if (filterTimeframe === 'this_month') {
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      filtered = filtered.filter(e => {
-        const date = new Date(e.startDate);
-        return date >= now && date <= monthEnd;
-      });
-    } else if (filterTimeframe === 'this_year') {
-      const yearEnd = new Date(now.getFullYear(), 11, 31);
-      filtered = filtered.filter(e => {
-        const date = new Date(e.startDate);
-        return date >= now && date <= yearEnd;
-      });
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
     }
 
-    // Country filter
-    if (filterCountry !== 'all') {
-      filtered = filtered.filter(e => e.country === filterCountry);
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB');
+      return;
     }
 
-    // Event type filter
-    if (filterType !== 'all') {
-      filtered = filtered.filter(e => e.eventType === filterType);
+    setUploading(true);
+
+    try {
+      // Create a preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const key = `events/${timestamp}-${sanitizedName}`;
+
+      // Upload to S3
+      await uploadData({
+        key,
+        data: file,
+        options: {
+          contentType: file.type,
+        },
+      }).result;
+
+      // Get the URL
+      const urlResult = await getUrl({ key });
+      const imageUrl = urlResult.url.toString().split('?')[0]; // Remove query params for cleaner URL
+
+      setNewEvent({ ...newEvent, coverImage: imageUrl });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+      setImagePreview(null);
+    } finally {
+      setUploading(false);
     }
+  };
 
-    // Distance filter
-    if (filterDistance > 0 && userLocation) {
-      filtered = filtered.filter(e => {
-        if (!e.latitude || !e.longitude) return false;
-        const distance = calculateDistance(
-          userLocation.lat, userLocation.lng,
-          e.latitude, e.longitude
-        );
-        return distance <= filterDistance;
-      });
+  const removeImage = () => {
+    setNewEvent({ ...newEvent, coverImage: '' });
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
-
-    // Search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(e =>
-        e.title.toLowerCase().includes(query) ||
-        e.city?.toLowerCase().includes(query) ||
-        e.venue?.toLowerCase().includes(query) ||
-        e.country?.toLowerCase().includes(query)
-      );
-    }
-
-    // Sort by date (soonest first for upcoming, most recent first for past)
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.startDate).getTime();
-      const dateB = new Date(b.startDate).getTime();
-      return filterTimeframe === 'past' ? dateB - dateA : dateA - dateB;
-    });
-
-    // Featured events first
-    filtered.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
-
-    setFilteredEvents(filtered);
   };
 
   const handleSubmitEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
+      // Convert date strings to start of day ISO strings
+      const startDateISO = newEvent.startDate
+        ? new Date(newEvent.startDate + 'T00:00:00').toISOString()
+        : '';
+      const endDateISO = newEvent.endDate
+        ? new Date(newEvent.endDate + 'T23:59:59').toISOString()
+        : undefined;
+
       const eventData = {
         title: newEvent.title,
         description: newEvent.description || undefined,
-        eventType: newEvent.eventType,
+        eventType: 'other' as Event['eventType'], // Default type
         venue: newEvent.venue || undefined,
-        address: newEvent.address || undefined,
         city: newEvent.city,
-        region: newEvent.region || undefined,
         country: newEvent.country,
-        latitude: newEvent.latitude ? parseFloat(newEvent.latitude) : undefined,
-        longitude: newEvent.longitude ? parseFloat(newEvent.longitude) : undefined,
-        startDate: new Date(newEvent.startDate).toISOString(),
-        endDate: newEvent.endDate ? new Date(newEvent.endDate).toISOString() : undefined,
+        startDate: startDateISO,
+        endDate: endDateISO,
         coverImage: newEvent.coverImage || undefined,
         website: newEvent.website || undefined,
         ticketUrl: newEvent.ticketUrl || undefined,
         price: newEvent.price || undefined,
-        isFeatured: newEvent.isFeatured,
         isPublished: true,
       };
 
@@ -253,22 +208,17 @@ export function EventsSection() {
     setNewEvent({
       title: event.title,
       description: event.description || '',
-      eventType: event.eventType || 'car_show',
       venue: event.venue || '',
-      address: event.address || '',
       city: event.city,
-      region: event.region || '',
       country: event.country,
-      latitude: event.latitude?.toString() || '',
-      longitude: event.longitude?.toString() || '',
-      startDate: event.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : '',
-      endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : '',
+      startDate: event.startDate ? new Date(event.startDate).toISOString().slice(0, 10) : '',
+      endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 10) : '',
       coverImage: event.coverImage || '',
       website: event.website || '',
       ticketUrl: event.ticketUrl || '',
       price: event.price || '',
-      isFeatured: event.isFeatured || false,
     });
+    setImagePreview(event.coverImage || null);
     setShowAddForm(true);
   };
 
@@ -285,684 +235,404 @@ export function EventsSection() {
     setNewEvent({
       title: '',
       description: '',
-      eventType: 'car_show',
       venue: '',
-      address: '',
       city: '',
-      region: '',
       country: '',
-      latitude: '',
-      longitude: '',
       startDate: '',
       endDate: '',
       coverImage: '',
       website: '',
       ticketUrl: '',
       price: '',
-      isFeatured: false,
     });
     setEditingEvent(null);
     setShowAddForm(false);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const formatDateRange = (start: string, end?: string | null) => {
-    const startDate = formatDate(start);
-    if (!end || start === end) return startDate;
-    const endDate = formatDate(end);
-    return `${startDate} - ${endDate}`;
-  };
-
-  const getEventTypeLabel = (type: string | null | undefined) => {
-    return EVENT_TYPES.find(t => t.value === type)?.label || '📅 Event';
-  };
-
-  const getDistanceText = (event: Event) => {
-    if (!userLocation || !event.latitude || !event.longitude) return null;
-    const distance = calculateDistance(
-      userLocation.lat, userLocation.lng,
-      event.latitude, event.longitude
-    );
-    return distance < 100 ? `${Math.round(distance)} km away` : `${Math.round(distance / 10) * 10} km away`;
+  const handleCardClick = (event: Event) => {
+    console.log('Event clicked:', event);
   };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '2rem' }}>Loading events...</div>;
+    return (
+      <div className="events-section" style={{ padding: horizontalPadding }}>
+        <div className="events-section__loading">
+          <p>Loading events...</p>
+        </div>
+      </div>
+    );
   }
 
+  const inputStyle = {
+    width: '100%',
+    padding: '0.75rem',
+    borderRadius: '8px',
+    border: '1px solid #ddd',
+    boxSizing: 'border-box' as const,
+    fontSize: '0.875rem',
+  };
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '0.5rem',
+    fontWeight: 600,
+    fontSize: '0.875rem',
+    color: '#333',
+  };
+
   return (
-    <div>
-      {/* Admin Controls */}
-      {isAdmin && (
-        <div style={{
-          background: '#fff3cd',
-          border: '1px solid #ffc107',
-          borderRadius: '8px',
-          padding: '0.75rem 1rem',
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-        }}>
-          <span style={{ fontWeight: 'bold', color: '#856404' }}>
-            👑 Admin Mode
-          </span>
-          <button
-            onClick={() => { setShowAddForm(!showAddForm); if (showAddForm) resetForm(); }}
-            style={{
-              padding: '0.5rem 1rem',
-              background: showAddForm ? '#dc3545' : '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-            }}
-          >
-            {showAddForm ? '✕ Cancel' : '+ Add Event'}
-          </button>
-        </div>
-      )}
-
-      {/* Add/Edit Event Form (Admin Only) */}
-      {isAdmin && showAddForm && (
-        <div style={{
-          background: '#f8f9fa',
-          padding: '1.5rem',
-          borderRadius: '12px',
-          marginBottom: '1.5rem',
-          border: '2px solid #28a745',
-        }}>
-          <h3 style={{ marginTop: 0 }}>
-            {editingEvent ? '✏️ Edit Event' : '➕ Add New Event'}
-          </h3>
-          <form onSubmit={handleSubmitEvent}>
-            <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-              {/* Title */}
-              <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Title *</label>
-                <input
-                  type="text"
-                  value={newEvent.title}
-                  onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                  required
-                  placeholder="e.g., Goodwood Festival of Speed"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Event Type */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Event Type *</label>
-                <select
-                  value={newEvent.eventType || 'car_show'}
-                  onChange={(e) => setNewEvent({ ...newEvent, eventType: e.target.value as Event['eventType'] })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
-                >
-                  {EVENT_TYPES.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Venue */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Venue</label>
-                <input
-                  type="text"
-                  value={newEvent.venue}
-                  onChange={(e) => setNewEvent({ ...newEvent, venue: e.target.value })}
-                  placeholder="e.g., Goodwood Estate"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* City */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>City *</label>
-                <input
-                  type="text"
-                  value={newEvent.city}
-                  onChange={(e) => setNewEvent({ ...newEvent, city: e.target.value })}
-                  required
-                  placeholder="e.g., Chichester"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Region */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Region/State</label>
-                <input
-                  type="text"
-                  value={newEvent.region}
-                  onChange={(e) => setNewEvent({ ...newEvent, region: e.target.value })}
-                  placeholder="e.g., West Sussex"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Country */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Country *</label>
-                <select
-                  value={newEvent.country}
-                  onChange={(e) => setNewEvent({ ...newEvent, country: e.target.value })}
-                  required
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
-                >
-                  <option value="">Select country...</option>
-                  {COUNTRIES.map(country => (
-                    <option key={country} value={country}>{country}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Start Date */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Start Date *</label>
-                <input
-                  type="datetime-local"
-                  value={newEvent.startDate}
-                  onChange={(e) => setNewEvent({ ...newEvent, startDate: e.target.value })}
-                  required
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* End Date */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>End Date</label>
-                <input
-                  type="datetime-local"
-                  value={newEvent.endDate}
-                  onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Cover Image */}
-              <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Cover Image URL</label>
-                <input
-                  type="url"
-                  value={newEvent.coverImage}
-                  onChange={(e) => setNewEvent({ ...newEvent, coverImage: e.target.value })}
-                  placeholder="https://..."
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Website */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Website</label>
-                <input
-                  type="url"
-                  value={newEvent.website}
-                  onChange={(e) => setNewEvent({ ...newEvent, website: e.target.value })}
-                  placeholder="https://..."
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Ticket URL */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Ticket URL</label>
-                <input
-                  type="url"
-                  value={newEvent.ticketUrl}
-                  onChange={(e) => setNewEvent({ ...newEvent, ticketUrl: e.target.value })}
-                  placeholder="https://..."
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Price */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Price</label>
-                <input
-                  type="text"
-                  value={newEvent.price}
-                  onChange={(e) => setNewEvent({ ...newEvent, price: e.target.value })}
-                  placeholder="e.g., Free, $50, €25-€100"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Coordinates */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Latitude</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={newEvent.latitude}
-                  onChange={(e) => setNewEvent({ ...newEvent, latitude: e.target.value })}
-                  placeholder="e.g., 50.8614"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Longitude</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={newEvent.longitude}
-                  onChange={(e) => setNewEvent({ ...newEvent, longitude: e.target.value })}
-                  placeholder="e.g., -0.7514"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Description */}
-              <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold' }}>Description</label>
-                <textarea
-                  value={newEvent.description}
-                  onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                  placeholder="Describe the event..."
-                  rows={3}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Featured */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="checkbox"
-                  id="isFeatured"
-                  checked={newEvent.isFeatured}
-                  onChange={(e) => setNewEvent({ ...newEvent, isFeatured: e.target.checked })}
-                />
-                <label htmlFor="isFeatured" style={{ fontWeight: 'bold' }}>⭐ Featured Event</label>
-              </div>
-            </div>
-
-            {/* Submit Buttons */}
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-              <button
-                type="submit"
-                style={{
-                  padding: '0.75rem 2rem',
-                  background: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                }}
-              >
-                {editingEvent ? 'Update Event' : 'Create Event'}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div style={{
-        display: 'flex',
-        gap: '0.75rem',
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        padding: '1rem',
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-      }}>
-        {/* Search */}
-        <input
-          type="text"
-          placeholder="🔍 Search events..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            padding: '0.5rem 1rem',
-            borderRadius: '20px',
-            border: '1px solid #ddd',
-            minWidth: '200px',
-            flex: '1',
-          }}
-        />
-
-        {/* Timeframe */}
-        <select
-          value={filterTimeframe}
-          onChange={(e) => setFilterTimeframe(e.target.value)}
-          style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
-        >
-          <option value="upcoming">📅 Upcoming</option>
-          <option value="this_month">📆 This Month</option>
-          <option value="this_year">🗓️ This Year</option>
-          <option value="past">⏪ Past Events</option>
-          <option value="all">🌐 All Events</option>
-        </select>
-
-        {/* Country */}
-        <select
-          value={filterCountry}
-          onChange={(e) => setFilterCountry(e.target.value)}
-          style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
-        >
-          <option value="all">🌍 All Countries</option>
-          {COUNTRIES.map(country => (
-            <option key={country} value={country}>{country}</option>
-          ))}
-        </select>
-
-        {/* Event Type */}
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
-        >
-          <option value="all">📋 All Types</option>
-          {EVENT_TYPES.map(type => (
-            <option key={type.value} value={type.value}>{type.label}</option>
-          ))}
-        </select>
-
-        {/* Distance (only if location available) */}
-        {userLocation && (
-          <select
-            value={filterDistance}
-            onChange={(e) => setFilterDistance(parseInt(e.target.value))}
-            style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
-          >
-            <option value="0">📍 Any Distance</option>
-            <option value="50">Within 50 km</option>
-            <option value="100">Within 100 km</option>
-            <option value="250">Within 250 km</option>
-            <option value="500">Within 500 km</option>
-            <option value="1000">Within 1000 km</option>
-          </select>
+    <div className="events-section" style={{ width: '100%', overflowX: 'hidden' }}>
+      <div
+        className="events-section__content"
+        style={{ padding: `2rem ${horizontalPadding}` }}
+      >
+        {/* Admin Controls */}
+        {isAdmin && (
+          <div className="events-section__admin-bar">
+            <span className="events-section__admin-label">
+              Admin Mode
+            </span>
+            <button
+              onClick={() => { setShowAddForm(!showAddForm); if (showAddForm) resetForm(); }}
+              className={`events-section__admin-btn ${showAddForm ? 'events-section__admin-btn--cancel' : 'events-section__admin-btn--add'}`}
+            >
+              {showAddForm ? 'Cancel' : '+ Add Event'}
+            </button>
+          </div>
         )}
 
-        {/* Results count */}
-        <span style={{ color: '#666', fontSize: '0.9rem', marginLeft: 'auto' }}>
-          {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
-        </span>
-      </div>
+        {/* Add/Edit Event Form (Admin Only) */}
+        {isAdmin && showAddForm && (
+          <div style={{
+            background: '#f8f9fa',
+            padding: '2rem',
+            borderRadius: '12px',
+            marginBottom: '1.5rem',
+            border: '2px solid #28a745',
+          }}>
+            <h3 style={{ marginTop: 0, marginBottom: '1.5rem', fontSize: '1.25rem' }}>
+              {editingEvent ? 'Edit Event' : 'Add New Event'}
+            </h3>
+            <form onSubmit={handleSubmitEvent}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-      {/* Events Grid */}
-      {filteredEvents.length > 0 ? (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: '1.5rem',
-        }}>
-          {filteredEvents.map(event => (
-            <div
-              key={event.id}
-              style={{
-                background: 'white',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                border: event.isFeatured ? '2px solid #ffc107' : 'none',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-              }}
-            >
-              {/* Cover Image */}
-              <div style={{ position: 'relative' }}>
-                <img
-                  src={event.coverImage || FALLBACK_IMAGE}
-                  alt={event.title}
-                  style={{
-                    width: '100%',
-                    height: '180px',
-                    objectFit: 'cover',
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
-                  }}
-                />
-                
-                {/* Featured Badge */}
-                {event.isFeatured && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '10px',
-                    left: '10px',
-                    background: '#ffc107',
-                    color: '#000',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '4px',
-                    fontWeight: 'bold',
-                    fontSize: '0.75rem',
-                  }}>
-                    ⭐ FEATURED
-                  </div>
-                )}
-
-                {/* Event Type Badge */}
-                <div style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  background: 'rgba(0,0,0,0.75)',
-                  color: 'white',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                }}>
-                  {getEventTypeLabel(event.eventType)}
+                {/* ROW 1: Event Title */}
+                <div>
+                  <label style={labelStyle}>Event Title *</label>
+                  <input
+                    type="text"
+                    value={newEvent.title}
+                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                    required
+                    placeholder="e.g., Goodwood Festival of Speed"
+                    style={inputStyle}
+                  />
                 </div>
 
-                {/* Date Badge */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: '10px',
-                  left: '10px',
-                  background: 'rgba(255,255,255,0.95)',
-                  color: '#1a1a2e',
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '6px',
-                  fontWeight: 'bold',
-                  fontSize: '0.85rem',
-                }}>
-                  📅 {formatDateRange(event.startDate, event.endDate)}
+                {/* ROW 2: Description */}
+                <div>
+                  <label style={labelStyle}>Description</label>
+                  <textarea
+                    value={newEvent.description}
+                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                    placeholder="Describe the event..."
+                    rows={4}
+                    style={{ ...inputStyle, resize: 'vertical' }}
+                  />
+                </div>
+
+                {/* ROW 3: Upload Cover Image */}
+                <div>
+                  <label style={labelStyle}>Upload Cover Image</label>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+
+                  {!imagePreview && !newEvent.coverImage ? (
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        border: '2px dashed #ccc',
+                        borderRadius: '8px',
+                        padding: '2rem',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        backgroundColor: '#fff',
+                        transition: 'border-color 0.2s',
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.borderColor = '#28a745'}
+                      onMouseOut={(e) => e.currentTarget.style.borderColor = '#ccc'}
+                    >
+                      {uploading ? (
+                        <p style={{ margin: 0, color: '#666' }}>Uploading...</p>
+                      ) : (
+                        <>
+                          <Upload size={32} style={{ color: '#999', marginBottom: '0.5rem' }} />
+                          <p style={{ margin: 0, color: '#666', fontSize: '0.875rem' }}>
+                            Click to upload image (max 5MB)
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                      <img
+                        src={imagePreview || newEvent.coverImage}
+                        alt="Cover preview"
+                        style={{
+                          maxWidth: '300px',
+                          maxHeight: '200px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          right: '-8px',
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: '#dc3545',
+                          color: 'white',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ROW 4: Start Date, End Date */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={labelStyle}>Start Date *</label>
+                    <input
+                      type="date"
+                      value={newEvent.startDate}
+                      onChange={(e) => setNewEvent({ ...newEvent, startDate: e.target.value })}
+                      required
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>End Date</label>
+                    <input
+                      type="date"
+                      value={newEvent.endDate}
+                      onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                {/* ROW 5: Country, City, Venue */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={labelStyle}>Country *</label>
+                    <select
+                      value={newEvent.country}
+                      onChange={(e) => setNewEvent({ ...newEvent, country: e.target.value })}
+                      required
+                      style={inputStyle}
+                    >
+                      <option value="">Select country...</option>
+                      {COUNTRIES.map(country => (
+                        <option key={country} value={country}>{country}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>City *</label>
+                    <input
+                      type="text"
+                      value={newEvent.city}
+                      onChange={(e) => setNewEvent({ ...newEvent, city: e.target.value })}
+                      required
+                      placeholder="e.g., Chichester"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Venue</label>
+                    <input
+                      type="text"
+                      value={newEvent.venue}
+                      onChange={(e) => setNewEvent({ ...newEvent, venue: e.target.value })}
+                      placeholder="e.g., Goodwood Estate"
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                {/* ROW 6: Website, Ticket URL, Price */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={labelStyle}>Website</label>
+                    <input
+                      type="url"
+                      value={newEvent.website}
+                      onChange={(e) => setNewEvent({ ...newEvent, website: e.target.value })}
+                      placeholder="https://..."
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Ticket URL</label>
+                    <input
+                      type="url"
+                      value={newEvent.ticketUrl}
+                      onChange={(e) => setNewEvent({ ...newEvent, ticketUrl: e.target.value })}
+                      placeholder="https://..."
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Price</label>
+                    <input
+                      type="text"
+                      value={newEvent.price}
+                      onChange={(e) => setNewEvent({ ...newEvent, price: e.target.value })}
+                      placeholder="e.g., Free, $50"
+                      style={inputStyle}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Event Info */}
-              <div style={{ padding: '1.25rem' }}>
-                <h3 style={{
-                  margin: '0 0 0.5rem 0',
-                  fontSize: '1.15rem',
-                  fontWeight: 'bold',
-                  color: '#1a1a2e',
-                  lineHeight: '1.3',
-                }}>
-                  {event.title}
-                </h3>
+              {/* Submit Buttons */}
+              <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  style={{
+                    padding: '0.75rem 2rem',
+                    background: uploading ? '#ccc' : '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  {editingEvent ? 'Update Event' : 'Create Event'}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
-                <p style={{
-                  margin: '0 0 0.5rem 0',
-                  color: '#555',
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                }}>
-                  📍 {event.venue ? `${event.venue}, ` : ''}{event.city}, {event.country}
-                </p>
+        {/* Title Section */}
+        <div className="events-section__title-wrapper">
+          <h2 className="events-section__title">Upcoming events</h2>
+          <div className="events-section__separator-line" />
+        </div>
 
-                {/* Distance from user */}
-                {getDistanceText(event) && (
-                  <p style={{
-                    margin: '0 0 0.5rem 0',
-                    color: '#3498db',
-                    fontSize: '0.85rem',
-                    fontWeight: '500',
+        {/* Events Grid */}
+        {upcomingEvents.length > 0 ? (
+          <div className="events-section__grid">
+            {upcomingEvents.map((event) => (
+              <div key={event.id} style={{ position: 'relative' }}>
+                <Card
+                  imageUrl={event.coverImage || FALLBACK_IMAGE}
+                  title1="EVENT"
+                  title2={event.title}
+                  separatorText={event.city && event.country ? `${event.city}, ${event.country}` : undefined}
+                  requirement={event.price || undefined}
+                  onClick={() => handleCardClick(event)}
+                />
+                {/* Admin Controls on Card */}
+                {isAdmin && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '0.5rem',
+                    left: '0.5rem',
+                    right: '0.5rem',
+                    display: 'flex',
+                    gap: '0.25rem',
+                    zIndex: 10,
                   }}>
-                    🚗 {getDistanceText(event)}
-                  </p>
-                )}
-
-                {/* Price */}
-                {event.price && (
-                  <p style={{
-                    margin: '0 0 0.75rem 0',
-                    color: '#27ae60',
-                    fontSize: '0.9rem',
-                    fontWeight: 'bold',
-                  }}>
-                    🎟️ {event.price}
-                  </p>
-                )}
-
-                {/* Description */}
-                {event.description && (
-                  <p style={{
-                    margin: '0 0 1rem 0',
-                    color: '#666',
-                    fontSize: '0.85rem',
-                    lineHeight: '1.4',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}>
-                    {event.description}
-                  </p>
-                )}
-
-                {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {event.website && (
-                    <a
-                      href={event.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        flex: 1,
-                        padding: '0.6rem',
-                        background: '#1a1a2e',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        textDecoration: 'none',
-                        textAlign: 'center',
-                        fontWeight: 'bold',
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      🌐 Website
-                    </a>
-                  )}
-                  {event.ticketUrl && (
-                    <a
-                      href={event.ticketUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        flex: 1,
-                        padding: '0.6rem',
-                        background: '#e74c3c',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        textDecoration: 'none',
-                        textAlign: 'center',
-                        fontWeight: 'bold',
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      🎟️ Tickets
-                    </a>
-                  )}
-                </div>
-
-                {/* Admin Controls */}
-                {isAdmin && event && (
-                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
                     <button
-                      onClick={() => handleEditEvent(event)}
+                      onClick={(e) => { e.stopPropagation(); handleEditEvent(event); }}
                       style={{
                         flex: 1,
-                        padding: '0.4rem',
+                        padding: '0.25rem',
                         background: '#ffc107',
                         color: '#000',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
-                        fontSize: '0.75rem',
+                        fontSize: '0.6875rem',
                       }}
                     >
-                      ✏️ Edit
+                      Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteEvent(event)}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event); }}
                       style={{
                         flex: 1,
-                        padding: '0.4rem',
+                        padding: '0.25rem',
                         background: '#dc3545',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
-                        fontSize: '0.75rem',
+                        fontSize: '0.6875rem',
                       }}
                     >
-                      🗑️ Delete
+                      Delete
                     </button>
                   </div>
                 )}
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div style={{
-          textAlign: 'center',
-          padding: '4rem 2rem',
-          background: '#f8f9fa',
-          borderRadius: '12px',
-        }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏁</div>
-          <h3 style={{ margin: '0 0 0.5rem 0' }}>No Events Found</h3>
-          <p style={{ color: '#666' }}>
-            {events.length === 0
-              ? 'No automotive events have been added yet.'
-              : 'Try adjusting your filters to see more events.'
-            }
-          </p>
-        </div>
-      )}
+            ))}
+          </div>
+        ) : (
+          <div className="events-section__empty">
+            <div className="events-section__empty-icon">No events found</div>
+            <h3>No Upcoming Events</h3>
+            <p>
+              {events.length === 0
+                ? 'No automotive events have been added yet.'
+                : 'Check back soon for upcoming events.'
+              }
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
