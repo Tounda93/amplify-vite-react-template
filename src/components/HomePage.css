@@ -118,3 +118,17 @@
 .home-page__grid .card * {
   color: inherit;
 }
+
+/* ===========================================
+   Upcoming Events Horizontal Scroll
+   =========================================== */
+
+.home-page__events-scroll,
+.home-page__news-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+.home-page__events-scroll::-webkit-scrollbar,
+.home-page__news-scroll::-webkit-scrollbar {
+  display: none;
+}

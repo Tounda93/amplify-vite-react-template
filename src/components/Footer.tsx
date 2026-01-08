@@ -26,6 +26,18 @@ export default function Footer({
   const currentYear = new Date().getFullYear();
   const isMobile = useIsMobile();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window === 'undefined' ? 0 : window.innerWidth
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (!isMobile) {
@@ -42,27 +54,39 @@ export default function Footer({
     setIsSearchOpen(false);
   };
 
+  const mobileIconSize = isMobile
+    ? Math.max(14, Math.min(18, viewportWidth ? viewportWidth / 24 : 16))
+    : 20;
+
+  // Glass effect styling - matching header
+  const footerBackground = 'rgba(255, 255, 255, 0.15)';
+  const footerBorderColor = '1px solid rgba(255, 255, 255, 0.3)';
+  const footerShadow = '0 -4px 30px rgba(0, 0, 0, 0.1)';
+  const textColor = '#000000';
+  const navInactiveColor = 'rgba(0, 0, 0, 0.5)';
+
   if (isMobile) {
+    // Order: Search, Chat, My Garage, Profile
     const navItems = [
       { id: 'search', label: 'Search', icon: Search, isSearch: true },
-      { id: 'garage', label: 'My Garage', icon: Car },
       { id: 'chat', label: 'Chat', icon: MessageSquare },
+      { id: 'garage', label: 'My Garage', icon: Car },
       { id: 'profile', label: 'Profile', icon: User },
     ];
 
     return (
       <footer style={{
         position: 'fixed',
-        bottom: '1rem',
-        left: '1rem',
-        right: '1rem',
-        padding: '4px 14px',
-        background: 'rgba(15,23,42,0.55)',
-        border: '1px solid rgba(255,255,255,0.15)',
+        bottom: '0.4rem',
+        left: '0.2rem',
+        right: '0.2rem',
+        padding: '3px 12px 6px 12px',
+        background: footerBackground,
+        border: footerBorderColor,
         borderRadius: '999px',
-        boxShadow: '0 -25px 55px rgba(15, 23, 42, 0.45)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        boxShadow: footerShadow,
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         zIndex: 1400,
         overflow: 'visible'
       }}>
@@ -72,7 +96,7 @@ export default function Footer({
             bottom: 'calc(100% + 0.5rem)',
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '80vw',
+            width: '90vw',
             maxWidth: '520px',
             zIndex: 1500
           }}>
@@ -91,8 +115,10 @@ export default function Footer({
         )}
         <nav style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          gap: '6px'
+          alignItems: 'center',
+          justifyContent: 'space-around',
+          gap: '4px',
+          width: '100%'
         }}>
           {navItems.map(({ id, label, icon: IconComponent, isSearch }) => {
             const isActive = isSearch ? isSearchOpen : activeSection === id;
@@ -109,36 +135,43 @@ export default function Footer({
                   }
                 }}
                 style={{
-                  flex: 1,
+                  flex: '1 1 0',
+                  minWidth: 0,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '4px',
-                  padding: '2px 4px 10px 4px',
-                  borderRadius: '16px',
+                  gap: '2px',
+                  padding: '6px 4px 10px 4px',
+                  borderRadius: '12px',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: '#f9fafb',
+                  color: isActive ? textColor : navInactiveColor,
                   boxShadow: 'none',
                   cursor: 'pointer',
                   transition: 'color 0.2s',
                   position: 'relative'
                 }}
               >
-                <IconComponent size={20} strokeWidth={isActive ? 2.4 : 1.8} />
-                <span style={{ fontSize: '11px', fontWeight: 400 }}>
+                <IconComponent
+                  size={mobileIconSize}
+                  strokeWidth={isActive ? 2.4 : 1.8}
+                />
+                <span style={{
+                  fontSize: '9px',
+                  fontWeight: 400
+                }}>
                   {label}
                 </span>
                 <div style={{
                   position: 'absolute',
-                  bottom: '3px',
+                  bottom: '4px',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: '40%',
-                  height: '2px',
+                  width: '30%',
+                  height: '1.5px',
                   borderRadius: '999px',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: textColor,
                   opacity: isActive ? 1 : 0,
                   transition: 'opacity 0.2s'
                 }} />
