@@ -137,9 +137,10 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [wikiSelectedMake, setWikiSelectedMake] = useState<Make | null>(null);
   const [pendingMakeId, setPendingMakeId] = useState<string | undefined>(initialState.makeId);
   const isMobile = useIsMobile();
-  const horizontalPadding = isMobile ? '2rem' : '5rem';
-  // Only add top padding on home page for mobile
-  const topPadding = isMobile && activeSection === 'home' ? '5rem' : '0';
+  // Mobile horizontal padding reduced by 80%: 2rem -> 0.4rem
+  const horizontalPadding = isMobile ? '0.4rem' : '5rem';
+  // Only add top padding on home page for mobile (reduced)
+  const topPadding = isMobile && activeSection === 'home' ? '3rem' : '0';
   const [hasEnsuredSeedData, setHasEnsuredSeedData] = useState(false);
   const adminEmail = user?.signInDetails?.loginId?.toLowerCase();
 
@@ -649,7 +650,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
       {/* HOME SECTION - New HomePage component with all sections */}
       {activeSection === 'home' && !selectedMake && makes.length === 0 && (
-        <HomePage />
+        <HomePage onCreateEvent={() => handleSectionChange('events')} />
       )}
 
       {/* Search Results or Selected Make View */}

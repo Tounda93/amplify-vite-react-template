@@ -1,111 +1,58 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
 import { Card } from './Card';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { NewsItem, fetchNewsFeedItems } from '../utils/newsFeed';
+import HeroCarousel from './HeroCarousel';
 import './HomePage.css';
 
 const client = generateClient<Schema>();
 
 type Event = Schema['Event']['type'];
-type WikiCarEntry = Schema['WikiCarEntry']['type'];
-
-// Unified card item type for the feed
-interface FeedItem {
-  id: string;
-  type: 'event' | 'wikicar' | 'news' | 'auction';
-  imageUrl: string;
-  title1: string;
-  title2: string;
-  separatorText?: string;
-  requirement?: string;
-  url?: string;
-  data?: Event | WikiCarEntry | NewsItem;
-}
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
-const ITEMS_PER_PAGE = 10;
 
-export default function HomePage() {
+interface HomePageProps {
+  onCreateEvent?: () => void;
+}
+
+export default function HomePage({ onCreateEvent }: HomePageProps) {
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
 
-  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(0);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // Load initial data
   useEffect(() => {
     loadInitialData();
   }, []);
 
-  // Setup infinite scroll observer
-  useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          loadMoreItems();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current);
-    }
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [hasMore, loadingMore, page]);
-
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      // Fetch news items first and store them
+      // Fetch news items
       const news = await fetchNewsFeedItems();
       setNewsItems(news);
 
-      const items = await fetchFeedItems(0, news);
-      setFeedItems(items);
-      setHasMore(items.length >= ITEMS_PER_PAGE);
-      setPage(1);
+      // Fetch upcoming events (up to 7, sorted by date)
+      const { data: events } = await client.models.Event.list({
+        limit: 20,
+      });
+      // Sort by startDate and filter for future events
+      const now = new Date();
+      const upcoming = (events || [])
+        .filter((e) => e.startDate && new Date(e.startDate) >= now)
+        .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime())
+        .slice(0, 7);
+      setUpcomingEvents(upcoming);
     } catch (error) {
       console.error('Error loading feed:', error);
     }
     setLoading(false);
   };
-
-  const loadMoreItems = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
-
-    setLoadingMore(true);
-    try {
-      const newItems = await fetchFeedItems(page, newsItems);
-      if (newItems.length === 0) {
-        setHasMore(false);
-      } else {
-        setFeedItems((prev) => [...prev, ...newItems]);
-        setHasMore(newItems.length >= ITEMS_PER_PAGE);
-        setPage((prev) => prev + 1);
-      }
-    } catch (error) {
-      console.error('Error loading more items:', error);
-    }
-    setLoadingMore(false);
-  }, [page, loadingMore, hasMore, newsItems]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -114,81 +61,6 @@ export default function HomePage() {
       month: 'short',
       year: 'numeric'
     });
-  };
-
-  const fetchFeedItems = async (pageNum: number, news: NewsItem[]): Promise<FeedItem[]> => {
-    const items: FeedItem[] = [];
-
-    // Fetch events
-    const { data: events } = await client.models.Event.list({
-      limit: ITEMS_PER_PAGE,
-    });
-
-    // Fetch wiki car entries
-    const { data: wikiCars } = await client.models.WikiCarEntry.list({
-      limit: ITEMS_PER_PAGE,
-    });
-
-    // Transform events to feed items
-    (events || []).forEach((event) => {
-      items.push({
-        id: `event-${event.id}`,
-        type: 'event',
-        imageUrl: event.coverImage || FALLBACK_IMAGE,
-        title1: event.eventType?.replace('_', ' ').toUpperCase() || 'EVENT',
-        title2: event.title || 'Untitled Event',
-        separatorText: event.city && event.country ? `${event.city}, ${event.country}` : undefined,
-        requirement: event.price || undefined,
-        data: event,
-      });
-    });
-
-    // Transform wiki cars to feed items
-    (wikiCars || []).forEach((car) => {
-      items.push({
-        id: `wikicar-${car.id}`,
-        type: 'wikicar',
-        imageUrl: car.heroImageUrl || FALLBACK_IMAGE,
-        title1: car.brandName || 'CAR',
-        title2: car.makeName || 'Untitled',
-        separatorText: car.production || undefined,
-        requirement: undefined,
-        data: car,
-      });
-    });
-
-    // Transform news to feed items
-    news.forEach((newsItem, index) => {
-      items.push({
-        id: `news-${index}-${newsItem.link}`,
-        type: 'news',
-        imageUrl: newsItem.thumbnail || FALLBACK_IMAGE,
-        title1: newsItem.source,
-        title2: newsItem.title,
-        separatorText: formatDate(newsItem.pubDate),
-        requirement: undefined,
-        url: newsItem.link,
-        data: newsItem,
-      });
-    });
-
-    // Shuffle items for variety (in production, you'd want proper pagination)
-    const shuffled = items.sort(() => Math.random() - 0.5);
-
-    // Simulate pagination by slicing
-    const start = pageNum * ITEMS_PER_PAGE;
-    const end = start + ITEMS_PER_PAGE;
-
-    return shuffled.slice(start, end);
-  };
-
-  const handleCardClick = (item: FeedItem) => {
-    if (item.type === 'news' && item.url) {
-      window.open(item.url, '_blank', 'noopener,noreferrer');
-    } else {
-      // TODO: Navigate to detail page or open popup based on item type
-      console.log('Card clicked:', item);
-    }
   };
 
   if (loading) {
@@ -203,39 +75,172 @@ export default function HomePage() {
 
   return (
     <div className="home-page" style={{ width: '100%', overflowX: 'hidden' }}>
-      <div
-        className="home-page__content"
-        style={{ padding: `2rem ${horizontalPadding}` }}
-      >
-        {/* Card Grid */}
-        <div className="home-page__grid">
-          {feedItems.map((item) => (
-            <Card
-              key={item.id}
-              imageUrl={item.imageUrl}
-              title1={item.title1}
-              title2={item.title2}
-              separatorText={item.separatorText}
-              requirement={item.requirement}
-              onClick={() => handleCardClick(item)}
-            />
-          ))}
-        </div>
+      {/* Hero Section with Image/Video */}
+      <HeroCarousel />
 
-        {/* Infinite scroll trigger */}
-        <div ref={loadMoreRef} className="home-page__load-more">
-          {loadingMore && <p>Loading more...</p>}
-          {!hasMore && feedItems.length > 0 && (
-            <p className="home-page__end-message">You've reached the end</p>
-          )}
+      {/* Upcoming Events Section */}
+      <div style={{ padding: `2rem ${horizontalPadding}` }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          marginBottom: '1rem'
+        }}>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: 600,
+            color: '#000',
+            margin: 0
+          }}>
+            Upcoming Events
+          </h2>
+          <div style={{
+            flex: 1,
+            height: '1px',
+            backgroundColor: '#000'
+          }} />
+          <button
+            onClick={onCreateEvent}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '999px',
+              border: '1px solid #000',
+              backgroundColor: 'transparent',
+              color: '#000',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#000';
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#000';
+            }}
+          >
+            Create your event
+          </button>
         </div>
-
-        {feedItems.length === 0 && !loading && (
-          <div className="home-page__empty">
-            <p>No content available yet.</p>
+        {upcomingEvents.length > 0 ? (
+          <div
+            className="home-page__events-scroll"
+            style={{
+              display: 'flex',
+              gap: '0.8125rem',
+              overflowX: 'auto',
+              paddingBottom: '1rem',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}
+          >
+            {upcomingEvents.map((event) => (
+              <Card
+                key={event.id}
+                imageUrl={event.coverImage || FALLBACK_IMAGE}
+                title1={event.eventType?.replace('_', ' ').toUpperCase() || 'EVENT'}
+                title2={event.title || 'Untitled Event'}
+                separatorText={event.city && event.country ? `${event.city}, ${event.country}` : undefined}
+                requirement={event.price || undefined}
+                onClick={() => console.log('Event clicked:', event)}
+                variant="wide"
+              />
+            ))}
           </div>
+        ) : (
+          <p style={{ color: '#666' }}>No upcoming events. Create one!</p>
         )}
       </div>
+
+      {/* Rooms Section */}
+      <div style={{ padding: `2rem ${horizontalPadding}` }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          marginBottom: '1rem'
+        }}>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: 600,
+            color: '#000',
+            margin: 0
+          }}>
+            Rooms
+          </h2>
+          <div style={{
+            flex: 1,
+            height: '1px',
+            backgroundColor: '#000'
+          }} />
+          <button
+            onClick={() => console.log('Create room clicked')}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '999px',
+              border: '1px solid #000',
+              backgroundColor: 'transparent',
+              color: '#000',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#000';
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#000';
+            }}
+          >
+            Create your room
+          </button>
+        </div>
+        <p style={{ color: '#666' }}>No rooms available. Create one!</p>
+      </div>
+
+      {/* News Section */}
+      {newsItems.length > 0 && (
+        <div style={{ padding: `2rem ${horizontalPadding}` }}>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: 600,
+            color: '#000',
+            margin: '0 0 1rem 0'
+          }}>
+            News
+          </h2>
+          <div
+            className="home-page__news-scroll"
+            style={{
+              display: 'flex',
+              gap: '0.8125rem',
+              overflowX: 'auto',
+              paddingBottom: '1rem',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}
+          >
+            {newsItems.slice(0, 9).map((newsItem, index) => (
+              <Card
+                key={`news-row-${index}`}
+                imageUrl={newsItem.thumbnail || FALLBACK_IMAGE}
+                title1={newsItem.source}
+                title2={newsItem.title}
+                separatorText={formatDate(newsItem.pubDate)}
+                onClick={() => window.open(newsItem.link, '_blank', 'noopener,noreferrer')}
+                variant="wide"
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

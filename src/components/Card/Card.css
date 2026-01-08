@@ -4,8 +4,8 @@
    =========================================== */
 
 .card {
-  width: 16.625rem; /* 266px */
-  height: 26.875rem; /* 430px */
+  width: 23.275rem; /* 372px - 40% wider than original 266px */
+  height: 18.8125rem; /* 301px - 30% shorter than 430px */
   background-color: #FFFFFF;
   border-radius: 0.9375rem; /* 15px */
   overflow: hidden;
@@ -45,7 +45,7 @@
 
 .card__image {
   width: 100%;
-  height: 18.5rem; /* 296px */
+  height: 12.95rem; /* 207px - 30% shorter than original 296px */
   border-radius: 0.9375rem 0.9375rem 0 0; /* 15px 15px 0 0 */
   background-color: lightgray;
   background-position: 50%;
@@ -194,15 +194,6 @@
 }
 
 /* --- Wide Variant --- */
-.card--wide {
-  width: 21.875rem; /* 350px */
-  height: 30rem; /* 480px */
-}
-
-.card--wide .card__image {
-  height: 21.875rem; /* 350px */
-}
-
 .card--wide .card__content {
   padding: 0.875rem 1.125rem; /* 14px 18px */
 }

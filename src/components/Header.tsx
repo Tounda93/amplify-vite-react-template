@@ -16,7 +16,8 @@ import { useEffect, useState } from 'react';
  * =====================================================
  *
  * Pill-shaped sticky header with glass effect.
- * Profile and Sign Out moved to Garage page.
+ * On mobile: only shows main navigation (Home, Events, News, Rooms)
+ * Chat and Garage are in the footer on mobile.
  *
  * =====================================================
  */
@@ -79,12 +80,15 @@ export default function Header({
     .filter((category): category is Category => Boolean(category));
 
   if (isMobile) {
+    // Mobile header: only main navigation, no Chat/Garage (they're in footer)
+    // Top margin reduced by 60%: 1rem -> 0.4rem
+    // Side margins reduced by 80%: 1rem -> 0.2rem
     return (
       <header style={{
         position: "sticky",
-        top: "1rem",
-        marginLeft: "1rem",
-        marginRight: "1rem",
+        top: "0.4rem",
+        marginLeft: "0.2rem",
+        marginRight: "0.2rem",
         padding: "3px 12px 6px 12px",
         zIndex: 1500,
         background: headerBackground,
@@ -151,94 +155,6 @@ export default function Header({
               </button>
             );
           })}
-          {/* Chat button */}
-          <button
-            onClick={() => onSectionChange("chat")}
-            style={{
-              flex: "1 1 0",
-              minWidth: 0,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "2px",
-              padding: "6px 4px 10px 4px",
-              borderRadius: "12px",
-              border: "none",
-              cursor: "pointer",
-              color: activeSection === "chat" ? textColor : navInactiveColor,
-              backgroundColor: "transparent",
-              transition: "color 0.2s",
-              position: "relative"
-            }}
-          >
-            <MessageSquare
-              size={mobileIconSize}
-              strokeWidth={activeSection === "chat" ? 2.4 : 1.8}
-            />
-            <span style={{
-              fontSize: "9px",
-              fontWeight: 400
-            }}>
-              Chat
-            </span>
-            <div style={{
-              position: "absolute",
-              bottom: "4px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "30%",
-              height: "1.5px",
-              borderRadius: "999px",
-              backgroundColor: textColor,
-              opacity: activeSection === "chat" ? 1 : 0,
-              transition: "opacity 0.2s"
-            }} />
-          </button>
-          {/* My Garage button */}
-          <button
-            onClick={() => onSectionChange("garage")}
-            style={{
-              flex: "1 1 0",
-              minWidth: 0,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "2px",
-              padding: "6px 4px 10px 4px",
-              borderRadius: "12px",
-              border: "none",
-              cursor: "pointer",
-              color: activeSection === "garage" ? textColor : navInactiveColor,
-              backgroundColor: "transparent",
-              transition: "color 0.2s",
-              position: "relative"
-            }}
-          >
-            <Car
-              size={mobileIconSize}
-              strokeWidth={activeSection === "garage" ? 2.4 : 1.8}
-            />
-            <span style={{
-              fontSize: "9px",
-              fontWeight: 400
-            }}>
-              Garage
-            </span>
-            <div style={{
-              position: "absolute",
-              bottom: "4px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "30%",
-              height: "1.5px",
-              borderRadius: "999px",
-              backgroundColor: textColor,
-              opacity: activeSection === "garage" ? 1 : 0,
-              transition: "opacity 0.2s"
-            }} />
-          </button>
         </nav>
       </header>
     );

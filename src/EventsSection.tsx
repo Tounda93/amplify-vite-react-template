@@ -557,8 +557,44 @@ export function EventsSection() {
 
         {/* Title Section */}
         <div className="events-section__title-wrapper">
-          <h2 className="events-section__title">Upcoming events</h2>
-          <div className="events-section__separator-line" />
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            marginBottom: '1rem'
+          }}>
+            <h2 className="events-section__title" style={{ margin: 0 }}>Upcoming events</h2>
+            <div style={{
+              flex: 1,
+              height: '1px',
+              backgroundColor: '#000'
+            }} />
+            <button
+              onClick={() => { setShowAddForm(true); }}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '999px',
+                border: '1px solid #000',
+                backgroundColor: 'transparent',
+                color: '#000',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#000';
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#000';
+              }}
+            >
+              Create your event
+            </button>
+          </div>
         </div>
 
         {/* Events Grid */}
