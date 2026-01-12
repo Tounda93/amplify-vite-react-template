@@ -27,6 +27,7 @@ export function NewsSection() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const horizontalPadding = isMobile ? '1rem' : '5rem';
 
   // Carousel scroll handlers
   const scrollCarousel = (direction: 'left' | 'right') => {
@@ -96,7 +97,7 @@ export function NewsSection() {
 
   if (loading) {
     return (
-      <div className="news-section">
+      <div style={{ width: '100%', backgroundColor: '#FFFFFF', padding: `2rem ${horizontalPadding}` }}>
         <div className="news-section__loading">
           <p>Loading news from car magazines...</p>
         </div>
@@ -106,7 +107,7 @@ export function NewsSection() {
 
   if (error) {
     return (
-      <div className="news-section">
+      <div style={{ width: '100%', backgroundColor: '#FFFFFF', padding: `2rem ${horizontalPadding}` }}>
         <div className="news-section__error">
           <p>{error}</p>
           <button onClick={fetchAllNews} className="news-section__retry-btn">
@@ -118,7 +119,7 @@ export function NewsSection() {
   }
 
   return (
-    <div className="news-section">
+    <div style={{ width: '100%', backgroundColor: '#FFFFFF', padding: `2rem ${horizontalPadding}` }}>
       {/* Magazine Carousel */}
       <div className="magazine-carousel-container" style={{
         position: 'relative',

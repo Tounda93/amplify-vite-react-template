@@ -564,12 +564,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
       {/* NEWS SECTION */}
       {activeSection === 'news' && (
-        <div style={{
-          width: '100%',
-          padding: `2rem ${horizontalPadding}`
-        }}>
-          <NewsSection />
-        </div>
+        <NewsSection />
       )}
 
       {/* AUCTIONS SECTION */}
@@ -587,22 +582,12 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
       {/* COMMUNITY SECTION */}
       {activeSection === 'community' && (
-        <div style={{
-          width: '100%',
-          padding: `2rem ${horizontalPadding}`
-        }}>
-          <CommunitySection />
-        </div>
+        <CommunitySection />
       )}
 
       {/* SHOP SECTION */}
       {activeSection === 'shop' && (
-        <div style={{
-          width: '100%',
-          padding: `2rem ${horizontalPadding}`
-        }}>
-          <ShopSection />
-        </div>
+        <ShopSection />
       )}
 
       {/* CHAT SECTION */}
@@ -617,26 +602,16 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
       {/* MY GARAGE SECTION */}
       {activeSection === 'garage' && (
-        <div style={{
-          width: '100%',
-          padding: `2rem ${horizontalPadding}`
-        }}>
-          <MyGarageSection
-            user={user}
-            signOut={signOut}
-            onSectionChange={handleSectionChange}
-          />
-        </div>
+        <MyGarageSection
+          user={user}
+          signOut={signOut}
+          onSectionChange={handleSectionChange}
+        />
       )}
 
       {/* PROFILE SECTION */}
       {activeSection === 'profile' && (
-        <div style={{
-          width: '100%',
-          padding: `2rem ${horizontalPadding}`
-        }}>
-          <ProfileSection user={user} signOut={signOut} />
-        </div>
+        <ProfileSection user={user} signOut={signOut} />
       )}
 
       {/* WIKICARS SECTION */}

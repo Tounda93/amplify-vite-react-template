@@ -73,13 +73,16 @@ export default function CarCard({ car, makeName, modelName, onClick, compact = f
     <div
       onClick={onClick}
       style={{
-        borderRadius: '12px',
+        borderRadius: '5px',
         overflow: 'hidden',
         backgroundColor: '#fff',
         border: '1px solid #e5e7eb',
         cursor: onClick ? 'pointer' : 'default',
         transition: 'all 0.2s',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '280px',
       }}
       onMouseOver={(e) => {
         if (onClick) {
@@ -94,10 +97,10 @@ export default function CarCard({ car, makeName, modelName, onClick, compact = f
         }
       }}
     >
-      {/* Car Image */}
+      {/* Car Image - 70% of card height */}
       <div
         style={{
-          height: '180px',
+          flex: '0 0 70%',
           backgroundColor: '#f3f4f6',
           backgroundImage: carImage ? `url(${carImage})` : `url(${FALLBACK_CAR_IMAGE})`,
           backgroundSize: 'cover',

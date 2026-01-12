@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Users, MessageCircle, Heart, Share2 } from 'lucide-react';
+import { useIsMobile } from './hooks/useIsMobile';
 
 export function CommunitySection() {
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
+  const horizontalPadding = isMobile ? '1rem' : '5rem';
 
   useEffect(() => {
     // Simulate loading
@@ -11,14 +14,14 @@ export function CommunitySection() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <p style={{ color: '#666' }}>Loading community...</p>
+      <div style={{ width: '100%', backgroundColor: '#FFFFFF', padding: `2rem ${horizontalPadding}` }}>
+        <p style={{ color: '#666', textAlign: 'center' }}>Loading community...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', backgroundColor: '#FFFFFF', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
       {/* Community Header */}
       <div style={{
         textAlign: 'center',

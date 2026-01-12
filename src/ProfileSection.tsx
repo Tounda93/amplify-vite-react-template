@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Calendar, MapPin, Edit, Camera, Shield, LogOut } from 'lucide-react';
 import WikiCarAdminPanel from './components/WikiCarAdminPanel';
+import { useIsMobile } from './hooks/useIsMobile';
 
 interface AmplifyUser {
   signInDetails?: {
@@ -16,6 +17,8 @@ interface ProfileSectionProps {
 
 export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
+  const horizontalPadding = isMobile ? '1rem' : '5rem';
 
   useEffect(() => {
     // Simulate loading
@@ -24,8 +27,8 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <p style={{ color: '#666' }}>Loading profile...</p>
+      <div style={{ width: '100%', backgroundColor: '#FFFFFF', padding: `2rem ${horizontalPadding}` }}>
+        <p style={{ color: '#666', textAlign: 'center' }}>Loading profile...</p>
       </div>
     );
   }
@@ -34,7 +37,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const userInitial = userEmail.charAt(0).toUpperCase();
 
   return (
-    <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
+    <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', backgroundColor: '#FFFFFF', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
       {/* Profile Header */}
       <div style={{
         backgroundColor: '#f8f9fa',
