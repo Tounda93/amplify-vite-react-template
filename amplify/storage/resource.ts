@@ -13,6 +13,11 @@ export const storage = defineStorage({
       allow.guest.to(['read']),
       allow.authenticated.to(['read']),
     ],
+    'event-photos/{entity_id}/*': [
+      allow.entity('identity').to(['read', 'write', 'delete']),
+      allow.guest.to(['read']),
+      allow.authenticated.to(['read']),
+    ],
     'documents/{entity_id}/*': [
       allow.entity('identity').to(['read', 'write', 'delete']),
     ],

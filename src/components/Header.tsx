@@ -304,7 +304,7 @@ export default function Header({
             }}
           >
             <Car size={20} strokeWidth={activeSection === "garage" ? 2 : 1.5} />
-            <span style={{ fontSize: "10px", fontWeight: 400 }}>Garage</span>
+            <span style={{ fontSize: "10px", fontWeight: 400 }}>My Garage</span>
             <div style={{
               position: "absolute",
               bottom: "4px",
