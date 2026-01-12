@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Calendar, MapPin, Edit, Camera, Shield } from 'lucide-react';
+import { User, Mail, Calendar, MapPin, Edit, Camera, Shield, LogOut } from 'lucide-react';
 import WikiCarAdminPanel from './components/WikiCarAdminPanel';
 
 interface AmplifyUser {
@@ -11,9 +11,10 @@ interface AmplifyUser {
 
 interface ProfileSectionProps {
   user: AmplifyUser | undefined;
+  signOut?: () => void;
 }
 
-export function ProfileSection({ user }: ProfileSectionProps) {
+export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -88,25 +89,57 @@ export function ProfileSection({ user }: ProfileSectionProps) {
           {userEmail}
         </p>
 
-        <button style={{
-          padding: '0.75rem 1.5rem',
-          backgroundColor: '#3498db',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          fontWeight: '600',
-          transition: 'transform 0.2s'
-        }}
-        onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-        onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-        >
-          <Edit size={18} />
-          Edit Profile
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#3498db',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontWeight: '600',
+            transition: 'transform 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            <Edit size={18} />
+            Edit Profile
+          </button>
+
+          {signOut && (
+            <button
+              onClick={signOut}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#fef2f2',
+                color: '#dc2626',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontWeight: '600',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#fee2e2';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#fef2f2';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <LogOut size={18} />
+              Sign Out
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Profile Information */}

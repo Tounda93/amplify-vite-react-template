@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Car, Plus, Heart, Settings, User, LogOut } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Car, Plus, Heart, Settings, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../amplify/data/resource';
 import AddCarPopup from './components/AddCarPopup';
-import CarCard from './components/CarCard';
+import CarDetailPopup from './components/CarDetailPopup';
+import { useIsMobile } from './hooks/useIsMobile';
 
 const client = generateClient<Schema>();
 
@@ -25,12 +26,18 @@ interface MyGarageSectionProps {
   onSectionChange?: (section: string) => void;
 }
 
-export function MyGarageSection({ user, signOut, onSectionChange }: MyGarageSectionProps) {
+const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80';
+
+export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps) {
+  const isMobile = useIsMobile();
+  const horizontalPadding = isMobile ? '1rem' : '5rem';
   const [loading, setLoading] = useState(true);
   const [showAddCarPopup, setShowAddCarPopup] = useState(false);
   const [userCars, setUserCars] = useState<CarType[]>([]);
   const [makes, setMakes] = useState<Map<string, Make>>(new Map());
   const [models, setModels] = useState<Map<string, Model>>(new Map());
+  const [selectedCar, setSelectedCar] = useState<CarType | null>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadUserCars();
@@ -108,6 +115,16 @@ export function MyGarageSection({ user, signOut, onSectionChange }: MyGarageSect
   const getMakeName = (makeId: string) => makes.get(makeId)?.makeName || 'Unknown';
   const getModelName = (modelId: string) => models.get(modelId)?.modelName || 'Unknown';
 
+  const scrollCarousel = (direction: 'left' | 'right') => {
+    if (carouselRef.current) {
+      const scrollAmount = 400;
+      carouselRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
@@ -117,18 +134,14 @@ export function MyGarageSection({ user, signOut, onSectionChange }: MyGarageSect
   }
 
   return (
-    <div style={{ width: '100vw' }}>
-      {/* Account Section - Profile & Sign Out */}
+    <div style={{ width: '100%', overflowX: 'hidden' }}>
+      {/* Profile Button - Left aligned */}
       <div style={{
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'flex-start',
         alignItems: 'center',
-        gap: '1rem',
-        padding: '1rem 2rem',
-        borderBottom: '1px solid #e5e7eb',
-        backgroundColor: '#f9fafb'
+        padding: `1rem ${horizontalPadding}`,
       }}>
-        {/* Profile Button */}
         <button
           onClick={() => onSectionChange?.('profile')}
           style={{
@@ -165,47 +178,48 @@ export function MyGarageSection({ user, signOut, onSectionChange }: MyGarageSect
           </div>
           <User size={16} style={{ color: '#666' }} />
         </button>
-
-        {/* Sign Out Button */}
-        {signOut && (
-          <button
-            onClick={signOut}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.625rem 1rem',
-              backgroundColor: '#fef2f2',
-              color: '#dc2626',
-              border: '1px solid #fecaca',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              transition: 'all 0.2s'
-            }}
-          >
-            <LogOut size={16} />
-            Sign Out
-          </button>
-        )}
       </div>
 
-      {/* Garage Header */}
-      <div style={{
-        textAlign: 'center',
-        padding: '3rem 0 2rem 0',
-        borderBottom: '1px solid #e5e7eb'
-      }}>
-        <Car size={48} style={{ color: '#3498db', marginBottom: '1rem' }} />
-        <h1 style={{ margin: '0 0 0.5rem 0', fontSize: '2.5rem', fontWeight: 'bold' }}>
-          My Garage
-        </h1>
-        <p style={{ color: '#666', fontSize: '1.1rem' }}>
-          {userCars.length > 0
-            ? `${userCars.length} car${userCars.length !== 1 ? 's' : ''} in your collection`
-            : 'Manage your collection and wishlist'}
-        </p>
+      {/* Title Section - Same as Upcoming Events */}
+      <div style={{ padding: `1rem ${horizontalPadding}` }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          marginBottom: '1rem'
+        }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#000', margin: 0 }}>My Garage</h2>
+          <div style={{
+            flex: 1,
+            height: '1px',
+            backgroundColor: '#000'
+          }} />
+          <button
+            onClick={() => setShowAddCarPopup(true)}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '999px',
+              border: '1px solid #000',
+              backgroundColor: 'transparent',
+              color: '#000',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#000';
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#000';
+            }}
+          >
+            Add a car
+          </button>
+        </div>
       </div>
 
       {userCars.length === 0 ? (
@@ -269,7 +283,7 @@ export function MyGarageSection({ user, signOut, onSectionChange }: MyGarageSect
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '2rem',
-            margin: '4rem 2rem'
+            padding: `2rem ${horizontalPadding}`
           }}>
             {/* Collection Card */}
             <div style={{
@@ -349,46 +363,195 @@ export function MyGarageSection({ user, signOut, onSectionChange }: MyGarageSect
         </>
       ) : (
         <>
-          {/* Cars Grid */}
-          <div style={{ padding: '2rem' }}>
-            {/* Add Car Button */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+          {/* Cars Horizontal Carousel */}
+          <div style={{ position: 'relative', padding: `0 ${horizontalPadding}` }}>
+            {/* Left Arrow */}
+            {!isMobile && userCars.length > 2 && (
               <button
-                onClick={() => setShowAddCarPopup(true)}
+                onClick={() => scrollCarousel('left')}
                 style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#000',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
+                  position: 'absolute',
+                  left: isMobile ? '0.5rem' : '3rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 10,
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '1px solid #000',
+                  backgroundColor: 'white',
                   cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  display: 'inline-flex',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                 }}
               >
-                <Plus size={18} />
-                Add Car
+                <ChevronLeft size={20} />
               </button>
+            )}
+
+            {/* Carousel Container */}
+            <div
+              ref={carouselRef}
+              style={{
+                display: 'flex',
+                gap: '1.5rem',
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
+                scrollBehavior: 'smooth',
+                paddingBottom: '1rem',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none',
+              }}
+            >
+              {userCars.map((car) => {
+                const carImage = car.photos && car.photos.length > 0 ? car.photos[0] : FALLBACK_CAR_IMAGE;
+                const makeName = getMakeName(car.makeId);
+                const modelName = getModelName(car.modelId);
+
+                return (
+                  <div
+                    key={car.id}
+                    onClick={() => setSelectedCar(car)}
+                    style={{
+                      flexShrink: 0,
+                      width: isMobile ? 'calc(100vw - 2rem)' : '28.2625rem',
+                      height: isMobile ? 'auto' : '25rem',
+                      minHeight: isMobile ? '18.2rem' : 'auto',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '0.625rem',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      scrollSnapAlign: 'start',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                    }}
+                  >
+                    {/* Car Image */}
+                    <div
+                      style={{
+                        width: '100%',
+                        height: isMobile ? '13rem' : '12.95rem',
+                        backgroundImage: `url(${carImage})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundColor: '#f3f4f6',
+                        position: 'relative',
+                      }}
+                    >
+                      {/* Year Badge */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '0.75rem',
+                          left: '0.75rem',
+                          padding: '0.25rem 0.75rem',
+                          backgroundColor: 'rgba(0,0,0,0.7)',
+                          color: '#fff',
+                          borderRadius: '999px',
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {car.year}
+                      </div>
+                    </div>
+
+                    {/* Car Info */}
+                    <div style={{ padding: '0.75rem 1rem' }}>
+                      <span style={{
+                        display: 'block',
+                        color: '#000',
+                        fontSize: '0.75rem',
+                        fontWeight: 400,
+                        marginBottom: '0.25rem',
+                      }}>
+                        MY CAR
+                      </span>
+                      <h3 style={{
+                        margin: 0,
+                        color: '#000',
+                        fontSize: '1rem',
+                        fontWeight: 500,
+                        lineHeight: '1.25rem',
+                      }}>
+                        {makeName} {modelName}
+                      </h3>
+
+                      {/* Separator */}
+                      <div style={{ margin: '0.5rem 0' }}>
+                        <span style={{
+                          display: 'block',
+                          color: '#000',
+                          fontSize: '0.625rem',
+                          fontWeight: 400,
+                          marginBottom: '0.375rem',
+                        }}>
+                          {[car.color, car.transmission?.replace('_', ' ')].filter(Boolean).join(' • ') || 'No details'}
+                        </span>
+                        <div style={{
+                          width: '11rem',
+                          height: '0.5px',
+                          backgroundColor: '#000',
+                        }} />
+                      </div>
+
+                      {/* View Details Pill */}
+                      <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '0.25rem 0.75rem',
+                          backgroundColor: '#f3f4f6',
+                          borderRadius: '999px',
+                          color: '#374151',
+                          fontSize: '0.6875rem',
+                          fontWeight: 500,
+                          border: '1px solid #e5e7eb',
+                        }}>
+                          View Details
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Cars Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: '1.5rem',
-            }}>
-              {userCars.map((car) => (
-                <CarCard
-                  key={car.id}
-                  car={car}
-                  makeName={getMakeName(car.makeId)}
-                  modelName={getModelName(car.modelId)}
-                />
-              ))}
-            </div>
+            {/* Right Arrow */}
+            {!isMobile && userCars.length > 2 && (
+              <button
+                onClick={() => scrollCarousel('right')}
+                style={{
+                  position: 'absolute',
+                  right: isMobile ? '0.5rem' : '3rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 10,
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '1px solid #000',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                }}
+              >
+                <ChevronRight size={20} />
+              </button>
+            )}
           </div>
         </>
       )}
@@ -398,6 +561,15 @@ export function MyGarageSection({ user, signOut, onSectionChange }: MyGarageSect
         isOpen={showAddCarPopup}
         onClose={() => setShowAddCarPopup(false)}
         onCarAdded={loadUserCars}
+      />
+
+      {/* Car Detail Popup */}
+      <CarDetailPopup
+        car={selectedCar}
+        makeName={selectedCar ? getMakeName(selectedCar.makeId) : ''}
+        modelName={selectedCar ? getModelName(selectedCar.modelId) : ''}
+        isOpen={selectedCar !== null}
+        onClose={() => setSelectedCar(null)}
       />
     </div>
   );

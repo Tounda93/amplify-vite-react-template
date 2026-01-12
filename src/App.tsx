@@ -635,7 +635,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
           width: '100%',
           padding: `2rem ${horizontalPadding}`
         }}>
-          <ProfileSection user={user} />
+          <ProfileSection user={user} signOut={signOut} />
         </div>
       )}
 
