@@ -367,10 +367,26 @@ function EventsAdmin() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    eventType: 'car_show' | 'race' | 'auction' | 'meet' | 'rally' | 'festival' | 'exhibition' | 'track_day' | 'other';
+    venue: string;
+    city: string;
+    country: string;
+    startDate: string;
+    endDate: string;
+    coverImage: string;
+    website: string;
+    ticketUrl: string;
+    price: string;
+    restrictions: string[];
+    isPublished: boolean;
+    isFeatured: boolean;
+  }>({
     title: '',
     description: '',
-    eventType: 'car_show' as const,
+    eventType: 'car_show',
     venue: '',
     city: '',
     country: '',
@@ -380,7 +396,7 @@ function EventsAdmin() {
     website: '',
     ticketUrl: '',
     price: '',
-    restrictions: [] as string[],
+    restrictions: [],
     isPublished: true,
     isFeatured: false,
   });
@@ -498,7 +514,7 @@ function EventsAdmin() {
       website: event.website || '',
       ticketUrl: event.ticketUrl || '',
       price: event.price || '',
-      restrictions: event.restrictions || [],
+      restrictions: (event.restrictions || []).filter((r): r is string => r !== null),
       isPublished: event.isPublished !== false,
       isFeatured: event.isFeatured === true,
     });
