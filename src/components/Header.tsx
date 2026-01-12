@@ -5,6 +5,8 @@ import {
   Calendar,
   Car,
   MessageSquare,
+  ShoppingBag,
+  Settings,
   LucideIcon
 } from "lucide-react";
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -65,16 +67,17 @@ export default function Header({
     { id: "events", label: "Events", icon: Calendar },
     { id: "news", label: "News", icon: Newspaper },
     { id: "community", label: "Rooms", icon: Users },
+    { id: "shop", label: "Shop", icon: ShoppingBag },
   ];
 
   // Glass effect styling
   const headerBackground = 'rgba(255, 255, 255, 0.15)';
   const headerBorderColor = '1px solid rgba(255, 255, 255, 0.3)';
-  const headerShadow = '0 4px 30px rgba(0, 0, 0, 0.1)';
+  const headerShadow = 'none';
   const textColor = '#000000';
   const navInactiveColor = 'rgba(0, 0, 0, 0.5)';
 
-  const mobileCategoryOrder = ["home", "events", "news", "community"];
+  const mobileCategoryOrder = ["home", "events", "news", "community", "shop"];
   const mobileCategories = mobileCategoryOrder
     .map(id => categories.find(category => category.id === id))
     .filter((category): category is Category => Boolean(category));
@@ -85,8 +88,8 @@ export default function Header({
     // Side margins reduced by 80%: 1rem -> 0.2rem
     return (
       <header style={{
-        position: "sticky",
-        top: "0.4rem",
+        position: "relative",
+        marginTop: "0.4rem",
         marginLeft: "0.2rem",
         marginRight: "0.2rem",
         padding: "3px 12px 6px 12px",
@@ -162,8 +165,8 @@ export default function Header({
 
   return (
     <header style={{
-      position: "sticky",
-      top: "2rem",
+      position: "relative",
+      marginTop: "2rem",
       marginLeft: "2rem",
       marginRight: "2rem",
       backgroundColor: headerBackground,
@@ -312,6 +315,40 @@ export default function Header({
               borderRadius: "999px",
               backgroundColor: textColor,
               opacity: activeSection === "garage" ? 1 : 0,
+              transition: "opacity 0.2s"
+            }} />
+          </button>
+
+          {/* Admin button */}
+          <button
+            onClick={() => onSectionChange("admin")}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "2px",
+              padding: "6px 10px 10px 10px",
+              borderRadius: "10px",
+              border: "none",
+              cursor: "pointer",
+              transition: "color 0.2s",
+              backgroundColor: "transparent",
+              color: activeSection === "admin" ? textColor : navInactiveColor,
+              position: "relative"
+            }}
+          >
+            <Settings size={20} strokeWidth={activeSection === "admin" ? 2 : 1.5} />
+            <span style={{ fontSize: "10px", fontWeight: 400 }}>Admin</span>
+            <div style={{
+              position: "absolute",
+              bottom: "4px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "40%",
+              height: "1.5px",
+              borderRadius: "999px",
+              backgroundColor: textColor,
+              opacity: activeSection === "admin" ? 1 : 0,
               transition: "opacity 0.2s"
             }} />
           </button>

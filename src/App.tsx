@@ -27,6 +27,8 @@ import { CommunitySection } from './CommunitySection';
 import { ChatSection } from './ChatSection';
 import { MyGarageSection } from './MyGarageSection';
 import { ProfileSection } from './ProfileSection';
+import { ShopSection } from './ShopSection';
+import { AdminSection } from './AdminSection';
 import WikiCarsSection from './components/WikiCarsSection';
 
 // NEW: Import the Header component
@@ -581,14 +583,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       )}
 
       {/* EVENTS SECTION */}
-      {activeSection === 'events' && (
-        <div style={{
-          width: '100%',
-          padding: `2rem ${horizontalPadding}`
-        }}>
-          <EventsSection />
-        </div>
-      )}
+      {activeSection === 'events' && <EventsSection />}
 
       {/* COMMUNITY SECTION */}
       {activeSection === 'community' && (
@@ -597,6 +592,16 @@ function CarSearch({ user, signOut }: CarSearchProps) {
           padding: `2rem ${horizontalPadding}`
         }}>
           <CommunitySection />
+        </div>
+      )}
+
+      {/* SHOP SECTION */}
+      {activeSection === 'shop' && (
+        <div style={{
+          width: '100%',
+          padding: `2rem ${horizontalPadding}`
+        }}>
+          <ShopSection />
         </div>
       )}
 
@@ -648,9 +653,16 @@ function CarSearch({ user, signOut }: CarSearchProps) {
         </div>
       )}
 
+      {/* ADMIN SECTION */}
+      {activeSection === 'admin' && (
+        <div style={{ width: '100%' }}>
+          <AdminSection />
+        </div>
+      )}
+
       {/* HOME SECTION - New HomePage component with all sections */}
       {activeSection === 'home' && !selectedMake && makes.length === 0 && (
-        <HomePage onCreateEvent={() => handleSectionChange('events')} />
+        <HomePage />
       )}
 
       {/* Search Results or Selected Make View */}

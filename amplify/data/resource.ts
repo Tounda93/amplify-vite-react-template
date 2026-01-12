@@ -170,10 +170,13 @@ const schema = a.schema({
       ticketUrl: a.string(),
       price: a.string(),         // "Free", "$50", "€25-€100"
       
+      // Restrictions (up to 3, max 3 words each)
+      restrictions: a.string().array(),
+
       // Status
       isPublished: a.boolean().default(true),
       isFeatured: a.boolean().default(false),
-      
+
       // Admin
       createdBy: a.string(),
     })
@@ -202,6 +205,23 @@ const schema = a.schema({
       topSpeed: a.string(),
       summary: a.string(),
       additionalFields: a.string(), // JSON encoded array of {label,value}
+    })
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read', 'create', 'update', 'delete']),
+    ]),
+
+  // Magazine subscriptions for News section
+  Magazine: a
+    .model({
+      name: a.string().required(),
+      description: a.string(),
+      coverImage: a.string(),
+      price: a.string().required(),        // "9,99€"
+      priceInterval: a.string().default('month'), // "month", "year"
+      websiteUrl: a.string(),
+      isActive: a.boolean().default(true),
+      sortOrder: a.integer().default(0),
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
