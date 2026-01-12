@@ -147,7 +147,7 @@
   }
 }
 
-/* Small tablets / large mobile - 2 columns */
+/* Small tablets - 2 columns */
 @media (max-width: 768px) {
   .events-section__grid {
     grid-template-columns: repeat(2, 1fr);
@@ -159,11 +159,15 @@
   }
 }
 
-/* Mobile - 2 columns with tighter spacing */
+/* Mobile - 1 column (stacked), full width with 1rem margin */
 @media (max-width: 480px) {
+  .events-section__content {
+    padding: 1rem !important; /* 1rem margin on all sides */
+  }
+
   .events-section__grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem; /* 8px */
+    grid-template-columns: 1fr;
+    gap: 1rem; /* 16px */
   }
 
   .events-section__title {
@@ -171,10 +175,14 @@
   }
 }
 
-/* Very small mobile - still 2 columns */
+/* Very small mobile - 1 column */
 @media (max-width: 360px) {
+  .events-section__content {
+    padding: 1rem !important; /* 1rem margin on all sides */
+  }
+
   .events-section__grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.375rem; /* 6px */
+    grid-template-columns: 1fr;
+    gap: 0.75rem; /* 12px */
   }
 }

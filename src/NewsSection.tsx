@@ -130,7 +130,7 @@ export function NewsSection() {
           fontWeight: 600,
           color: '#000',
           margin: '0 0 1rem 0',
-          textAlign: 'center',
+          textAlign: 'left',
         }}>
           Get your favorite magazine delivered at home
         </h2>
@@ -149,7 +149,7 @@ export function NewsSection() {
               height: '40px',
               borderRadius: '50%',
               border: '1px solid #000',
-              backgroundColor: '#fff',
+              backgroundColor: 'transparent',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -200,7 +200,7 @@ export function NewsSection() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
               />
-              <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+              <div style={{ marginTop: '0.5rem', textAlign: 'left' }}>
                 <p style={{
                   fontSize: '14px',
                   fontWeight: 600,
@@ -236,7 +236,7 @@ export function NewsSection() {
               height: '40px',
               borderRadius: '50%',
               border: '1px solid #000',
-              backgroundColor: '#fff',
+              backgroundColor: 'transparent',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
