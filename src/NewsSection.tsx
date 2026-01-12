@@ -200,7 +200,7 @@ export function NewsSection() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
               />
-              <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+              <div style={{ marginTop: '0.5rem', textAlign: 'left' }}>
                 <p style={{
                   fontSize: '14px',
                   fontWeight: 600,
