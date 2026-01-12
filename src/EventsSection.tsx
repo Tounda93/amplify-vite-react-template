@@ -4,6 +4,7 @@ import type { Schema } from '../amplify/data/resource';
 import { Card } from './components/Card';
 import { useIsMobile } from './hooks/useIsMobile';
 import CreateEventPopup from './components/CreateEventPopup';
+import EventDetailPopup from './components/EventDetailPopup';
 import './EventsSection.css';
 
 const client = generateClient<Schema>();
@@ -20,6 +21,7 @@ export function EventsSection() {
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreatePopup, setShowCreatePopup] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     loadEvents();
@@ -71,7 +73,7 @@ export function EventsSection() {
   };
 
   const handleCardClick = (event: Event) => {
-    console.log('Event clicked:', event);
+    setSelectedEvent(event);
   };
 
   if (loading) {
@@ -164,6 +166,13 @@ export function EventsSection() {
         isOpen={showCreatePopup}
         onClose={() => setShowCreatePopup(false)}
         onEventCreated={loadEvents}
+      />
+
+      {/* Event Detail Popup */}
+      <EventDetailPopup
+        event={selectedEvent}
+        isOpen={selectedEvent !== null}
+        onClose={() => setSelectedEvent(null)}
       />
     </div>
   );
