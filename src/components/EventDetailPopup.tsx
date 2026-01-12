@@ -1,7 +1,15 @@
-import { X, MapPin, Calendar, Globe, Ticket, DollarSign } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, MapPin, Calendar, Globe, Ticket, DollarSign, Users, Car, ChevronDown } from 'lucide-react';
+import { generateClient } from 'aws-amplify/data';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../../amplify/data/resource';
 
+const client = generateClient<Schema>();
+
 type Event = Schema['Event']['type'];
+type Car = Schema['Car']['type'];
+type Make = Schema['Make']['type'];
+type Model = Schema['Model']['type'];
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
@@ -12,6 +20,142 @@ interface EventDetailPopupProps {
 }
 
 export default function EventDetailPopup({ event, isOpen, onClose }: EventDetailPopupProps) {
+  const [showJoinSection, setShowJoinSection] = useState(false);
+  const [userCars, setUserCars] = useState<Car[]>([]);
+  const [makes, setMakes] = useState<Map<string, Make>>(new Map());
+  const [models, setModels] = useState<Map<string, Model>>(new Map());
+  const [selectedCarId, setSelectedCarId] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [alreadyJoined, setAlreadyJoined] = useState(false);
+  const [participantCount, setParticipantCount] = useState(0);
+
+  useEffect(() => {
+    if (isOpen && event) {
+      loadUserData();
+      setParticipantCount(event.participantCount || 0);
+    }
+  }, [isOpen, event]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset state when popup closes
+      setShowJoinSection(false);
+      setSelectedCarId('');
+      setAlreadyJoined(false);
+    }
+  }, [isOpen]);
+
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+
+      // Get current user ID
+      const session = await fetchAuthSession();
+      const currentUserId = session.tokens?.idToken?.payload?.sub as string;
+      setUserId(currentUserId);
+
+      if (!currentUserId || !event) return;
+
+      // Check if user already joined this event
+      const { data: existingParticipants } = await client.models.EventParticipant.list({
+        filter: {
+          eventId: { eq: event.id },
+          oderId: { eq: currentUserId }
+        }
+      });
+
+      if (existingParticipants && existingParticipants.length > 0) {
+        setAlreadyJoined(true);
+      }
+
+      // Load user's cars
+      const { data: cars } = await client.models.Car.list({
+        filter: { ownerId: { eq: currentUserId } }
+      });
+
+      if (cars && cars.length > 0) {
+        setUserCars(cars);
+
+        // Load makes and models for the cars
+        const makeIds = [...new Set(cars.map(c => c.makeId))];
+        const modelIds = [...new Set(cars.map(c => c.modelId))];
+
+        const [makesData, modelsData] = await Promise.all([
+          Promise.all(makeIds.map(id => client.models.Make.get({ makeId: id }))),
+          Promise.all(modelIds.map(id => client.models.Model.get({ modelId: id })))
+        ]);
+
+        const makesMap = new Map<string, Make>();
+        makesData.forEach(result => {
+          if (result.data) makesMap.set(result.data.makeId, result.data);
+        });
+        setMakes(makesMap);
+
+        const modelsMap = new Map<string, Model>();
+        modelsData.forEach(result => {
+          if (result.data) modelsMap.set(result.data.modelId, result.data);
+        });
+        setModels(modelsMap);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getCarDisplayName = (car: Car) => {
+    const make = makes.get(car.makeId);
+    const model = models.get(car.modelId);
+    const makeName = make?.makeName || 'Unknown';
+    const modelName = model?.modelName || 'Unknown';
+    return `${car.year} ${makeName} ${modelName}`;
+  };
+
+  const handleJoinEvent = async () => {
+    if (!event || !selectedCarId || !userId) return;
+
+    const selectedCar = userCars.find(c => c.id === selectedCarId);
+    if (!selectedCar) return;
+
+    try {
+      setJoining(true);
+
+      const make = makes.get(selectedCar.makeId);
+      const model = models.get(selectedCar.modelId);
+
+      // Create participant record
+      await client.models.EventParticipant.create({
+        eventId: event.id,
+        oderId: userId,
+        carId: selectedCar.id,
+        carMake: make?.makeName || 'Unknown',
+        carModel: model?.modelName || 'Unknown',
+        carYear: selectedCar.year,
+        registeredAt: new Date().toISOString(),
+      });
+
+      // Update participant count on event
+      const newCount = (event.participantCount || 0) + 1;
+      await client.models.Event.update({
+        id: event.id,
+        participantCount: newCount,
+      });
+
+      setParticipantCount(newCount);
+      setAlreadyJoined(true);
+      setShowJoinSection(false);
+      alert('You have successfully joined this event!');
+    } catch (error) {
+      console.error('Error joining event:', error);
+      alert('Failed to join event. Please try again.');
+    } finally {
+      setJoining(false);
+    }
+  };
+
   if (!isOpen || !event) return null;
 
   const formatDate = (dateString: string) => {
@@ -121,6 +265,27 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
               {event.eventType.replace('_', ' ')}
             </div>
           )}
+
+          {/* Participant Count Badge */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '1rem',
+              right: '1rem',
+              padding: '0.375rem 0.75rem',
+              background: 'rgba(255, 255, 255, 0.9)',
+              color: '#000',
+              borderRadius: '999px',
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+            }}
+          >
+            <Users size={14} />
+            {participantCount} participant{participantCount !== 1 ? 's' : ''}
+          </div>
         </div>
 
         {/* Scrollable Content */}
@@ -197,8 +362,147 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
             </div>
           )}
 
+          {/* Join Section */}
+          {showJoinSection && !alreadyJoined && (
+            <div style={{
+              marginBottom: '1.5rem',
+              padding: '1rem',
+              background: '#f9fafb',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+            }}>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 600, color: '#333', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Car size={18} />
+                Select your car
+              </h3>
+
+              {loading ? (
+                <p style={{ color: '#666', fontSize: '0.875rem' }}>Loading your cars...</p>
+              ) : userCars.length === 0 ? (
+                <p style={{ color: '#666', fontSize: '0.875rem' }}>
+                  You don't have any cars in your collection yet. Add a car to your garage first.
+                </p>
+              ) : (
+                <>
+                  <div style={{ position: 'relative', marginBottom: '1rem' }}>
+                    <select
+                      value={selectedCarId}
+                      onChange={(e) => setSelectedCarId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 2.5rem 0.75rem 0.75rem',
+                        borderRadius: '8px',
+                        border: '1px solid #ddd',
+                        fontSize: '0.875rem',
+                        appearance: 'none',
+                        backgroundColor: '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="">Choose a car from your collection...</option>
+                      {userCars.map((car) => (
+                        <option key={car.id} value={car.id}>
+                          {getCarDisplayName(car)}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={18}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                        color: '#666',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button
+                      onClick={() => setShowJoinSection(false)}
+                      style={{
+                        padding: '0.75rem 1.25rem',
+                        background: '#fff',
+                        color: '#333',
+                        borderRadius: '8px',
+                        border: '1px solid #ddd',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleJoinEvent}
+                      disabled={!selectedCarId || joining}
+                      style={{
+                        padding: '0.75rem 1.25rem',
+                        background: !selectedCarId || joining ? '#ccc' : '#000',
+                        color: '#fff',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        cursor: !selectedCarId || joining ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      {joining ? 'Joining...' : 'Join event'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* Join Now Button */}
+            {!alreadyJoined ? (
+              <button
+                onClick={() => setShowJoinSection(true)}
+                disabled={showJoinSection}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.25rem',
+                  background: showJoinSection ? '#ccc' : '#000',
+                  color: '#fff',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  cursor: showJoinSection ? 'default' : 'pointer',
+                }}
+              >
+                <Users size={16} />
+                Join now
+              </button>
+            ) : (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.25rem',
+                  background: '#22c55e',
+                  color: '#fff',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                }}
+              >
+                <Users size={16} />
+                You're attending!
+              </div>
+            )}
+
             {event.website && (
               <a
                 href={event.website}
@@ -209,12 +513,13 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
                   alignItems: 'center',
                   gap: '0.5rem',
                   padding: '0.75rem 1.25rem',
-                  background: '#000',
-                  color: '#fff',
+                  background: '#fff',
+                  color: '#000',
                   borderRadius: '8px',
                   textDecoration: 'none',
                   fontSize: '0.875rem',
                   fontWeight: 500,
+                  border: '1px solid #000',
                 }}
               >
                 <Globe size={16} />

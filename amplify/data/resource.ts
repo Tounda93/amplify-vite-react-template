@@ -177,12 +177,34 @@ const schema = a.schema({
       isPublished: a.boolean().default(true),
       isFeatured: a.boolean().default(false),
 
+      // Participants
+      participantCount: a.integer().default(0),
+      participants: a.hasMany('EventParticipant', 'eventId'),
+
       // Admin
       createdBy: a.string(),
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
       allow.authenticated().to(['read', 'create', 'update', 'delete']),
+    ]),
+
+  // Event participants (users registered to events with their cars)
+  EventParticipant: a
+    .model({
+      eventId: a.string().required(),
+      oderId: a.string().required(),  // Owner ID (user ID)
+      carId: a.string().required(),
+      carMake: a.string().required(),
+      carModel: a.string().required(),
+      carYear: a.integer().required(),
+      registeredAt: a.datetime(),
+      event: a.belongsTo('Event', 'eventId'),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read', 'delete']),
+      allow.authenticated().to(['read']),
+      allow.guest().to(['read']),
     ]),
 
   WikiCarEntry: a
