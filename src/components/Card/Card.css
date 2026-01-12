@@ -4,10 +4,10 @@
    =========================================== */
 
 .card {
-  width: 23.275rem; /* 372px - 40% wider than original 266px */
-  height: 18.8125rem; /* 301px - 30% shorter than 430px */
+  width: 28.2625rem; /* 452px - 70% wider than original 266px */
+  height: 25rem; /* 301px - 3:2 ratio (width:height) */
   background-color: #FFFFFF;
-  border-radius: 0.9375rem; /* 15px */
+  border-radius: 0.625rem; /* 10px */
   overflow: hidden;
   cursor: pointer;
   display: flex;
@@ -25,7 +25,7 @@
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0);
-  border-radius: 0.9375rem; /* 15px */
+  border-radius: 0.625rem; /* 10px */
   transition: background-color 0.2s ease;
   pointer-events: none;
 }
@@ -45,8 +45,8 @@
 
 .card__image {
   width: 100%;
-  height: 12.95rem; /* 207px - 30% shorter than original 296px */
-  border-radius: 0.9375rem 0.9375rem 0 0; /* 15px 15px 0 0 */
+  height: 12.95rem; /* 207px */
+  border-radius: 0.625rem 0.625rem 0 0; /* 10px 10px 0 0 */
   background-color: lightgray;
   background-position: 50%;
   background-size: cover;
@@ -255,12 +255,12 @@
 /* Tablets and smaller desktops */
 @media (max-width: 1200px) {
   .card {
-    width: 14rem;
-    height: 22.5rem;
+    width: 21rem; /* 336px */
+    height: 14rem; /* 224px - 3:2 ratio */
   }
 
   .card__image {
-    height: 15.5rem;
+    height: 9.5rem;
   }
 
   .card__title2 {
@@ -268,19 +268,19 @@
   }
 
   .card__separator-line {
-    width: 9rem;
+    width: 12rem;
   }
 }
 
 /* Tablets */
 @media (max-width: 992px) {
   .card {
-    width: 12.5rem;
-    height: 20rem;
+    width: 18rem; /* 288px */
+    height: 12rem; /* 192px - 3:2 ratio */
   }
 
   .card__image {
-    height: 13.5rem;
+    height: 8rem;
   }
 
   .card__title1 {
@@ -293,19 +293,19 @@
   }
 
   .card__separator-line {
-    width: 8rem;
+    width: 10rem;
   }
 }
 
 /* Mobile */
 @media (max-width: 768px) {
   .card {
-    width: 10rem;
-    height: 16.5rem;
+    width: 15rem; /* 240px */
+    height: 10rem; /* 160px - 3:2 ratio */
   }
 
   .card__image {
-    height: 10.5rem;
+    height: 6.5rem;
   }
 
   .card__content {
@@ -336,7 +336,7 @@
   }
 
   .card__separator-line {
-    width: 6rem;
+    width: 8rem;
   }
 
   .card__requirement-pill {
@@ -348,12 +348,12 @@
 /* Small Mobile */
 @media (max-width: 480px) {
   .card {
-    width: 9rem;
-    height: 15rem;
+    width: 12rem; /* 192px */
+    height: 8rem; /* 128px - 3:2 ratio */
   }
 
   .card__image {
-    height: 9.5rem;
+    height: 5rem;
   }
 
   .card__content {
@@ -370,7 +370,7 @@
   }
 
   .card__separator-line {
-    width: 5rem;
+    width: 6rem;
   }
 
   .card__requirement-pill {

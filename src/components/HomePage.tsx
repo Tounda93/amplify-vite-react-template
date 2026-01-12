@@ -5,6 +5,7 @@ import { Card } from './Card';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { NewsItem, fetchNewsFeedItems } from '../utils/newsFeed';
 import HeroCarousel from './HeroCarousel';
+import CreateEventPopup from './CreateEventPopup';
 import './HomePage.css';
 
 const client = generateClient<Schema>();
@@ -13,17 +14,14 @@ type Event = Schema['Event']['type'];
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
-interface HomePageProps {
-  onCreateEvent?: () => void;
-}
-
-export default function HomePage({ onCreateEvent }: HomePageProps) {
+export default function HomePage() {
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
 
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -100,7 +98,7 @@ export default function HomePage({ onCreateEvent }: HomePageProps) {
             backgroundColor: '#000'
           }} />
           <button
-            onClick={onCreateEvent}
+            onClick={() => setShowCreateEventPopup(true)}
             style={{
               padding: '0.5rem 1rem',
               borderRadius: '999px',
@@ -241,6 +239,13 @@ export default function HomePage({ onCreateEvent }: HomePageProps) {
           </div>
         </div>
       )}
+
+      {/* Create Event Popup */}
+      <CreateEventPopup
+        isOpen={showCreateEventPopup}
+        onClose={() => setShowCreateEventPopup(false)}
+        onEventCreated={loadInitialData}
+      />
     </div>
   );
 }
