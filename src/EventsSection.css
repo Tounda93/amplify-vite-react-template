@@ -159,8 +159,12 @@
   }
 }
 
-/* Mobile - 1 column (stacked) */
+/* Mobile - 1 column (stacked), full width with 1rem margin */
 @media (max-width: 480px) {
+  .events-section__content {
+    padding: 1rem !important; /* 1rem margin on all sides */
+  }
+
   .events-section__grid {
     grid-template-columns: 1fr;
     gap: 1rem; /* 16px */
@@ -173,6 +177,10 @@
 
 /* Very small mobile - 1 column */
 @media (max-width: 360px) {
+  .events-section__content {
+    padding: 1rem !important; /* 1rem margin on all sides */
+  }
+
   .events-section__grid {
     grid-template-columns: 1fr;
     gap: 0.75rem; /* 12px */

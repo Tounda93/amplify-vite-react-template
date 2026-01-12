@@ -345,36 +345,41 @@
   }
 }
 
-/* Small Mobile */
+/* Small Mobile - Full width cards */
 @media (max-width: 480px) {
   .card {
-    width: 12rem; /* 192px */
-    height: 8rem; /* 128px - 3:2 ratio */
+    width: 100%; /* Fill container width */
+    height: auto; /* Auto height based on content */
+    min-height: 14rem; /* Minimum height */
   }
 
   .card__image {
-    height: 5rem;
+    height: 10rem; /* Larger image for full-width cards */
   }
 
   .card__content {
-    padding: 0.375rem 0.5rem;
+    padding: 0.75rem 1rem;
   }
 
   .card__title1 {
-    font-size: 0.5625rem;
+    font-size: 0.6875rem;
   }
 
   .card__title2 {
-    font-size: 0.6875rem;
-    line-height: 0.875rem;
+    font-size: 1rem;
+    line-height: 1.25rem;
+  }
+
+  .card__separator-text {
+    font-size: 0.625rem;
   }
 
   .card__separator-line {
-    width: 6rem;
+    width: 10rem;
   }
 
   .card__requirement-pill {
-    font-size: 0.5rem;
-    padding: 0.125rem 0.375rem;
+    font-size: 0.625rem;
+    padding: 0.25rem 0.5rem;
   }
 }
