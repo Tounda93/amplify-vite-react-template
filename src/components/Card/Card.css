@@ -350,11 +350,11 @@
   .card {
     width: 100%; /* Fill container width */
     height: auto; /* Auto height based on content */
-    min-height: 14rem; /* Minimum height */
+    min-height: 18.2rem; /* Minimum height - 30% increase from 14rem */
   }
 
   .card__image {
-    height: 10rem; /* Larger image for full-width cards */
+    height: 13rem; /* Larger image - 30% increase from 10rem */
   }
 
   .card__content {
