@@ -141,8 +141,8 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const isMobile = useIsMobile();
   // Mobile horizontal padding reduced by 80%: 2rem -> 0.4rem
   const horizontalPadding = isMobile ? '0.4rem' : '5rem';
-  // Only add top padding on home page for mobile (reduced)
-  const topPadding = isMobile && activeSection === 'home' ? '3rem' : '0';
+  // No top padding needed
+  const topPadding = '0';
   const [hasEnsuredSeedData, setHasEnsuredSeedData] = useState(false);
   const adminEmail = user?.signInDetails?.loginId?.toLowerCase();
 
@@ -545,7 +545,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   };
 
   // Use the same background color for all pages
-  const mainBackgroundColor = '#EFEFEF';
+  const mainBackgroundColor = '#FFFFFF';
 
   return (
     <div style={{

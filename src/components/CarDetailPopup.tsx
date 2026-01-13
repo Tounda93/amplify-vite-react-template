@@ -1,10 +1,14 @@
 import { X, Calendar, Palette, Settings, Gauge, Car as CarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
 
 type Car = Schema['Car']['type'];
 
 const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
+
+// Helper to check if a string is a storage path or a URL
+const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
 
 interface CarDetailPopupProps {
   car: Car | null;
@@ -16,21 +20,58 @@ interface CarDetailPopupProps {
 
 export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClose }: CarDetailPopupProps) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const photoPaths = car?.photos?.filter(Boolean) as string[] || [];
+
+  useEffect(() => {
+    const loadPhotos = async () => {
+      if (!car || photoPaths.length === 0) {
+        setPhotoUrls([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      const urls: string[] = [];
+
+      for (const path of photoPaths) {
+        // If it's already a URL (legacy data), use it directly
+        if (!isStoragePath(path)) {
+          urls.push(path);
+          continue;
+        }
+
+        // Otherwise, get the URL from the storage path
+        try {
+          const result = await getUrl({ path });
+          urls.push(result.url.toString());
+        } catch (error) {
+          console.error('Error loading photo:', error);
+        }
+      }
+
+      setPhotoUrls(urls);
+      setLoading(false);
+    };
+
+    loadPhotos();
+  }, [car?.id]);
 
   if (!isOpen || !car) return null;
 
-  const photos = car.photos && car.photos.length > 0 ? car.photos.filter(Boolean) as string[] : [];
-  const currentImage = photos.length > 0 ? photos[currentPhotoIndex] : FALLBACK_CAR_IMAGE;
+  const currentImage = photoUrls.length > 0 ? photoUrls[currentPhotoIndex] : FALLBACK_CAR_IMAGE;
 
   const nextPhoto = () => {
-    if (photos.length > 1) {
-      setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
+    if (photoUrls.length > 1) {
+      setCurrentPhotoIndex((prev) => (prev + 1) % photoUrls.length);
     }
   };
 
   const prevPhoto = () => {
-    if (photos.length > 1) {
-      setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
+    if (photoUrls.length > 1) {
+      setCurrentPhotoIndex((prev) => (prev - 1 + photoUrls.length) % photoUrls.length);
     }
   };
 
@@ -105,7 +146,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
           </button>
 
           {/* Photo Navigation */}
-          {photos.length > 1 && (
+          {photoUrls.length > 1 && (
             <>
               <button
                 onClick={prevPhoto}
@@ -161,7 +202,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                   gap: '0.5rem',
                 }}
               >
-                {photos.map((_, index) => (
+                {photoUrls.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentPhotoIndex(index)}
@@ -329,17 +370,17 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
           )}
 
           {/* Photo Thumbnails */}
-          {photos.length > 1 && (
+          {photoUrls.length > 1 && (
             <div>
               <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', fontWeight: 600, color: '#333' }}>
-                Photos ({photos.length})
+                Photos ({photoUrls.length})
               </h3>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
                 gap: '0.5rem',
               }}>
-                {photos.map((photo, index) => (
+                {photoUrls.map((photo, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentPhotoIndex(index)}

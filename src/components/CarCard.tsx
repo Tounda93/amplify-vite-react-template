@@ -1,4 +1,6 @@
 import { Car as CarIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
 
 type Car = Schema['Car']['type'];
@@ -13,8 +15,38 @@ interface CarCardProps {
 
 const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80';
 
+// Helper to check if a string is a storage path or a URL
+const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
+
 export default function CarCard({ car, makeName, modelName, onClick, compact = false }: CarCardProps) {
-  const carImage = car.photos && car.photos.length > 0 ? car.photos[0] : null;
+  const [carImageUrlUrl, setCarImageUrl] = useState<string | null>(null);
+  const photoPath = car.photos && car.photos.length > 0 ? car.photos[0] : null;
+
+  useEffect(() => {
+    const loadImage = async () => {
+      if (!photoPath) {
+        setCarImageUrl(null);
+        return;
+      }
+
+      // If it's already a URL (legacy data), use it directly
+      if (!isStoragePath(photoPath)) {
+        setCarImageUrl(photoPath);
+        return;
+      }
+
+      // Otherwise, get the URL from the storage path
+      try {
+        const result = await getUrl({ path: photoPath });
+        setCarImageUrl(result.url.toString());
+      } catch (error) {
+        console.error('Error loading car image:', error);
+        setCarImageUrl(null);
+      }
+    };
+
+    loadImage();
+  }, [photoPath]);
 
   if (compact) {
     // Compact version for dropdowns/lists
@@ -45,7 +77,7 @@ export default function CarCard({ car, makeName, modelName, onClick, compact = f
             height: '48px',
             borderRadius: '8px',
             backgroundColor: '#f3f4f6',
-            backgroundImage: carImage ? `url(${carImage})` : 'none',
+            backgroundImage: carImageUrl ? `url(${carImageUrl})` : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             display: 'flex',
@@ -54,7 +86,7 @@ export default function CarCard({ car, makeName, modelName, onClick, compact = f
             flexShrink: 0,
           }}
         >
-          {!carImage && <CarIcon size={24} style={{ color: '#9ca3af' }} />}
+          {!carImageUrl && <CarIcon size={24} style={{ color: '#9ca3af' }} />}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#111' }}>
@@ -102,7 +134,7 @@ export default function CarCard({ car, makeName, modelName, onClick, compact = f
         style={{
           flex: '0 0 70%',
           backgroundColor: '#f3f4f6',
-          backgroundImage: carImage ? `url(${carImage})` : `url(${FALLBACK_CAR_IMAGE})`,
+          backgroundImage: carImageUrl ? `url(${carImageUrl})` : `url(${FALLBACK_CAR_IMAGE})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           display: 'flex',
@@ -111,7 +143,7 @@ export default function CarCard({ car, makeName, modelName, onClick, compact = f
           position: 'relative',
         }}
       >
-        {!carImage && (
+        {!carImageUrl && (
           <div
             style={{
               position: 'absolute',

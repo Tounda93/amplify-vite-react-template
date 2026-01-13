@@ -3,6 +3,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
 import { Card } from './components/Card';
 import { useIsMobile } from './hooks/useIsMobile';
+import { getImageUrl } from './utils/storageHelpers';
 import CreateEventPopup from './components/CreateEventPopup';
 import EventDetailPopup from './components/EventDetailPopup';
 import './EventsSection.css';
@@ -10,6 +11,7 @@ import './EventsSection.css';
 const client = generateClient<Schema>();
 
 type Event = Schema['Event']['type'];
+type EventWithImageUrl = Event & { imageUrl?: string };
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
@@ -18,7 +20,7 @@ export function EventsSection() {
   const horizontalPadding = isMobile ? '1rem' : '5rem';
 
   const [events, setEvents] = useState<Event[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventWithImageUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreatePopup, setShowCreatePopup] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -59,7 +61,7 @@ export function EventsSection() {
     setLoading(false);
   };
 
-  const filterUpcomingEvents = (allEvents: Event[]) => {
+  const filterUpcomingEvents = async (allEvents: Event[]) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const upcoming = allEvents
@@ -69,7 +71,16 @@ export function EventsSection() {
         return eventDate >= today;
       })
       .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-    setUpcomingEvents(upcoming);
+
+    // Load image URLs for events
+    const eventsWithUrls = await Promise.all(
+      upcoming.map(async (event) => {
+        const imageUrl = await getImageUrl(event.coverImage);
+        return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
+      })
+    );
+
+    setUpcomingEvents(eventsWithUrls);
   };
 
   const handleCardClick = (event: Event) => {
@@ -138,7 +149,7 @@ export function EventsSection() {
             {upcomingEvents.map((event) => (
               <Card
                 key={event.id}
-                imageUrl={event.coverImage || FALLBACK_IMAGE}
+                imageUrl={event.imageUrl || FALLBACK_IMAGE}
                 title1="EVENT"
                 title2={event.title}
                 separatorText={event.city && event.country ? `${event.city}, ${event.country}` : undefined}

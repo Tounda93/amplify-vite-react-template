@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import { uploadData, getUrl } from 'aws-amplify/storage';
-import { fetchAuthSession } from 'aws-amplify/auth';
+import { uploadData } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
 import { Upload, X } from 'lucide-react';
 
@@ -59,16 +58,6 @@ export default function CreateEventPopup({ isOpen, onClose, onEventCreated }: Cr
     setUploading(true);
 
     try {
-      // Get current user ID for the storage path
-      const session = await fetchAuthSession();
-      const userId = session.tokens?.idToken?.payload?.sub as string;
-
-      if (!userId) {
-        alert('Please sign in to upload images');
-        setUploading(false);
-        return;
-      }
-
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -77,21 +66,18 @@ export default function CreateEventPopup({ isOpen, onClose, onEventCreated }: Cr
 
       const timestamp = Date.now();
       const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      // Use the correct storage path pattern: event-photos/{entity_id}/*
-      const filePath = `event-photos/${userId}/${timestamp}-${sanitizedName}`;
 
-      await uploadData({
-        path: filePath,
+      // Use identity-based path pattern for Amplify storage
+      const result = await uploadData({
+        path: ({ identityId }) => `event-photos/${identityId}/${timestamp}-${sanitizedName}`,
         data: file,
         options: {
           contentType: file.type,
         },
-      });
+      }).result;
 
-      const urlResult = await getUrl({ path: filePath });
-      const imageUrl = urlResult.url.toString().split('?')[0];
-
-      setNewEvent({ ...newEvent, coverImage: imageUrl });
+      // Store the path, not the signed URL (which expires)
+      setNewEvent({ ...newEvent, coverImage: result.path });
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Failed to upload image. Please try again.');
