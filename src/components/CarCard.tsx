@@ -19,7 +19,7 @@ const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879c
 const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
 
 export default function CarCard({ car, makeName, modelName, onClick, compact = false }: CarCardProps) {
-  const [carImageUrlUrl, setCarImageUrl] = useState<string | null>(null);
+  const [carImageUrl, setCarImageUrl] = useState<string | null>(null);
   const photoPath = car.photos && car.photos.length > 0 ? car.photos[0] : null;
 
   useEffect(() => {

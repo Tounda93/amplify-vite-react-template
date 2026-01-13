@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown, Camera, Trash2 } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { uploadData, getUrl } from 'aws-amplify/storage';
+import { uploadData } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
 
 const client = generateClient<Schema>();
