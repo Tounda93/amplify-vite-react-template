@@ -21,7 +21,6 @@ interface CarDetailPopupProps {
 export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClose }: CarDetailPopupProps) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const photoPaths = car?.photos?.filter(Boolean) as string[] || [];
 
@@ -29,11 +28,9 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
     const loadPhotos = async () => {
       if (!car || photoPaths.length === 0) {
         setPhotoUrls([]);
-        setLoading(false);
         return;
       }
 
-      setLoading(true);
       const urls: string[] = [];
 
       for (const path of photoPaths) {
@@ -53,7 +50,6 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
       }
 
       setPhotoUrls(urls);
-      setLoading(false);
     };
 
     loadPhotos();
