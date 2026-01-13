@@ -4,6 +4,7 @@ import type { Schema } from '../../amplify/data/resource';
 import { Card } from './Card';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { NewsItem, fetchNewsFeedItems } from '../utils/newsFeed';
+import { getImageUrl } from '../utils/storageHelpers';
 import HeroCarousel from './HeroCarousel';
 import CreateEventPopup from './CreateEventPopup';
 import './HomePage.css';
@@ -11,6 +12,7 @@ import './HomePage.css';
 const client = generateClient<Schema>();
 
 type Event = Schema['Event']['type'];
+type EventWithImageUrl = Event & { imageUrl?: string };
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
@@ -18,7 +20,7 @@ export default function HomePage() {
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
 
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventWithImageUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
@@ -45,7 +47,16 @@ export default function HomePage() {
         .filter((e) => e.startDate && new Date(e.startDate) >= now)
         .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime())
         .slice(0, 7);
-      setUpcomingEvents(upcoming);
+
+      // Load image URLs for events
+      const eventsWithUrls = await Promise.all(
+        upcoming.map(async (event) => {
+          const imageUrl = await getImageUrl(event.coverImage);
+          return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
+        })
+      );
+
+      setUpcomingEvents(eventsWithUrls);
     } catch (error) {
       console.error('Error loading feed:', error);
     }
@@ -138,7 +149,7 @@ export default function HomePage() {
             {upcomingEvents.map((event) => (
               <Card
                 key={event.id}
-                imageUrl={event.coverImage || FALLBACK_IMAGE}
+                imageUrl={event.imageUrl || FALLBACK_IMAGE}
                 title1={event.eventType?.replace('_', ' ').toUpperCase() || 'EVENT'}
                 title2={event.title || 'Untitled Event'}
                 separatorText={event.city && event.country ? `${event.city}, ${event.country}` : undefined}

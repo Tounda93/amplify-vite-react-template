@@ -89,7 +89,7 @@ export default function Header({
     return (
       <header style={{
         position: "relative",
-        marginTop: "0.4rem",
+        marginTop: "1rem",
         marginLeft: "0.2rem",
         marginRight: "0.2rem",
         padding: "3px 12px 6px 12px",
@@ -166,7 +166,7 @@ export default function Header({
   return (
     <header style={{
       position: "relative",
-      marginTop: "2rem",
+      marginTop: "1rem",
       marginLeft: "2rem",
       marginRight: "2rem",
       backgroundColor: headerBackground,

@@ -127,20 +127,20 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <p style={{ color: '#666' }}>Loading your garage...</p>
+      <div style={{ width: '100%', backgroundColor: '#FFFFFF', padding: `2rem ${horizontalPadding}` }}>
+        <p style={{ color: '#666', textAlign: 'center' }}>Loading your garage...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ width: '100%', overflowX: 'hidden' }}>
+    <div style={{ width: '100%', overflowX: 'hidden', backgroundColor: '#FFFFFF', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
       {/* Profile Button - Left aligned */}
       <div style={{
         display: 'flex',
         justifyContent: 'flex-start',
         alignItems: 'center',
-        padding: `1rem ${horizontalPadding}`,
+        marginBottom: '1rem',
       }}>
         <button
           onClick={() => onSectionChange?.('profile')}
@@ -181,7 +181,7 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
       </div>
 
       {/* Title Section - Same as Upcoming Events */}
-      <div style={{ padding: `1rem ${horizontalPadding}` }}>
+      <div>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -283,7 +283,7 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '2rem',
-            padding: `2rem ${horizontalPadding}`
+            marginTop: '2rem'
           }}>
             {/* Collection Card */}
             <div style={{
@@ -364,7 +364,7 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
       ) : (
         <>
           {/* Cars Horizontal Carousel */}
-          <div style={{ position: 'relative', padding: `0 ${horizontalPadding}` }}>
+          <div style={{ position: 'relative' }}>
             {/* Left Arrow */}
             {!isMobile && userCars.length > 2 && (
               <button

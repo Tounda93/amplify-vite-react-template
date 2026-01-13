@@ -7,7 +7,7 @@
   width: 28.2625rem; /* 452px - 70% wider than original 266px */
   height: 25rem; /* 301px - 3:2 ratio (width:height) */
   background-color: #FFFFFF;
-  border-radius: 0.625rem; /* 10px */
+  border-radius: 0.3125rem; /* 5px */
   overflow: hidden;
   cursor: pointer;
   display: flex;
@@ -25,7 +25,7 @@
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0);
-  border-radius: 0.625rem; /* 10px */
+  border-radius: 0.3125rem; /* 5px */
   transition: background-color 0.2s ease;
   pointer-events: none;
 }
@@ -45,8 +45,8 @@
 
 .card__image {
   width: 100%;
-  height: 12.95rem; /* 207px */
-  border-radius: 0.625rem 0.625rem 0 0; /* 10px 10px 0 0 */
+  height: 17.5rem; /* 70% of 25rem card height */
+  border-radius: 0.3125rem; /* 5px on all corners */
   background-color: lightgray;
   background-position: 50%;
   background-size: cover;
@@ -260,7 +260,7 @@
   }
 
   .card__image {
-    height: 9.5rem;
+    height: 9.8rem; /* 70% of 14rem */
   }
 
   .card__title2 {
@@ -280,7 +280,7 @@
   }
 
   .card__image {
-    height: 8rem;
+    height: 8.4rem; /* 70% of 12rem */
   }
 
   .card__title1 {
@@ -305,7 +305,7 @@
   }
 
   .card__image {
-    height: 6.5rem;
+    height: 7rem; /* 70% of 10rem */
   }
 
   .card__content {
@@ -354,7 +354,7 @@
   }
 
   .card__image {
-    height: 13rem; /* Larger image - 30% increase from 10rem */
+    height: 12.74rem; /* 70% of 18.2rem min-height */
   }
 
   .card__content {

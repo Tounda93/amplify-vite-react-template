@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { X, MapPin, Calendar, Globe, Ticket, DollarSign, Users, Car, ChevronDown } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
+
+// Helper to check if a string is a storage path
+const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/') || str.startsWith('hero/');
 
 const client = generateClient<Schema>();
 
@@ -30,6 +34,36 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
   const [userId, setUserId] = useState<string | null>(null);
   const [alreadyJoined, setAlreadyJoined] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+
+  // Load cover image URL from storage path
+  useEffect(() => {
+    const loadCoverImage = async () => {
+      if (!event?.coverImage) {
+        setCoverImageUrl(null);
+        return;
+      }
+
+      // If it's already a URL (legacy data), use it directly
+      if (!isStoragePath(event.coverImage)) {
+        setCoverImageUrl(event.coverImage);
+        return;
+      }
+
+      // Otherwise, get the URL from the storage path
+      try {
+        const result = await getUrl({ path: event.coverImage });
+        setCoverImageUrl(result.url.toString());
+      } catch (error) {
+        console.error('Error loading cover image:', error);
+        setCoverImageUrl(null);
+      }
+    };
+
+    if (isOpen && event) {
+      loadCoverImage();
+    }
+  }, [isOpen, event?.coverImage]);
 
   useEffect(() => {
     if (isOpen && event) {
@@ -217,7 +251,7 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
         {/* Header with Image */}
         <div style={{ position: 'relative' }}>
           <img
-            src={event.coverImage || FALLBACK_IMAGE}
+            src={coverImageUrl || FALLBACK_IMAGE}
             alt={event.title}
             style={{
               width: '100%',

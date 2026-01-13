@@ -114,32 +114,32 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
     setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const uploadPhotos = async (userId: string, carId: string): Promise<string[]> => {
-    const uploadedUrls: string[] = [];
+  const uploadPhotos = async (carId: string): Promise<string[]> => {
+    const uploadedPaths: string[] = [];
 
     for (let i = 0; i < photos.length; i++) {
       const photo = photos[i];
-      // Use the storage path pattern: car-photos/{entity_id}/*
-      const fileName = `car-photos/${userId}/${carId}-${Date.now()}-${i}.${photo.name.split('.').pop()}`;
+      const fileExtension = photo.name.split('.').pop();
+      const fileName = `${carId}-${Date.now()}-${i}.${fileExtension}`;
 
       try {
-        await uploadData({
-          path: fileName,
+        // Use identity-based path pattern for Amplify storage
+        const result = await uploadData({
+          path: ({ identityId }) => `car-photos/${identityId}/${fileName}`,
           data: photo,
           options: {
             contentType: photo.type,
           }
-        });
+        }).result;
 
-        // Get the URL for the uploaded file
-        const urlResult = await getUrl({ path: fileName });
-        uploadedUrls.push(urlResult.url.toString());
+        // Store the path, not the signed URL (which expires)
+        uploadedPaths.push(result.path);
       } catch (error) {
         console.error('Error uploading photo:', error);
       }
     }
 
-    return uploadedUrls;
+    return uploadedPaths;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,13 +183,13 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
 
       // Upload photos if any
       if (photos.length > 0 && carResult.data?.id) {
-        const photoUrls = await uploadPhotos(userId, carResult.data.id);
+        const photoPaths = await uploadPhotos(carResult.data.id);
 
-        // Update car with photo URLs
-        if (photoUrls.length > 0) {
+        // Update car with photo paths
+        if (photoPaths.length > 0) {
           await client.models.Car.update({
             id: carResult.data.id,
-            photos: photoUrls,
+            photos: photoPaths,
           });
         }
       }
