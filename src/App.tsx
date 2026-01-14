@@ -17,7 +17,7 @@
 
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
 import { NewsSection } from './NewsSection';
@@ -214,12 +214,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       console.error('Error loading models:', error);
     }
   };
-
-  const makeById = useMemo(() => {
-    const map = new Map<string, Make>();
-    allMakes.forEach((make) => map.set(make.makeId, make));
-    return map;
-  }, [allMakes]);
 
   useEffect(() => {
     if (searchTerm.length < 1) {
