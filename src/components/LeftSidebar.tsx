@@ -106,12 +106,12 @@ export default function LeftSidebar({
               }} />
             ) : IconComponent ? (
               <IconComponent
-                size={20}
+                size={30}
                 strokeWidth={isActive ? 2 : 1.5}
               />
             ) : null}
             <span style={{
-              fontSize: '14px',
+              fontSize: '17px',
               fontWeight: isActive ? 600 : 500,
               whiteSpace: 'nowrap',
             }}>

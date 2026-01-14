@@ -95,7 +95,7 @@ export default function HomePage() {
         alignItems: 'center',
         padding: isMobile ? '1rem' : '2rem 5rem',
         gap: '1.5rem',
-        maxWidth: '800px',
+        maxWidth: '960px',
         margin: '0 auto',
       }}>
         {/* Feed Cards - Stacked vertically */}
