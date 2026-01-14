@@ -37,20 +37,19 @@ export default function HomePage() {
       // Fetch news items
       const news = await fetchNewsFeedItems();
 
-      // Fetch upcoming events (up to 7, sorted by date)
+      // Fetch published events (up to 7, sorted by date)
       const { data: events } = await client.models.Event.list({
         limit: 20,
       });
-      // Sort by startDate and filter for future events
-      const now = new Date();
-      const upcoming = (events || [])
-        .filter((e) => e.startDate && new Date(e.startDate) >= now)
+      // Filter for published events and sort by startDate
+      const publishedEvents = (events || [])
+        .filter((e) => e.isPublished !== false && e.startDate)
         .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime())
         .slice(0, 7);
 
       // Load image URLs for events
       const eventsWithUrls = await Promise.all(
-        upcoming.map(async (event) => {
+        publishedEvents.map(async (event) => {
           const imageUrl = await getImageUrl(event.coverImage);
           return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
         })

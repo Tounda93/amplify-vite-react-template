@@ -50,6 +50,67 @@
 }
 
 /* ===========================================
+   Events Carousel
+   =========================================== */
+
+.events-carousel-container {
+  position: relative;
+  width: 100%;
+}
+
+.events-carousel {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 0.5rem 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.events-carousel::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.events-carousel__item {
+  flex: 0 0 auto;
+  width: 350px;
+}
+
+.events-carousel__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.events-carousel__arrow:hover {
+  background: #f5f5f5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.events-carousel__arrow--left {
+  left: -24px;
+}
+
+.events-carousel__arrow--right {
+  right: -24px;
+}
+
+/* ===========================================
    Loading States
    =========================================== */
 
@@ -144,6 +205,23 @@
   .events-section__grid {
     gap: 1rem;
   }
+
+  .events-carousel__item {
+    width: 300px;
+  }
+
+  .events-carousel__arrow {
+    width: 40px;
+    height: 40px;
+  }
+
+  .events-carousel__arrow--left {
+    left: -20px;
+  }
+
+  .events-carousel__arrow--right {
+    right: -20px;
+  }
 }
 
 /* Mobile */
@@ -157,6 +235,14 @@
   }
 
   .events-section__grid {
+    gap: 1rem;
+  }
+
+  .events-carousel__item {
+    width: 280px;
+  }
+
+  .events-carousel {
     gap: 1rem;
   }
 }

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
 import { Card } from './components/Card';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
 import EventDetailPopup from './components/EventDetailPopup';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './EventsSection.css';
 
 const client = generateClient<Schema>();
@@ -17,11 +18,13 @@ const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9
 export function EventsSection() {
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
+  const carouselRef = useRef<HTMLDivElement>(null);
 
-  const [events, setEvents] = useState<Event[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<EventWithImageUrl[]>([]);
+  const [allEvents, setAllEvents] = useState<EventWithImageUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   useEffect(() => {
     loadEvents();
@@ -30,8 +33,7 @@ export function EventsSection() {
       next: ({ items }) => {
         console.log('Events subscription received:', items.length, 'items');
         const published = items.filter(e => e.isPublished !== false);
-        setEvents(published);
-        filterUpcomingEvents(published);
+        processEvents(published);
         setLoading(false);
       },
       error: (err) => {
@@ -51,38 +53,64 @@ export function EventsSection() {
       console.log('Loaded events:', data?.length || 0, 'items');
       const published = (data || []).filter(e => e.isPublished !== false);
       console.log('Published events:', published.length);
-      setEvents(published);
-      filterUpcomingEvents(published);
+      processEvents(published);
     } catch (error) {
       console.error('Error loading events:', error);
     }
     setLoading(false);
   };
 
-  const filterUpcomingEvents = async (allEvents: Event[]) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const upcoming = allEvents
-      .filter(e => {
-        const eventDate = new Date(e.startDate);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= today;
-      })
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  const processEvents = async (events: Event[]) => {
+    // Sort by startDate (soonest first)
+    const sorted = [...events].sort((a, b) =>
+      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+    );
 
     // Load image URLs for events
     const eventsWithUrls = await Promise.all(
-      upcoming.map(async (event) => {
+      sorted.map(async (event) => {
         const imageUrl = await getImageUrl(event.coverImage);
         return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
       })
     );
 
-    setUpcomingEvents(eventsWithUrls);
+    setAllEvents(eventsWithUrls);
   };
 
   const handleCardClick = (event: Event) => {
     setSelectedEvent(event);
+  };
+
+  // Carousel scroll handling
+  const checkScrollButtons = () => {
+    if (carouselRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkScrollButtons();
+    const carousel = carouselRef.current;
+    if (carousel) {
+      carousel.addEventListener('scroll', checkScrollButtons);
+      window.addEventListener('resize', checkScrollButtons);
+      return () => {
+        carousel.removeEventListener('scroll', checkScrollButtons);
+        window.removeEventListener('resize', checkScrollButtons);
+      };
+    }
+  }, [allEvents]);
+
+  const scrollCarousel = (direction: 'left' | 'right') => {
+    if (carouselRef.current) {
+      const scrollAmount = 400;
+      carouselRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
   };
 
   if (loading) {
@@ -106,9 +134,9 @@ export function EventsSection() {
           display: 'flex',
           alignItems: 'center',
           gap: '1rem',
-          marginBottom: '1rem'
+          marginBottom: '1.5rem'
         }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#000', margin: 0 }}>Upcoming events</h2>
+          <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#000', margin: 0 }}>All Events</h2>
           <div style={{
             flex: 1,
             height: '1px',
@@ -116,31 +144,55 @@ export function EventsSection() {
           }} />
         </div>
 
-        {/* Events Grid */}
-        {upcomingEvents.length > 0 ? (
-          <div className="events-section__grid">
-            {upcomingEvents.map((event) => (
-              <Card
-                key={event.id}
-                imageUrl={event.imageUrl || FALLBACK_IMAGE}
-                category="EVENT"
-                authorName={event.venue || 'Event Organizer'}
-                description={event.title}
-                onClick={() => handleCardClick(event)}
-                variant="wide"
-              />
-            ))}
+        {/* Events Carousel */}
+        {allEvents.length > 0 ? (
+          <div className="events-carousel-container">
+            {/* Left Arrow */}
+            {canScrollLeft && !isMobile && (
+              <button
+                className="events-carousel__arrow events-carousel__arrow--left"
+                onClick={() => scrollCarousel('left')}
+                aria-label="Scroll left"
+              >
+                <ChevronLeft size={24} />
+              </button>
+            )}
+
+            {/* Carousel */}
+            <div
+              ref={carouselRef}
+              className="events-carousel"
+            >
+              {allEvents.map((event) => (
+                <div key={event.id} className="events-carousel__item">
+                  <Card
+                    imageUrl={event.imageUrl || FALLBACK_IMAGE}
+                    category="EVENT"
+                    authorName={event.venue || 'Event Organizer'}
+                    description={event.title}
+                    onClick={() => handleCardClick(event)}
+                    variant="default"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Right Arrow */}
+            {canScrollRight && !isMobile && (
+              <button
+                className="events-carousel__arrow events-carousel__arrow--right"
+                onClick={() => scrollCarousel('right')}
+                aria-label="Scroll right"
+              >
+                <ChevronRight size={24} />
+              </button>
+            )}
           </div>
         ) : (
           <div className="events-section__empty">
             <div className="events-section__empty-icon">No events found</div>
-            <h3>No Upcoming Events</h3>
-            <p>
-              {events.length === 0
-                ? 'No automotive events have been added yet.'
-                : 'Check back soon for upcoming events.'
-              }
-            </p>
+            <h3>No Events Available</h3>
+            <p>No automotive events have been added yet.</p>
           </div>
         )}
 
