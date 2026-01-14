@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { NewsItem, RSS_FEEDS, fetchNewsFeedItems } from './utils/newsFeed';
 import { useIsMobile } from './hooks/useIsMobile';
-import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import './NewsSection.css';
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
@@ -22,24 +21,8 @@ export function NewsSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<string>('all');
-  const [searchExpanded, setSearchExpanded] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
-
-  // Carousel scroll handlers
-  const scrollCarousel = (direction: 'left' | 'right') => {
-    if (carouselRef.current) {
-      const cardWidth = carouselRef.current.querySelector('.magazine-card')?.clientWidth || 200;
-      const scrollAmount = cardWidth + 16; // card width + gap
-      carouselRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  };
 
   useEffect(() => {
     fetchAllNews();
@@ -57,30 +40,11 @@ export function NewsSection() {
     setLoading(false);
   };
 
-  // Filter by source and search query
+  // Filter by source only
   const filteredNews = news.filter(item => {
     const matchesSource = selectedSource === 'all' || item.source === selectedSource;
-    const matchesSearch = searchQuery === '' ||
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSource && matchesSearch;
+    return matchesSource;
   });
-
-  // Focus input when search expands
-  useEffect(() => {
-    if (searchExpanded && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [searchExpanded]);
-
-  const handleSearchToggle = () => {
-    if (searchExpanded) {
-      setSearchQuery('');
-      setSearchExpanded(false);
-    } else {
-      setSearchExpanded(true);
-    }
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -135,36 +99,9 @@ export function NewsSection() {
         }}>
           Get your favorite magazine delivered at home
         </h2>
-        {/* Left Arrow */}
-        {!isMobile && (
-          <button
-            onClick={() => scrollCarousel('left')}
-            className="magazine-carousel__arrow magazine-carousel__arrow--left"
-            style={{
-              position: 'absolute',
-              left: '-20px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 10,
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              border: '1px solid #000',
-              backgroundColor: 'transparent',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background-color 0.2s',
-            }}
-          >
-            <ChevronLeft size={20} />
-          </button>
-        )}
 
         {/* Carousel */}
         <div
-          ref={carouselRef}
           className="magazine-carousel"
           style={{
             display: 'flex',
@@ -221,33 +158,6 @@ export function NewsSection() {
             </div>
           ))}
         </div>
-
-        {/* Right Arrow */}
-        {!isMobile && (
-          <button
-            onClick={() => scrollCarousel('right')}
-            className="magazine-carousel__arrow magazine-carousel__arrow--right"
-            style={{
-              position: 'absolute',
-              right: '-20px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 10,
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              border: '1px solid #000',
-              backgroundColor: 'transparent',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background-color 0.2s',
-            }}
-          >
-            <ChevronRight size={20} />
-          </button>
-        )}
       </div>
 
       {/* Title Section */}
@@ -265,80 +175,6 @@ export function NewsSection() {
         }}>
           News
         </h2>
-        <div style={{
-          flex: 1,
-          height: '1px',
-          backgroundColor: '#000'
-        }} />
-        {/* Animated Search Bar */}
-        <div
-          className={`news-search ${searchExpanded ? 'news-search--expanded' : ''}`}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: searchExpanded ? 'flex-end' : 'center',
-            borderRadius: '999px',
-            border: '1px solid #000',
-            backgroundColor: searchExpanded ? 'rgba(255, 255, 255, 0.9)' : 'transparent',
-            overflow: 'hidden',
-            transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease',
-            width: searchExpanded ? (isMobile ? 200 : 300) : 40,
-            minWidth: 40,
-            height: 40,
-            flexShrink: 0,
-            cursor: searchExpanded ? 'default' : 'pointer',
-          }}
-          onClick={!searchExpanded ? handleSearchToggle : undefined}
-        >
-          {/* Centered search icon when collapsed */}
-          {!searchExpanded && (
-            <Search size={18} style={{ color: '#000' }} />
-          )}
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search news..."
-            style={{
-              flex: searchExpanded ? 1 : 0,
-              border: 'none',
-              outline: 'none',
-              backgroundColor: 'transparent',
-              padding: searchExpanded ? '0 0.75rem' : '0',
-              fontSize: '14px',
-              color: '#000',
-              width: searchExpanded ? '100%' : 0,
-              minWidth: 0,
-              opacity: searchExpanded ? 1 : 0,
-              transition: 'opacity 0.3s ease, flex 0.4s ease, width 0.4s ease, padding 0.4s ease',
-              display: searchExpanded ? 'block' : 'none',
-            }}
-          />
-          {/* Close button - only visible when expanded */}
-          {searchExpanded && (
-            <button
-              onClick={handleSearchToggle}
-              style={{
-                width: 40,
-                height: 40,
-                minWidth: 40,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: 'none',
-                backgroundColor: '#000',
-                color: '#fff',
-                cursor: 'pointer',
-                transition: 'background-color 0.3s ease, color 0.3s ease',
-                flexShrink: 0,
-                borderRadius: '50%',
-              }}
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Source Filter */}

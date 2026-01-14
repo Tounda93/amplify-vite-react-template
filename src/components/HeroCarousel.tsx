@@ -64,8 +64,8 @@ const DEFAULT_CONTENT: HeroContent = {
   imageUrl: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=2000&q=80&auto=format&fit=crop',
   title: 'Welcome to Collectible',
   subtitle: 'Curated encyclopedia for enthusiasts by enthusiasts.',
-  ctaText: 'Explore WikiCars',
-  ctaLink: '#section=wikicars',
+  ctaText: 'Explore Events',
+  ctaLink: '#section=events',
   todaysHighlight: "Today's pick",
 };
 

@@ -5,7 +5,7 @@ export function ShopSection() {
   const horizontalPadding = isMobile ? '1rem' : '5rem';
 
   return (
-    <div style={{ width: '100%', overflowX: 'hidden', backgroundColor: '#FFFFFF', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
+    <div style={{ width: '100%', overflowX: 'hidden', backgroundColor: '#F2F3F5', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
       {/* Title Section */}
       <div style={{
         display: 'flex',

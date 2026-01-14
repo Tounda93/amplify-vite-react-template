@@ -1,4 +1,4 @@
-export type SearchCategory = 'wikicars' | 'news' | 'events' | 'auctions' | 'community';
+export type SearchCategory = 'news' | 'events' | 'auctions' | 'community';
 
 export interface SearchResultItem {
   id: string;

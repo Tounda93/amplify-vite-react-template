@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useEffect, useState } from 'react';
+import SearchBar from './SearchBar';
+import { SearchResultGroups, SearchResultItem } from '../types/search';
 
 /**
  * =====================================================
@@ -24,6 +26,11 @@ import { useEffect, useState } from 'react';
 interface HeaderProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  searchResults: SearchResultGroups;
+  searchLoading: boolean;
+  onSearchResultSelect: (result: SearchResultItem, options?: { clearInput?: boolean }) => void;
 }
 
 // Define the type for category items
@@ -35,7 +42,12 @@ interface Category {
 
 export default function Header({
   activeSection,
-  onSectionChange
+  onSectionChange,
+  searchTerm,
+  onSearchChange,
+  searchResults,
+  searchLoading,
+  onSearchResultSelect
 }: HeaderProps) {
   const isMobile = useIsMobile();
   const [viewportWidth, setViewportWidth] = useState(
@@ -168,17 +180,47 @@ export default function Header({
       color: textColor,
     }}>
       <div style={{
+        position: "relative",
         display: "flex",
         alignItems: "center",
         padding: "8px 2rem",
-        justifyContent: "center"
+        justifyContent: "flex-start",
+        gap: "16px"
       }}>
+        {/* Left: Logo + Search */}
+        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              fontSize: "26px",
+              fontWeight: 700,
+              letterSpacing: "0.02em",
+              color: "#0b0b0b"
+            }}
+            aria-label="Collectible"
+          >
+            C
+          </div>
+          <SearchBar
+            searchTerm={searchTerm}
+            onSearchChange={onSearchChange}
+            searchResults={searchResults}
+            searchLoading={searchLoading}
+            onSearchResultSelect={onSearchResultSelect}
+            isMobile={false}
+            style={{ width: "280px" }}
+            appearance="light"
+          />
+        </div>
+
         {/* Center: Main Navigation */}
         <nav style={{
           display: "flex",
           alignItems: "center",
           gap: "8px",
-          justifyContent: "center"
+          justifyContent: "center",
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)"
         }}>
           {categories.map((category) => {
             const IconComponent = category.icon;

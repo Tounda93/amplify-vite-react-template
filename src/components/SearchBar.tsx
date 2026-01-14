@@ -9,13 +9,13 @@ interface SearchBarProps {
   searchLoading: boolean;
   onSearchResultSelect: (result: SearchResultItem, options?: { clearInput?: boolean }) => void;
   isMobile: boolean;
+  appearance?: 'dark' | 'light';
   style?: CSSProperties;
   dropdownDirection?: 'up' | 'down';
   onDismiss?: () => void;
 }
 
 const searchSections: Array<{ key: keyof SearchResultGroups; label: string; accent: string }> = [
-  { key: 'wikicars', label: 'WikiCars', accent: '#1d4ed8' },
   { key: 'news', label: 'News', accent: '#dc2626' },
   { key: 'events', label: 'Events', accent: '#059669' },
   { key: 'auctions', label: 'Auctions', accent: '#b45309' },
@@ -29,11 +29,13 @@ export default function SearchBar({
   searchLoading,
   onSearchResultSelect,
   isMobile,
+  appearance = 'dark',
   style,
   dropdownDirection = 'down',
   onDismiss
 }: SearchBarProps) {
   const showSearchDropdown = searchTerm.trim().length >= 2;
+  const isLight = appearance === 'light';
 
   const containerStyle: CSSProperties = {
     width: isMobile ? '100%' : '300px',
@@ -50,13 +52,13 @@ export default function SearchBar({
             left: '16px',
             top: '50%',
             transform: 'translateY(-50%)',
-            color: isMobile ? '#d1d5db' : '#ffffff'
+            color: isLight ? '#111827' : (isMobile ? '#d1d5db' : '#ffffff')
           }}
           size={18}
         />
         <input
           type="text"
-          placeholder="Search"
+          placeholder="Search Collectible"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           style={{
@@ -65,16 +67,16 @@ export default function SearchBar({
             paddingRight: onDismiss ? '44px' : '16px',
             paddingTop: '10px',
             paddingBottom: '10px',
-            border: isMobile ? '1px solid rgba(255,255,255,0.25)' : '1px solid rgba(255,255,255,0.35)',
-            backgroundColor: isMobile ? 'rgba(15,23,42,0.1)' : 'rgba(15,23,42,0.8)',
+            border: isLight ? '1px solid #d1d5db' : (isMobile ? '1px solid rgba(255,255,255,0.25)' : '1px solid rgba(255,255,255,0.35)'),
+            backgroundColor: isLight ? '#ffffff' : (isMobile ? 'rgba(15,23,42,0.1)' : 'rgba(15,23,42,0.8)'),
             borderRadius: '9999px',
-            color: isMobile ? '#f9fafb' : '#ffffff',
+            color: isLight ? '#111827' : (isMobile ? '#f9fafb' : '#ffffff'),
             fontSize: isMobile ? '16px' : '14px',
             outline: 'none',
             boxSizing: 'border-box',
-            boxShadow: isMobile ? '0 15px 35px rgba(15, 23, 42, 0.35)' : '0 15px 35px rgba(15,23,42,0.45)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)'
+            boxShadow: isLight ? '0 0px 0px rgba(15,23,42,0.08)' : (isMobile ? '0 15px 35px rgba(15, 23, 42, 0.35)' : '0 15px 35px rgba(15,23,42,0.45)'),
+            backdropFilter: isLight ? 'none' : 'blur(10px)',
+            WebkitBackdropFilter: isLight ? undefined : 'blur(10px)'
           }}
           className="collectible-search-input"
         />
@@ -90,7 +92,7 @@ export default function SearchBar({
               transform: 'translateY(-50%)',
               border: 'none',
               background: 'none',
-              color: '#ffffff',
+              color: isLight ? '#111827' : '#ffffff',
               cursor: 'pointer',
               padding: 0,
               width: '24px',
@@ -112,22 +114,22 @@ export default function SearchBar({
           bottom: dropdownDirection === 'up' ? (isMobile ? 'calc(100% + 12px)' : '48px') : undefined,
           left: 0,
           width: '100%',
-          backgroundColor: isMobile ? 'rgba(15,23,42,0.95)' : '#ffffff',
-          border: isMobile ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e5e7eb',
+          backgroundColor: isLight ? '#ffffff' : (isMobile ? 'rgba(15,23,42,0.95)' : '#ffffff'),
+          border: isLight ? '1px solid #e5e7eb' : (isMobile ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e5e7eb'),
           borderRadius: '16px',
-          boxShadow: isMobile ? '0 25px 55px rgba(15, 23, 42, 0.55)' : '0 20px 40px rgba(0, 0, 0, 0.12)',
+          boxShadow: isLight ? '0 20px 40px rgba(15, 23, 42, 0.12)' : (isMobile ? '0 25px 55px rgba(15, 23, 42, 0.55)' : '0 20px 40px rgba(0, 0, 0, 0.12)'),
           maxHeight: '420px',
           overflowY: 'auto',
           zIndex: 2000,
-          backdropFilter: isMobile ? 'blur(16px)' : undefined,
-          WebkitBackdropFilter: isMobile ? 'blur(16px)' : undefined
+          backdropFilter: isLight ? undefined : (isMobile ? 'blur(16px)' : undefined),
+          WebkitBackdropFilter: isLight ? undefined : (isMobile ? 'blur(16px)' : undefined)
         }}>
           {searchLoading && (
             <div style={{
               padding: '12px 16px',
               fontSize: '13px',
-              color: isMobile ? '#f3f4f6' : '#6b7280',
-              borderBottom: isMobile ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f3f4f6'
+              color: isLight ? '#6b7280' : (isMobile ? '#f3f4f6' : '#6b7280'),
+              borderBottom: isLight ? '1px solid #f3f4f6' : (isMobile ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f3f4f6')
             }}>
               Searching across encyclopedia, news, events, and more...
             </div>
@@ -140,7 +142,7 @@ export default function SearchBar({
               <div
                 key={section.key}
                 style={{
-                  borderBottom: isLast ? 'none' : (isMobile ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f3f4f6'),
+                  borderBottom: isLast ? 'none' : (isLight ? '1px solid #f3f4f6' : (isMobile ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f3f4f6')),
                   paddingBottom: '4px'
                 }}
               >
@@ -151,7 +153,7 @@ export default function SearchBar({
                   padding: '10px 16px 6px 16px',
                   fontSize: '11px',
                   fontWeight: 600,
-                  color: isMobile ? '#e5e7eb' : '#6b7280',
+                  color: isLight ? '#6b7280' : (isMobile ? '#e5e7eb' : '#6b7280'),
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase'
                 }}>
@@ -168,7 +170,7 @@ export default function SearchBar({
                   <div style={{
                     padding: '6px 16px 14px 36px',
                     fontSize: '13px',
-                    color: isMobile ? '#cbd5f5' : '#9ca3af'
+                    color: isLight ? '#9ca3af' : (isMobile ? '#cbd5f5' : '#9ca3af')
                   }}>
                     No matches yet
                   </div>
@@ -188,16 +190,18 @@ export default function SearchBar({
                       borderRadius: 0,
                       cursor: 'pointer',
                       transition: 'background 0.2s',
-                      color: isMobile ? '#f9fafb' : undefined
+                      color: isLight ? '#111827' : (isMobile ? '#f9fafb' : undefined)
                     }}
-                    onMouseOver={(e) => { e.currentTarget.style.background = isMobile ? 'rgba(255,255,255,0.05)' : '#f9fafb'; }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = isLight ? '#f9fafb' : (isMobile ? 'rgba(255,255,255,0.05)' : '#f9fafb');
+                    }}
                     onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: isMobile ? '#ffffff' : '#111827' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: isLight ? '#111827' : (isMobile ? '#ffffff' : '#111827') }}>
                       {result.title}
                     </div>
                     {result.subtitle && (
-                      <div style={{ fontSize: '12px', color: isMobile ? '#cbd5f5' : '#6b7280', marginTop: '2px' }}>
+                      <div style={{ fontSize: '12px', color: isLight ? '#6b7280' : (isMobile ? '#cbd5f5' : '#6b7280'), marginTop: '2px' }}>
                         {result.subtitle}
                       </div>
                     )}

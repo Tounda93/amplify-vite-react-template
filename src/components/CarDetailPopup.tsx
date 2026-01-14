@@ -1,14 +1,26 @@
-import { X, Calendar, Palette, Settings, Gauge, Car as CarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { getUrl } from 'aws-amplify/storage';
+import { X, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { generateClient } from 'aws-amplify/data';
+import { getUrl, uploadData } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
 
 type Car = Schema['Car']['type'];
+type Make = Schema['Make']['type'];
+type Model = Schema['Model']['type'];
 
 const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
 // Helper to check if a string is a storage path or a URL
 const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
+
+const client = generateClient<Schema>();
+
+const TRANSMISSIONS = [
+  { value: '', label: 'Select transmission' },
+  { value: 'manual', label: 'Manual' },
+  { value: 'automatic', label: 'Automatic' },
+  { value: 'semi_automatic', label: 'Semi-Automatic' },
+];
 
 interface CarDetailPopupProps {
   car: Car | null;
@@ -16,17 +28,61 @@ interface CarDetailPopupProps {
   modelName: string;
   isOpen: boolean;
   onClose: () => void;
+  onCarUpdated?: () => void;
+  onCarDeleted?: () => void;
 }
 
-export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClose }: CarDetailPopupProps) {
+export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClose, onCarUpdated, onCarDeleted }: CarDetailPopupProps) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [carData, setCarData] = useState<Car | null>(car);
+  const [makes, setMakes] = useState<Make[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [filteredModels, setFilteredModels] = useState<Model[]>([]);
+  const [editValues, setEditValues] = useState({
+    makeId: '',
+    modelId: '',
+    year: '',
+    engineVariantId: '',
+    transmission: '' as '' | 'manual' | 'automatic' | 'semi_automatic',
+    color: '',
+    interiorColor: '',
+  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const photoPaths = car?.photos?.filter(Boolean) as string[] || [];
+  const photoPaths = carData?.photos?.filter(Boolean) as string[] || [];
+
+  useEffect(() => {
+    setCarData(car);
+    if (car) {
+      setEditValues({
+        makeId: car.makeId || '',
+        modelId: car.modelId || '',
+        year: car.year ? String(car.year) : '',
+        engineVariantId: car.engineVariantId || '',
+        transmission: (car.transmission || '') as '' | 'manual' | 'automatic' | 'semi_automatic',
+        color: car.color || '',
+        interiorColor: car.interiorColor || '',
+      });
+    } else {
+      setEditValues({
+        makeId: '',
+        modelId: '',
+        year: '',
+        engineVariantId: '',
+        transmission: '',
+        color: '',
+        interiorColor: '',
+      });
+    }
+  }, [car]);
 
   useEffect(() => {
     const loadPhotos = async () => {
-      if (!car || photoPaths.length === 0) {
+      if (!carData || photoPaths.length === 0) {
         setPhotoUrls([]);
         return;
       }
@@ -53,11 +109,43 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
     };
 
     loadPhotos();
-  }, [car?.id]);
+  }, [carData?.id, carData?.photos, photoPaths.length]);
 
-  if (!isOpen || !car) return null;
+  useEffect(() => {
+    if (!isOpen) return;
+    const loadMakes = async () => {
+      try {
+        const { data: makesData } = await client.models.Make.list({ limit: 500 });
+        const sorted = (makesData || []).sort((a, b) => a.makeName.localeCompare(b.makeName));
+        setMakes(sorted);
+
+        const { data: modelsData } = await client.models.Model.list({ limit: 1000 });
+        setModels(modelsData || []);
+      } catch (error) {
+        console.error('Error loading makes/models:', error);
+      }
+    };
+
+    loadMakes();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!editValues.makeId) {
+      setFilteredModels([]);
+      return;
+    }
+    const filtered = models.filter((model) => model.makeId === editValues.makeId);
+    setFilteredModels(filtered);
+    if (!filtered.find((model) => model.modelId === editValues.modelId)) {
+      setEditValues((prev) => ({ ...prev, modelId: '' }));
+    }
+  }, [editValues.makeId, editValues.modelId, models]);
+
+  if (!isOpen || !carData) return null;
 
   const currentImage = photoUrls.length > 0 ? photoUrls[currentPhotoIndex] : FALLBACK_CAR_IMAGE;
+  const displayMakeName = makes.find((make) => make.makeId === carData.makeId)?.makeName || makeName;
+  const displayModelName = models.find((model) => model.modelId === carData.modelId)?.modelName || modelName;
 
   const nextPhoto = () => {
     if (photoUrls.length > 1) {
@@ -74,6 +162,171 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
   const formatTransmission = (transmission: string | null | undefined) => {
     if (!transmission) return null;
     return transmission.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const handleEditPhotos = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const uploadPhotos = async (carId: string, files: File[]) => {
+    const uploadedPaths: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const photo = files[i];
+      const fileExtension = photo.name.split('.').pop() || 'jpg';
+      const fileName = `${carId}-${Date.now()}-${i}.${fileExtension}`;
+
+      try {
+        const result = await uploadData({
+          path: ({ identityId }) => `car-photos/${identityId}/${fileName}`,
+          data: photo,
+          options: { contentType: photo.type }
+        }).result;
+
+        uploadedPaths.push(result.path);
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+      }
+    }
+
+    return uploadedPaths;
+  };
+
+  const handlePhotoInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !carData) return;
+
+    const selected = Array.from(files);
+    if (selected.length === 0) return;
+
+    try {
+      setIsUploading(true);
+      const newPaths = await uploadPhotos(carData.id, selected);
+      const nextPaths = [...photoPaths, ...newPaths].filter(Boolean);
+
+      if (newPaths.length > 0) {
+        await client.models.Car.update({
+          id: carData.id,
+          photos: nextPaths,
+        });
+
+        const newUrls: string[] = [];
+        for (const path of newPaths) {
+          if (!isStoragePath(path)) {
+            newUrls.push(path);
+            continue;
+          }
+          try {
+            const result = await getUrl({ path });
+            newUrls.push(result.url.toString());
+          } catch (error) {
+            console.error('Error loading photo:', error);
+          }
+        }
+        setPhotoUrls(prev => [...prev, ...newUrls]);
+        setCarData(prev => prev ? { ...prev, photos: nextPaths } : prev);
+        onCarUpdated?.();
+      }
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setMenuOpen(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!carData) return;
+    const confirmed = window.confirm('Delete this car from your garage? This cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      await client.models.Car.delete({ id: carData.id });
+      onCarDeleted?.();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting car:', error);
+      alert('Failed to delete car. Please try again.');
+    } finally {
+      setMenuOpen(false);
+    }
+  };
+
+  const handleEdit = () => {
+    if (!carData) return;
+    setEditValues({
+      makeId: carData.makeId || '',
+      modelId: carData.modelId || '',
+      year: carData.year ? String(carData.year) : '',
+      engineVariantId: carData.engineVariantId || '',
+      transmission: (carData.transmission || '') as '' | 'manual' | 'automatic' | 'semi_automatic',
+      color: carData.color || '',
+      interiorColor: carData.interiorColor || '',
+    });
+    setIsEditing(true);
+    setMenuOpen(false);
+  };
+
+  const handleSave = async () => {
+    if (!carData) return;
+    if (!editValues.makeId || !editValues.modelId || !editValues.year) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    const year = parseInt(editValues.year, 10);
+    if (Number.isNaN(year)) {
+      alert('Please enter a valid year.');
+      return;
+    }
+
+    try {
+      await client.models.Car.update({
+        id: carData.id,
+        makeId: editValues.makeId,
+        modelId: editValues.modelId,
+        year,
+        engineVariantId: editValues.engineVariantId || undefined,
+        transmission: editValues.transmission || undefined,
+        color: editValues.color || undefined,
+        interiorColor: editValues.interiorColor || undefined,
+      });
+
+      setCarData(prev => prev ? ({
+        ...prev,
+        makeId: editValues.makeId,
+        modelId: editValues.modelId,
+        year,
+        engineVariantId: editValues.engineVariantId || undefined,
+        transmission: editValues.transmission || undefined,
+        color: editValues.color || undefined,
+        interiorColor: editValues.interiorColor || undefined,
+      }) : prev);
+      setIsEditing(false);
+      onCarUpdated?.();
+    } catch (error) {
+      console.error('Error updating car:', error);
+      alert('Failed to update car. Please try again.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setMenuOpen(false);
+    if (carData) {
+      setEditValues({
+        makeId: carData.makeId || '',
+        modelId: carData.modelId || '',
+        year: carData.year ? String(carData.year) : '',
+        engineVariantId: carData.engineVariantId || '',
+        transmission: (carData.transmission || '') as '' | 'manual' | 'automatic' | 'semi_automatic',
+        color: carData.color || '',
+        interiorColor: carData.interiorColor || '',
+      });
+    }
   };
 
   return (
@@ -111,7 +364,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
         <div style={{ position: 'relative' }}>
           <img
             src={currentImage}
-            alt={`${makeName} ${modelName}`}
+            alt={`${displayMakeName} ${displayModelName}`}
             style={{
               width: '100%',
               height: '300px',
@@ -119,27 +372,112 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
             }}
           />
 
-          {/* Close Button */}
-          <button
-            onClick={onClose}
+          {/* Actions */}
+          <div
             style={{
               position: 'absolute',
               top: '1rem',
               right: '1rem',
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              border: 'none',
-              background: 'rgba(255, 255, 255, 0.9)',
-              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              gap: '0.5rem',
+              zIndex: 2,
             }}
           >
-            <X size={20} />
-          </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen((prev) => !prev);
+                }}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  border: '1px solid rgba(0,0,0,0.4)',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  color: '#000',
+                }}
+                aria-label="More actions"
+              >
+                <MoreVertical size={20} />
+              </button>
+
+              {menuOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '44px',
+                    right: 0,
+                    backgroundColor: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                    minWidth: '180px',
+                    overflow: 'hidden',
+                    zIndex: 3,
+                  }}
+                >
+                  <button
+                    onClick={handleEdit}
+                    disabled={isUploading}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      border: 'none',
+                      background: 'transparent',
+                      textAlign: 'left',
+                      cursor: isUploading ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem',
+                      color: '#111',
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      border: 'none',
+                      background: 'transparent',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      color: '#b91c1c',
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={onClose}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                border: '1px solid rgba(0,0,0,0.4)',
+                background: 'rgba(255, 255, 255, 0.9)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                color: '#000',
+              }}
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+          </div>
 
           {/* Photo Navigation */}
           {photoUrls.length > 1 && (
@@ -217,190 +555,206 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
             </>
           )}
 
-          {/* Year Badge */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '1rem',
-              left: '1rem',
-              padding: '0.375rem 0.75rem',
-              background: 'rgba(0, 0, 0, 0.7)',
-              color: '#fff',
-              borderRadius: '999px',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-            }}
-          >
-            {car.year}
-          </div>
         </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: 'none' }}
+          onChange={handlePhotoInputChange}
+        />
 
         {/* Scrollable Content */}
         <div style={{ overflowY: 'auto', padding: '1.5rem' }}>
-          {/* Title */}
           <h2 style={{ margin: '0 0 1.5rem 0', fontSize: '1.5rem', fontWeight: 600, color: '#000' }}>
-            {makeName} {modelName}
+            {displayMakeName} {displayModelName}
           </h2>
 
-          {/* Details Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-            {/* Year */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              padding: '1rem',
-              backgroundColor: '#f9fafb',
-              borderRadius: '8px',
-            }}>
-              <Calendar size={20} style={{ color: '#666' }} />
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#666' }}>Year</div>
-                <div style={{ fontWeight: 500, color: '#333' }}>{car.year}</div>
+          {!isEditing ? (
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
+                <span>Car name</span>
+                <span>{displayMakeName} {displayModelName}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
+                <span>Date</span>
+                <span>{carData.year || '—'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
+                <span>Engine</span>
+                <span>{carData.engineVariantId || '—'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
+                <span>Transmission</span>
+                <span>{formatTransmission(carData.transmission) || '—'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
+                <span>Exterior colour</span>
+                <span>{carData.color || '—'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
+                <span>Interior colour</span>
+                <span>{carData.interiorColor || '—'}</span>
               </div>
             </div>
-
-            {/* Exterior Color */}
-            {car.color && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '1rem',
-                backgroundColor: '#f9fafb',
-                borderRadius: '8px',
-              }}>
-                <Palette size={20} style={{ color: '#666' }} />
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Exterior</div>
-                  <div style={{ fontWeight: 500, color: '#333' }}>{car.color}</div>
-                </div>
-              </div>
-            )}
-
-            {/* Interior Color */}
-            {car.interiorColor && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '1rem',
-                backgroundColor: '#f9fafb',
-                borderRadius: '8px',
-              }}>
-                <Palette size={20} style={{ color: '#666' }} />
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Interior</div>
-                  <div style={{ fontWeight: 500, color: '#333' }}>{car.interiorColor}</div>
-                </div>
-              </div>
-            )}
-
-            {/* Transmission */}
-            {car.transmission && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '1rem',
-                backgroundColor: '#f9fafb',
-                borderRadius: '8px',
-              }}>
-                <Settings size={20} style={{ color: '#666' }} />
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Transmission</div>
-                  <div style={{ fontWeight: 500, color: '#333' }}>{formatTransmission(car.transmission)}</div>
-                </div>
-              </div>
-            )}
-
-            {/* Engine */}
-            {car.engineVariantId && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '1rem',
-                backgroundColor: '#f9fafb',
-                borderRadius: '8px',
-              }}>
-                <Gauge size={20} style={{ color: '#666' }} />
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Engine</div>
-                  <div style={{ fontWeight: 500, color: '#333' }}>{car.engineVariantId}</div>
-                </div>
-              </div>
-            )}
-
-            {/* Mileage */}
-            {car.mileage && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '1rem',
-                backgroundColor: '#f9fafb',
-                borderRadius: '8px',
-              }}>
-                <CarIcon size={20} style={{ color: '#666' }} />
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Mileage</div>
-                  <div style={{ fontWeight: 500, color: '#333' }}>
-                    {car.mileage.toLocaleString()} {car.mileageUnit || 'km'}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Description */}
-          {car.description && (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 600, color: '#333' }}>
-                Description
-              </h3>
-              <p style={{ margin: 0, color: '#555', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                {car.description}
-              </p>
-            </div>
-          )}
-
-          {/* Photo Thumbnails */}
-          {photoUrls.length > 1 && (
-            <div>
-              <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', fontWeight: 600, color: '#333' }}>
-                Photos ({photoUrls.length})
-              </h3>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-                gap: '0.5rem',
-              }}>
-                {photoUrls.map((photo, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentPhotoIndex(index)}
+          ) : (
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <label style={{ display: 'grid', gap: '0.5rem', color: '#111' }}>
+                <span>Car name</span>
+                <div style={{ display: 'grid', gap: '0.5rem' }}>
+                  <select
+                    value={editValues.makeId}
+                    onChange={(e) => setEditValues((prev) => ({ ...prev, makeId: e.target.value }))}
                     style={{
-                      aspectRatio: '1',
+                      padding: '0.6rem 0.75rem',
                       borderRadius: '8px',
-                      overflow: 'hidden',
-                      border: index === currentPhotoIndex ? '2px solid #000' : '2px solid transparent',
-                      padding: 0,
-                      cursor: 'pointer',
-                      background: 'none',
+                      border: '1px solid #d1d5db',
+                      background: '#fff',
                     }}
                   >
-                    <img
-                      src={photo}
-                      alt={`Photo ${index + 1}`}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                    />
-                  </button>
-                ))}
+                    <option value="">Select make</option>
+                    {makes.map((make) => (
+                      <option key={make.makeId} value={make.makeId}>{make.makeName}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={editValues.modelId}
+                    onChange={(e) => setEditValues((prev) => ({ ...prev, modelId: e.target.value }))}
+                    style={{
+                      padding: '0.6rem 0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #d1d5db',
+                      background: '#fff',
+                    }}
+                  >
+                    <option value="">Select model</option>
+                    {filteredModels.map((model) => (
+                      <option key={model.modelId} value={model.modelId}>{model.modelName}</option>
+                    ))}
+                  </select>
+                </div>
+              </label>
+              <label style={{ display: 'grid', gap: '0.5rem', color: '#111' }}>
+                <span>Date</span>
+                <input
+                  type="number"
+                  value={editValues.year}
+                  onChange={(e) => setEditValues((prev) => ({ ...prev, year: e.target.value }))}
+                  style={{
+                    padding: '0.6rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                  }}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: '0.5rem', color: '#111' }}>
+                <span>Engine</span>
+                <input
+                  type="text"
+                  value={editValues.engineVariantId}
+                  onChange={(e) => setEditValues((prev) => ({ ...prev, engineVariantId: e.target.value }))}
+                  style={{
+                    padding: '0.6rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                  }}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: '0.5rem', color: '#111' }}>
+                <span>Transmission</span>
+                <select
+                  value={editValues.transmission}
+                  onChange={(e) => setEditValues((prev) => ({
+                    ...prev,
+                    transmission: e.target.value as '' | 'manual' | 'automatic' | 'semi_automatic',
+                  }))}
+                  style={{
+                    padding: '0.6rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    background: '#fff',
+                  }}
+                >
+                  {TRANSMISSIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: 'grid', gap: '0.5rem', color: '#111' }}>
+                <span>Exterior colour</span>
+                <input
+                  type="text"
+                  value={editValues.color}
+                  onChange={(e) => setEditValues((prev) => ({ ...prev, color: e.target.value }))}
+                  style={{
+                    padding: '0.6rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                  }}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: '0.5rem', color: '#111' }}>
+                <span>Interior colour</span>
+                <input
+                  type="text"
+                  value={editValues.interiorColor}
+                  onChange={(e) => setEditValues((prev) => ({ ...prev, interiorColor: e.target.value }))}
+                  style={{
+                    padding: '0.6rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                  }}
+                />
+              </label>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  onClick={handleEditPhotos}
+                  disabled={isUploading}
+                  style={{
+                    padding: '0.6rem 1rem',
+                    borderRadius: '999px',
+                    border: '1px solid #111',
+                    background: '#fff',
+                    cursor: isUploading ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  {isUploading ? 'Uploading…' : 'Upload photos'}
+                </button>
+                <span style={{ color: '#666', fontSize: '0.875rem' }}>
+                  {photoUrls.length} photo{photoUrls.length === 1 ? '' : 's'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button
+                  onClick={handleCancelEdit}
+                  style={{
+                    padding: '0.6rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    background: '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  style={{
+                    padding: '0.6rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid #111',
+                    background: '#111',
+                    color: '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Save
+                </button>
               </div>
             </div>
           )}

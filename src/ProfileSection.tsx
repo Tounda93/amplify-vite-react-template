@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Calendar, MapPin, Edit, Camera, Shield, LogOut } from 'lucide-react';
-import WikiCarAdminPanel from './components/WikiCarAdminPanel';
 import { useIsMobile } from './hooks/useIsMobile';
 
 interface AmplifyUser {
@@ -340,8 +339,6 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
           </button>
         </div>
       </div>
-
-      <WikiCarAdminPanel />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Car, Plus, Heart, Settings, User, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
+import { Car, Plus, Heart, Settings, User, Shield } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../amplify/data/resource';
 import AddCarPopup from './components/AddCarPopup';
 import CarDetailPopup from './components/CarDetailPopup';
@@ -28,6 +29,7 @@ interface MyGarageSectionProps {
 }
 
 const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80';
+const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
 
 export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps) {
   const isMobile = useIsMobile();
@@ -35,6 +37,7 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
   const [loading, setLoading] = useState(true);
   const [showAddCarPopup, setShowAddCarPopup] = useState(false);
   const [userCars, setUserCars] = useState<CarType[]>([]);
+  const [carImageUrls, setCarImageUrls] = useState<Map<string, string>>(new Map());
   const [makes, setMakes] = useState<Map<string, Make>>(new Map());
   const [models, setModels] = useState<Map<string, Model>>(new Map());
   const [selectedCar, setSelectedCar] = useState<CarType | null>(null);
@@ -43,6 +46,40 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
   useEffect(() => {
     loadUserCars();
   }, []);
+
+  useEffect(() => {
+    if (userCars.length === 0) {
+      setCarImageUrls(new Map());
+      return;
+    }
+
+    const loadCarImages = async () => {
+      const entries = await Promise.all(
+        userCars.map(async (car) => {
+          const photoPath = car.photos && car.photos.length > 0 ? car.photos[0] : null;
+          if (!photoPath) {
+            return [car.id, FALLBACK_CAR_IMAGE] as const;
+          }
+
+          if (!isStoragePath(photoPath)) {
+            return [car.id, photoPath] as const;
+          }
+
+          try {
+            const result = await getUrl({ path: photoPath });
+            return [car.id, result.url.toString()] as const;
+          } catch (error) {
+            console.error('Error loading car image:', error);
+            return [car.id, FALLBACK_CAR_IMAGE] as const;
+          }
+        })
+      );
+
+      setCarImageUrls(new Map(entries));
+    };
+
+    loadCarImages();
+  }, [userCars]);
 
   const loadUserCars = async () => {
     try {
@@ -116,26 +153,16 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
   const getMakeName = (makeId: string) => makes.get(makeId)?.makeName || 'Unknown';
   const getModelName = (modelId: string) => models.get(modelId)?.modelName || 'Unknown';
 
-  const scrollCarousel = (direction: 'left' | 'right') => {
-    if (carouselRef.current) {
-      const scrollAmount = 400;
-      carouselRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  };
-
   if (loading) {
     return (
-      <div style={{ width: '100%', backgroundColor: '#FFFFFF', padding: `2rem ${horizontalPadding}` }}>
+      <div style={{ width: '100%', backgroundColor: '#F2F3F5', padding: `2rem ${horizontalPadding}` }}>
         <p style={{ color: '#666', textAlign: 'center' }}>Loading your garage...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ width: '100%', overflowX: 'hidden', backgroundColor: '#FFFFFF', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
+    <div style={{ width: '100%', overflowX: 'hidden', backgroundColor: '#F2F3F5', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
       {/* Profile Button and Admin Button - Left aligned */}
       <div style={{
         display: 'flex',
@@ -393,32 +420,6 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
         <>
           {/* Cars Horizontal Carousel */}
           <div style={{ position: 'relative' }}>
-            {/* Left Arrow */}
-            {!isMobile && userCars.length > 2 && (
-              <button
-                onClick={() => scrollCarousel('left')}
-                style={{
-                  position: 'absolute',
-                  left: isMobile ? '0.5rem' : '3rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 10,
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  border: '1px solid #000',
-                  backgroundColor: 'white',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                }}
-              >
-                <ChevronLeft size={20} />
-              </button>
-            )}
-
             {/* Carousel Container */}
             <div
               ref={carouselRef}
@@ -434,7 +435,7 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
               }}
             >
               {userCars.map((car) => {
-                const carImage = car.photos && car.photos.length > 0 ? car.photos[0] : FALLBACK_CAR_IMAGE;
+                const carImage = carImageUrls.get(car.id) || FALLBACK_CAR_IMAGE;
                 const makeName = getMakeName(car.makeId);
                 const modelName = getModelName(car.modelId);
 
@@ -445,8 +446,7 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
                     style={{
                       flexShrink: 0,
                       width: isMobile ? 'calc(100vw - 2rem)' : '28.2625rem',
-                      height: isMobile ? 'auto' : '25rem',
-                      minHeight: isMobile ? '18.2rem' : 'auto',
+                      height: isMobile ? '18.2rem' : '25rem',
                       backgroundColor: '#FFFFFF',
                       borderRadius: '0.625rem',
                       overflow: 'hidden',
@@ -454,6 +454,8 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
                       scrollSnapAlign: 'start',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                       transition: 'transform 0.2s, box-shadow 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.transform = 'translateY(-4px)';
@@ -468,7 +470,7 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
                     <div
                       style={{
                         width: '100%',
-                        height: isMobile ? '13rem' : '12.95rem',
+                        flex: '0 0 70%',
                         backgroundImage: `url(${carImage})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -495,7 +497,7 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
                     </div>
 
                     {/* Car Info */}
-                    <div style={{ padding: '0.75rem 1rem' }}>
+                    <div style={{ padding: '0.75rem 1rem', flex: '1 0 30%' }}>
                       <span style={{
                         display: 'block',
                         color: '#000',
@@ -515,38 +517,14 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
                         {makeName} {modelName}
                       </h3>
 
-                      {/* Separator */}
                       <div style={{ margin: '0.5rem 0' }}>
                         <span style={{
                           display: 'block',
                           color: '#000',
                           fontSize: '0.625rem',
                           fontWeight: 400,
-                          marginBottom: '0.375rem',
                         }}>
                           {[car.color, car.transmission?.replace('_', ' ')].filter(Boolean).join(' • ') || 'No details'}
-                        </span>
-                        <div style={{
-                          width: '11rem',
-                          height: '0.5px',
-                          backgroundColor: '#000',
-                        }} />
-                      </div>
-
-                      {/* View Details Pill */}
-                      <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '0.25rem 0.75rem',
-                          backgroundColor: '#f3f4f6',
-                          borderRadius: '999px',
-                          color: '#374151',
-                          fontSize: '0.6875rem',
-                          fontWeight: 500,
-                          border: '1px solid #e5e7eb',
-                        }}>
-                          View Details
                         </span>
                       </div>
                     </div>
@@ -554,32 +532,6 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
                 );
               })}
             </div>
-
-            {/* Right Arrow */}
-            {!isMobile && userCars.length > 2 && (
-              <button
-                onClick={() => scrollCarousel('right')}
-                style={{
-                  position: 'absolute',
-                  right: isMobile ? '0.5rem' : '3rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 10,
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  border: '1px solid #000',
-                  backgroundColor: 'white',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                }}
-              >
-                <ChevronRight size={20} />
-              </button>
-            )}
           </div>
         </>
       )}
@@ -598,6 +550,8 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
         modelName={selectedCar ? getModelName(selectedCar.modelId) : ''}
         isOpen={selectedCar !== null}
         onClose={() => setSelectedCar(null)}
+        onCarUpdated={loadUserCars}
+        onCarDeleted={loadUserCars}
       />
     </div>
   );

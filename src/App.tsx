@@ -29,7 +29,6 @@ import { MyGarageSection } from './MyGarageSection';
 import { ProfileSection } from './ProfileSection';
 import { ShopSection } from './ShopSection';
 import { AdminSection } from './AdminSection';
-import WikiCarsSection from './components/WikiCarsSection';
 
 // NEW: Import the Header component
 import Header from './components/Header';
@@ -73,7 +72,6 @@ const COMMUNITY_THREADS = [
 ];
 
 const getEmptySearchResults = (): SearchResultGroups => ({
-  wikicars: [],
   news: [],
   events: [],
   auctions: [],
@@ -137,8 +135,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [auctionsCache, setAuctionsCache] = useState<AuctionModel[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResultGroups>(getEmptySearchResults());
   const [searchLoading, setSearchLoading] = useState(false);
-  const [wikiSelectedMake, setWikiSelectedMake] = useState<Make | null>(null);
-  const [pendingMakeId, setPendingMakeId] = useState<string | undefined>(initialState.makeId);
   const isMobile = useIsMobile();
   // Mobile horizontal padding reduced by 80%: 2rem -> 0.4rem
   const horizontalPadding = isMobile ? '0.4rem' : '5rem';
@@ -189,35 +185,16 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     loadAllModels();
   }, []);
 
-  // Restore selected make from URL once makes are loaded
-  useEffect(() => {
-    if (pendingMakeId && allMakes.length > 0) {
-      const foundMake = allMakes.find(m => m.makeId === pendingMakeId);
-      if (foundMake) {
-        setWikiSelectedMake(foundMake);
-      }
-      setPendingMakeId(undefined);
-    }
-  }, [pendingMakeId, allMakes]);
-
   // Listen for browser back/forward navigation
   useEffect(() => {
     const handleHashChange = () => {
-      const { section, makeId } = parseUrlHash();
+      const { section } = parseUrlHash();
       setActiveSection(section);
-      if (section === 'wikicars' && makeId && allMakes.length > 0) {
-        const foundMake = allMakes.find(m => m.makeId === makeId);
-        if (foundMake) {
-          setWikiSelectedMake(foundMake);
-        }
-      } else if (section !== 'wikicars') {
-        setWikiSelectedMake(null);
-      }
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [allMakes]);
+  }, []);
 
   const loadAllMakes = async () => {
     try {
@@ -254,37 +231,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     );
     setMakes(filtered);
   }, [searchTerm, allMakes]);
-
-  const buildWikiCarResults = (term: string): SearchResultItem[] => {
-    const query = term.toLowerCase();
-    const makeMatches = allMakes
-      .filter((make) => make.makeName.toLowerCase().includes(query))
-      .slice(0, 5)
-      .map((make) => ({
-        id: `make-${make.makeId}`,
-        category: 'wikicars' as const,
-        title: make.makeName,
-        subtitle: make.country ? `${make.country}${make.yearsFrom ? ` • Since ${make.yearsFrom}` : ''}` : undefined,
-        data: { type: 'make', make },
-      }));
-
-    const modelMatches = allModels
-      .filter((model) => {
-        const name = (model.fullName || model.modelName || '').toLowerCase();
-        return name.includes(query);
-      })
-      .slice(0, 5)
-      .map((model) => ({
-        id: `model-${model.modelId}`,
-        category: 'wikicars' as const,
-        title: model.fullName || model.modelName,
-        subtitle: makeById.get(model.makeId)?.makeName,
-        description: model.yearsFrom ? `Since ${model.yearsFrom}${model.yearsTo ? ` - ${model.yearsTo}` : ''}` : undefined,
-        data: { type: 'model', model },
-      }));
-
-    return [...makeMatches, ...modelMatches].slice(0, 8);
-  };
 
   const ensureNewsItems = async (): Promise<NewsItem[]> => {
     if (newsCache.length > 0) {
@@ -414,8 +360,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     const runSearch = async () => {
       setSearchLoading(true);
       try {
-        const [wikicars, news, events, auctions, community] = await Promise.all([
-          Promise.resolve(buildWikiCarResults(term)),
+        const [news, events, auctions, community] = await Promise.all([
           getNewsResults(term),
           getEventResults(term),
           getAuctionResults(term),
@@ -424,7 +369,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
         if (!cancelled) {
           setSearchResults({
-            wikicars,
             news,
             events,
             auctions,
@@ -472,7 +416,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
     // Update URL hash
-    updateUrlHash(section, section === 'wikicars' ? wikiSelectedMake?.makeId : undefined);
+    updateUrlHash(section);
     // Clear selection when switching sections
     if (section !== 'home') {
       setSelectedMake(null);
@@ -485,7 +429,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     setSearchTerm(value);
     setSelectedMake(null);
     setModels([]);
-    setWikiSelectedMake(null);
     // Switch to home section when searching
     if (value.length > 0) {
       setActiveSection('home');
@@ -496,27 +439,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   };
 
   const handleSearchResultSelect = async (result: SearchResultItem) => {
-    let clearInput = true;
-    let selectedMakeId: string | undefined;
-
-    if (result.category === 'wikicars') {
-      if (result.data?.type === 'make' && result.data.make) {
-        const make = result.data.make as Make;
-        setWikiSelectedMake(make);
-        selectedMakeId = make.makeId;
-        clearInput = false;
-      } else if (result.data?.type === 'model' && result.data.model) {
-        const model = result.data.model as Model;
-        const targetMake = makeById.get(model.makeId);
-        if (targetMake) {
-          setWikiSelectedMake(targetMake);
-          selectedMakeId = targetMake.makeId;
-          clearInput = false;
-        }
-      }
-      setActiveSection('wikicars');
-      updateUrlHash('wikicars', selectedMakeId);
-    } else if (result.category === 'news') {
+    if (result.category === 'news') {
       setActiveSection('news');
       updateUrlHash('news');
       if (result.url) {
@@ -539,9 +462,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       updateUrlHash('community');
     }
 
-    if (clearInput) {
-      setSearchTerm('');
-    }
+    setSearchTerm('');
     setSearchResults(getEmptySearchResults());
   };
 
@@ -560,6 +481,11 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       <Header
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
+        searchTerm={searchTerm}
+        onSearchChange={handleSearchChange}
+        searchResults={searchResults}
+        searchLoading={searchLoading}
+        onSearchResultSelect={handleSearchResultSelect}
       />
 
       {/* Main layout with sidebar and content - 10% / 80% / 10% */}
@@ -640,20 +566,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
           {/* PROFILE SECTION */}
           {activeSection === 'profile' && (
             <ProfileSection user={user} signOut={signOut} />
-          )}
-
-          {/* WIKICARS SECTION */}
-          {activeSection === 'wikicars' && (
-            <div style={{ width: '100%' }}>
-              <WikiCarsSection
-                makes={allMakes}
-                selectedMake={wikiSelectedMake}
-                onSelectMake={(make) => {
-                  setWikiSelectedMake(make);
-                  updateUrlHash('wikicars', make.makeId);
-                }}
-              />
-            </div>
           )}
 
           {/* ADMIN SECTION */}
