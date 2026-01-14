@@ -3,10 +3,6 @@ import {
   Newspaper,
   Users,
   Calendar,
-  Car,
-  MessageSquare,
-  ShoppingBag,
-  Settings,
   LucideIcon
 } from "lucide-react";
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -56,8 +52,8 @@ export default function Header({
   }, []);
 
   const mobileIconSize = isMobile
-    ? Math.max(14, Math.min(18, viewportWidth ? viewportWidth / 24 : 16))
-    : 20;
+    ? Math.max(17, Math.min(22, viewportWidth ? viewportWidth / 20 : 19))
+    : 24;
 
   // ============================================
   // CATEGORY DATA
@@ -67,17 +63,16 @@ export default function Header({
     { id: "events", label: "Events", icon: Calendar },
     { id: "news", label: "News", icon: Newspaper },
     { id: "community", label: "Rooms", icon: Users },
-    { id: "shop", label: "Shop", icon: ShoppingBag },
   ];
 
   // Glass effect styling
   const headerBackground = 'rgba(255, 255, 255, 0.15)';
-  const headerBorderColor = '1px solid rgba(255, 255, 255, 0.3)';
-  const headerShadow = 'none';
-  const textColor = '#000000';
+  const headerBorderColor = '5px solid rgba(255, 255, 255, 0.3)';
+  const headerShadow = '0px 0px 0px rgba(0, 0, 0, 0.9)';
+  const textColor = '#010101';
   const navInactiveColor = 'rgba(0, 0, 0, 0.5)';
 
-  const mobileCategoryOrder = ["home", "events", "news", "community", "shop"];
+  const mobileCategoryOrder = ["home", "events", "news", "community"];
   const mobileCategories = mobileCategoryOrder
     .map(id => categories.find(category => category.id === id))
     .filter((category): category is Category => Boolean(category));
@@ -123,7 +118,7 @@ export default function Header({
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "2px",
-                  padding: "6px 4px 10px 4px",
+                  padding: "8px 4px",
                   borderRadius: "12px",
                   border: "none",
                   cursor: "pointer",
@@ -137,12 +132,6 @@ export default function Header({
                   size={mobileIconSize}
                   strokeWidth={isActive ? 2.4 : 1.8}
                 />
-                <span style={{
-                  fontSize: "9px",
-                  fontWeight: 400
-                }}>
-                  {category.label}
-                </span>
                 <div style={{
                   position: "absolute",
                   bottom: "4px",
@@ -165,34 +154,30 @@ export default function Header({
 
   return (
     <header style={{
-      position: "relative",
-      marginTop: "1rem",
-      marginLeft: "2rem",
-      marginRight: "2rem",
-      backgroundColor: headerBackground,
+      position: "sticky",
+      top: "0",
+      marginTop: "0",
+      marginLeft: "0",
+      marginRight: "0",
+      width: "100%",
+      backgroundColor: "#fff",
       boxShadow: headerShadow,
       zIndex: 1000,
-      border: headerBorderColor,
-      borderRadius: "999px",
+      border: "none",
+      borderRadius: "0",
       color: textColor,
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)"
     }}>
       <div style={{
         display: "flex",
         alignItems: "center",
         padding: "8px 2rem",
-        justifyContent: "space-between"
+        justifyContent: "center"
       }}>
-        {/* Empty left spacer for balance */}
-        <div style={{ flex: "0 0 auto", width: "140px" }} />
-
         {/* Center: Main Navigation */}
         <nav style={{
           display: "flex",
           alignItems: "center",
           gap: "8px",
-          flex: "1",
           justifyContent: "center"
         }}>
           {categories.map((category) => {
@@ -208,7 +193,7 @@ export default function Header({
                   flexDirection: "column",
                   alignItems: "center",
                   gap: "2px",
-                  padding: "6px 10px 10px 10px",
+                  padding: "8px 12px",
                   borderRadius: "10px",
                   border: "none",
                   cursor: "pointer",
@@ -219,15 +204,9 @@ export default function Header({
                 }}
               >
                 <IconComponent
-                  size={20}
+                  size={24}
                   strokeWidth={isActive ? 2 : 1.5}
                 />
-                <span style={{
-                  fontSize: "10px",
-                  fontWeight: 400
-                }}>
-                  {category.label}
-                </span>
                 <div style={{
                   position: "absolute",
                   bottom: "4px",
@@ -244,115 +223,6 @@ export default function Header({
             );
           })}
         </nav>
-
-        {/* Right: Chat and Garage */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px"
-        }}>
-          {/* Chat button */}
-          <button
-            onClick={() => onSectionChange("chat")}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "2px",
-              padding: "6px 10px 10px 10px",
-              borderRadius: "10px",
-              border: "none",
-              cursor: "pointer",
-              transition: "color 0.2s",
-              backgroundColor: "transparent",
-              color: activeSection === "chat" ? textColor : navInactiveColor,
-              position: "relative"
-            }}
-          >
-            <MessageSquare size={20} strokeWidth={activeSection === "chat" ? 2 : 1.5} />
-            <span style={{ fontSize: "10px", fontWeight: 400 }}>Chat</span>
-            <div style={{
-              position: "absolute",
-              bottom: "4px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "40%",
-              height: "1.5px",
-              borderRadius: "999px",
-              backgroundColor: textColor,
-              opacity: activeSection === "chat" ? 1 : 0,
-              transition: "opacity 0.2s"
-            }} />
-          </button>
-
-          {/* My Garage button */}
-          <button
-            onClick={() => onSectionChange("garage")}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "2px",
-              padding: "6px 10px 10px 10px",
-              borderRadius: "10px",
-              border: "none",
-              cursor: "pointer",
-              transition: "color 0.2s",
-              backgroundColor: "transparent",
-              color: activeSection === "garage" ? textColor : navInactiveColor,
-              position: "relative"
-            }}
-          >
-            <Car size={20} strokeWidth={activeSection === "garage" ? 2 : 1.5} />
-            <span style={{ fontSize: "10px", fontWeight: 400 }}>My Garage</span>
-            <div style={{
-              position: "absolute",
-              bottom: "4px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "40%",
-              height: "1.5px",
-              borderRadius: "999px",
-              backgroundColor: textColor,
-              opacity: activeSection === "garage" ? 1 : 0,
-              transition: "opacity 0.2s"
-            }} />
-          </button>
-
-          {/* Admin button */}
-          <button
-            onClick={() => onSectionChange("admin")}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "2px",
-              padding: "6px 10px 10px 10px",
-              borderRadius: "10px",
-              border: "none",
-              cursor: "pointer",
-              transition: "color 0.2s",
-              backgroundColor: "transparent",
-              color: activeSection === "admin" ? textColor : navInactiveColor,
-              position: "relative"
-            }}
-          >
-            <Settings size={20} strokeWidth={activeSection === "admin" ? 2 : 1.5} />
-            <span style={{ fontSize: "10px", fontWeight: 400 }}>Admin</span>
-            <div style={{
-              position: "absolute",
-              bottom: "4px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "40%",
-              height: "1.5px",
-              borderRadius: "999px",
-              backgroundColor: textColor,
-              opacity: activeSection === "admin" ? 1 : 0,
-              transition: "opacity 0.2s"
-            }} />
-          </button>
-        </div>
       </div>
     </header>
   );

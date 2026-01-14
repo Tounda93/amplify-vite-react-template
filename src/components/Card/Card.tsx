@@ -1,3 +1,4 @@
+import { Heart, MessageCircle, Share2 } from 'lucide-react';
 import './Card.css';
 
 export type CardVariant = 'default' | 'compact' | 'wide';
@@ -5,10 +6,14 @@ export type CardVariant = 'default' | 'compact' | 'wide';
 export interface CardProps {
   /** Image URL for the card */
   imageUrl: string;
-  /** First title - smaller, lighter text (e.g., category, date, source) */
-  title1: string;
-  /** Second title - main title, bolder text */
-  title2: string;
+  /** Category title (e.g., "Event", "News", "Rooms") */
+  category?: string;
+  /** Author/poster name (user, magazine, event organizer) */
+  authorName?: string;
+  /** Author profile picture URL */
+  authorImage?: string;
+  /** Description text */
+  description?: string;
   /** Separator text between titles and requirement pill */
   separatorText?: string;
   /** Requirement text shown in pill (e.g., "Members Only", "Free", "Premium") */
@@ -21,20 +26,61 @@ export interface CardProps {
   className?: string;
   /** Alt text for the image */
   imageAlt?: string;
+  /** Like count */
+  likeCount?: number;
+  /** Comment count */
+  commentCount?: number;
+  /** Share count */
+  shareCount?: number;
+  /** Like handler */
+  onLike?: () => void;
+  /** Comment handler */
+  onComment?: () => void;
+  /** Share handler */
+  onShare?: () => void;
+
+  // Legacy props for backwards compatibility
+  /** @deprecated Use category instead */
+  title1?: string;
+  /** @deprecated Use description instead */
+  title2?: string;
 }
 
 export default function Card({
   imageUrl,
-  title1,
-  title2,
+  category,
+  authorName,
+  authorImage,
+  description,
   separatorText,
   requirement,
   variant = 'default',
   onClick,
   className = '',
   imageAlt = '',
+  likeCount = 0,
+  commentCount = 0,
+  shareCount = 0,
+  onLike,
+  onComment,
+  onShare,
+  // Legacy props
+  title1,
+  title2,
 }: CardProps) {
   const cardClassName = `card card--${variant} ${className}`.trim();
+
+  // Support legacy props
+  const displayCategory = category || title1 || 'Post';
+  const displayDescription = description || title2;
+
+  // Default profile picture
+  const defaultProfilePic = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face';
+
+  const handleActionClick = (e: React.MouseEvent, handler?: () => void) => {
+    e.stopPropagation();
+    handler?.();
+  };
 
   return (
     <div
@@ -49,37 +95,80 @@ export default function Card({
         }
       }}
     >
+      {/* Card Header - Category, Author, Description */}
+      <div className="card__header">
+        {/* Category Badge */}
+        <span className="card__category">{displayCategory}</span>
+
+        {/* Author Info */}
+        <div className="card__author">
+          <div
+            className="card__author-image"
+            style={{ backgroundImage: `url(${authorImage || defaultProfilePic})` }}
+          />
+          <span className="card__author-name">{authorName || 'Anonymous'}</span>
+        </div>
+
+        {/* Description */}
+        {displayDescription && (
+          <p className="card__description">{displayDescription}</p>
+        )}
+      </div>
+
       {/* Card Image */}
       <div
         className="card__image"
         style={{ backgroundImage: `url(${imageUrl})` }}
         role="img"
-        aria-label={imageAlt || title2}
+        aria-label={imageAlt || displayDescription || 'Card image'}
       />
 
-      {/* Card Content */}
-      <div className="card__content">
-        {/* Titles */}
-        <div className="card__titles">
-          <span className="card__title1">{title1}</span>
-          <h3 className="card__title2">{title2}</h3>
-        </div>
+      {/* Card Footer - Like, Comment, Share */}
+      <div className="card__actions">
+        <button
+          className="card__action-btn"
+          onClick={(e) => handleActionClick(e, onLike)}
+          aria-label="Like"
+        >
+          <Heart size={18} />
+          {likeCount > 0 && <span className="card__action-count">{likeCount}</span>}
+        </button>
 
-        {/* Separator with text and line */}
-        {separatorText && (
-          <div className="card__separator">
-            <span className="card__separator-text">{separatorText}</span>
-            <div className="card__separator-line" />
-          </div>
-        )}
+        <button
+          className="card__action-btn"
+          onClick={(e) => handleActionClick(e, onComment)}
+          aria-label="Comment"
+        >
+          <MessageCircle size={18} />
+          {commentCount > 0 && <span className="card__action-count">{commentCount}</span>}
+        </button>
 
-        {/* Requirement Pill */}
-        {requirement && (
-          <div className="card__requirement">
-            <span className="card__requirement-pill">{requirement}</span>
-          </div>
-        )}
+        <button
+          className="card__action-btn"
+          onClick={(e) => handleActionClick(e, onShare)}
+          aria-label="Share"
+        >
+          <Share2 size={18} />
+          {shareCount > 0 && <span className="card__action-count">{shareCount}</span>}
+        </button>
       </div>
+
+      {/* Optional: Separator and Requirement (for backwards compat) */}
+      {(separatorText || requirement) && (
+        <div className="card__extras">
+          {separatorText && (
+            <div className="card__separator">
+              <span className="card__separator-text">{separatorText}</span>
+              <div className="card__separator-line" />
+            </div>
+          )}
+          {requirement && (
+            <div className="card__requirement">
+              <span className="card__requirement-pill">{requirement}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

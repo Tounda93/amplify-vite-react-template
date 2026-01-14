@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
-import { Card } from './Card';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { NewsItem, fetchNewsFeedItems } from '../utils/newsFeed';
 import { getImageUrl } from '../utils/storageHelpers';
-import HeroCarousel from './HeroCarousel';
-import CreateEventPopup from './CreateEventPopup';
+import { Card } from './Card';
 import './HomePage.css';
 
 const client = generateClient<Schema>();
@@ -16,14 +14,17 @@ type EventWithImageUrl = Event & { imageUrl?: string };
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
+// Feed item types for the unified feed
+type FeedItem =
+  | { type: 'event'; data: EventWithImageUrl }
+  | { type: 'news'; data: NewsItem }
+  | { type: 'room'; data: { id: string; name: string } };
+
 export default function HomePage() {
   const isMobile = useIsMobile();
-  const horizontalPadding = isMobile ? '1rem' : '5rem';
 
-  const [upcomingEvents, setUpcomingEvents] = useState<EventWithImageUrl[]>([]);
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -35,7 +36,6 @@ export default function HomePage() {
     try {
       // Fetch news items
       const news = await fetchNewsFeedItems();
-      setNewsItems(news);
 
       // Fetch upcoming events (up to 7, sorted by date)
       const { data: events } = await client.models.Event.list({
@@ -56,25 +56,29 @@ export default function HomePage() {
         })
       );
 
-      setUpcomingEvents(eventsWithUrls);
+      // Combine into a unified feed - interleave events and news
+      const combinedFeed: FeedItem[] = [];
+      const maxItems = Math.max(eventsWithUrls.length, news.length);
+
+      for (let i = 0; i < maxItems; i++) {
+        if (i < eventsWithUrls.length) {
+          combinedFeed.push({ type: 'event', data: eventsWithUrls[i] });
+        }
+        if (i < news.length) {
+          combinedFeed.push({ type: 'news', data: news[i] });
+        }
+      }
+
+      setFeedItems(combinedFeed);
     } catch (error) {
       console.error('Error loading feed:', error);
     }
     setLoading(false);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
   if (loading) {
     return (
-      <div className="home-page" style={{ padding: horizontalPadding }}>
+      <div className="home-page" style={{ padding: isMobile ? '1rem' : '2rem 5rem' }}>
         <div className="home-page__loading">
           <p>Loading feed...</p>
         </div>
@@ -84,111 +88,85 @@ export default function HomePage() {
 
   return (
     <div className="home-page" style={{ width: '100%', overflowX: 'hidden' }}>
-      {/* Hero Section with Image/Video */}
-      <HeroCarousel />
+      {/* Social Media Style Feed */}
+      <div className="home-feed" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: isMobile ? '1rem' : '2rem 5rem',
+        gap: '1.5rem',
+        maxWidth: '800px',
+        margin: '0 auto',
+      }}>
+        {/* Feed Cards - Stacked vertically */}
+        {feedItems.length > 0 ? (
+          feedItems.map((item, index) => {
+            if (item.type === 'event') {
+              const event = item.data;
+              return (
+                <Card
+                  key={`event-${event.id}-${index}`}
+                  imageUrl={event.imageUrl || FALLBACK_IMAGE}
+                  category="EVENT"
+                  authorName={event.venue || 'Event Organizer'}
+                  description={event.title || 'Untitled Event'}
+                  variant="wide"
+                />
+              );
+            }
 
-      {/* Upcoming Events Section */}
-      <div style={{ padding: `2rem ${horizontalPadding}` }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-          marginBottom: '1rem'
-        }}>
-          <h2 style={{
-            fontSize: '24px',
-            fontWeight: 600,
-            color: '#000',
-            margin: 0
-          }}>
-            Upcoming Events
-          </h2>
-          <div style={{
-            flex: 1,
-            height: '1px',
-            backgroundColor: '#000'
-          }} />
-          <button
-            onClick={() => setShowCreateEventPopup(true)}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '999px',
-              border: '1px solid #000',
-              backgroundColor: 'transparent',
-              color: '#000',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#000';
-              e.currentTarget.style.color = '#fff';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#000';
-            }}
-          >
-            Create your event
-          </button>
-        </div>
-        {upcomingEvents.length > 0 ? (
-          <div
-            className="home-page__events-scroll"
-            style={{
-              display: 'flex',
-              gap: '0.8125rem',
-              overflowX: 'auto',
-              paddingBottom: '1rem',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none'
-            }}
-          >
-            {upcomingEvents.map((event) => (
-              <Card
-                key={event.id}
-                imageUrl={event.imageUrl || FALLBACK_IMAGE}
-                title1={event.eventType?.replace('_', ' ').toUpperCase() || 'EVENT'}
-                title2={event.title || 'Untitled Event'}
-                separatorText={event.city && event.country ? `${event.city}, ${event.country}` : undefined}
-                requirement={event.price || undefined}
-                onClick={() => console.log('Event clicked:', event)}
-                variant="wide"
-              />
-            ))}
-          </div>
+            if (item.type === 'news') {
+              const newsItem = item.data;
+              return (
+                <Card
+                  key={`news-${index}`}
+                  imageUrl={newsItem.thumbnail || FALLBACK_IMAGE}
+                  category="NEWS"
+                  authorName={newsItem.source}
+                  description={newsItem.title}
+                  onClick={() => window.open(newsItem.link, '_blank', 'noopener,noreferrer')}
+                  variant="wide"
+                />
+              );
+            }
+
+            return null;
+          })
         ) : (
-          <p style={{ color: '#666' }}>No upcoming events. Create one!</p>
+          <p style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>
+            No content available yet. Check back soon!
+          </p>
         )}
-      </div>
 
-      {/* Rooms Section */}
-      <div style={{ padding: `2rem ${horizontalPadding}` }}>
+        {/* Rooms Section - Create your room CTA */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-          marginBottom: '1rem'
+          width: '100%',
+          marginTop: '1rem',
+          padding: '2rem',
+          borderRadius: '5px',
+          backgroundColor: 'rgba(0, 0, 0, 0.03)',
+          border: '1px dashed rgba(0, 0, 0, 0.15)',
+          textAlign: 'center',
         }}>
-          <h2 style={{
-            fontSize: '24px',
+          <h3 style={{
+            fontSize: '18px',
             fontWeight: 600,
             color: '#000',
-            margin: 0
+            margin: '0 0 0.5rem 0',
           }}>
-            Rooms
-          </h2>
-          <div style={{
-            flex: 1,
-            height: '1px',
-            backgroundColor: '#000'
-          }} />
+            Create Your Room
+          </h3>
+          <p style={{
+            fontSize: '14px',
+            color: '#666',
+            margin: '0 0 1rem 0',
+          }}>
+            Start a community discussion about your favorite cars
+          </p>
           <button
             onClick={() => console.log('Create room clicked')}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.75rem 1.5rem',
               borderRadius: '999px',
               border: '1px solid #000',
               backgroundColor: 'transparent',
@@ -197,7 +175,6 @@ export default function HomePage() {
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'all 0.2s',
-              whiteSpace: 'nowrap'
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.backgroundColor = '#000';
@@ -211,52 +188,7 @@ export default function HomePage() {
             Create your room
           </button>
         </div>
-        <p style={{ color: '#666' }}>No rooms available. Create one!</p>
       </div>
-
-      {/* News Section */}
-      {newsItems.length > 0 && (
-        <div style={{ padding: `2rem ${horizontalPadding}` }}>
-          <h2 style={{
-            fontSize: '24px',
-            fontWeight: 600,
-            color: '#000',
-            margin: '0 0 1rem 0'
-          }}>
-            Latest news
-          </h2>
-          <div
-            className="home-page__news-scroll"
-            style={{
-              display: 'flex',
-              gap: '0.8125rem',
-              overflowX: 'auto',
-              paddingBottom: '1rem',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none'
-            }}
-          >
-            {newsItems.slice(0, 9).map((newsItem, index) => (
-              <Card
-                key={`news-row-${index}`}
-                imageUrl={newsItem.thumbnail || FALLBACK_IMAGE}
-                title1={newsItem.source}
-                title2={newsItem.title}
-                separatorText={formatDate(newsItem.pubDate)}
-                onClick={() => window.open(newsItem.link, '_blank', 'noopener,noreferrer')}
-                variant="wide"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Create Event Popup */}
-      <CreateEventPopup
-        isOpen={showCreateEventPopup}
-        onClose={() => setShowCreateEventPopup(false)}
-        onEventCreated={loadInitialData}
-      />
     </div>
   );
 }

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Car, Plus, Heart, Settings, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Car, Plus, Heart, Settings, User, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../amplify/data/resource';
 import AddCarPopup from './components/AddCarPopup';
 import CarDetailPopup from './components/CarDetailPopup';
 import { useIsMobile } from './hooks/useIsMobile';
+import { isAdminEmail } from './constants/admins';
 
 const client = generateClient<Schema>();
 
@@ -135,11 +136,12 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
 
   return (
     <div style={{ width: '100%', overflowX: 'hidden', backgroundColor: '#FFFFFF', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
-      {/* Profile Button - Left aligned */}
+      {/* Profile Button and Admin Button - Left aligned */}
       <div style={{
         display: 'flex',
         justifyContent: 'flex-start',
         alignItems: 'center',
+        gap: '0.75rem',
         marginBottom: '1rem',
       }}>
         <button
@@ -178,6 +180,32 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
           </div>
           <User size={16} style={{ color: '#666' }} />
         </button>
+
+        {/* Admin Button - Only visible to admin users */}
+        {isAdminEmail(userEmail) && (
+          <button
+            onClick={() => onSectionChange?.('admin')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <Shield size={20} style={{ color: '#666' }} />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111' }}>
+                Admin
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#666' }}>Manage Site</div>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* Title Section - Same as Upcoming Events */}

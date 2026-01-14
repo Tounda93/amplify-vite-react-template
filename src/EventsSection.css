@@ -4,7 +4,7 @@
 
 .events-section {
   min-height: 100vh;
-  background-color: #FFFFFF;
+  background-color: #F2F3F5;
 }
 
 .events-section__content {
@@ -37,14 +37,16 @@
 }
 
 /* ===========================================
-   Card Grid - 5 columns with 13px spacing
+   Card Grid - Single column feed layout
    =========================================== */
 
 .events-section__grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.8125rem; /* 13px */
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 /* ===========================================
@@ -130,59 +132,31 @@
 }
 
 /* ===========================================
-   Responsive Grid Adjustments
+   Responsive Adjustments
    =========================================== */
 
-/* Large tablets / small desktops - 4 columns */
-@media (max-width: 1400px) {
-  .events-section__grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-/* Tablets - 3 columns */
-@media (max-width: 1100px) {
-  .events-section__grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-/* Small tablets - 2 columns */
+/* Tablets */
 @media (max-width: 768px) {
-  .events-section__grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.625rem; /* 10px */
-  }
-
   .events-section__title {
     font-size: 1.5rem; /* 24px */
   }
-}
-
-/* Mobile - 1 column (stacked), full width with 1rem margin */
-@media (max-width: 480px) {
-  .events-section__content {
-    padding: 1rem !important; /* 1rem margin on all sides */
-  }
 
   .events-section__grid {
-    grid-template-columns: 1fr;
-    gap: 1rem; /* 16px */
+    gap: 1rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .events-section__content {
+    padding: 1rem !important;
   }
 
   .events-section__title {
     font-size: 1.25rem; /* 20px */
   }
-}
-
-/* Very small mobile - 1 column */
-@media (max-width: 360px) {
-  .events-section__content {
-    padding: 1rem !important; /* 1rem margin on all sides */
-  }
 
   .events-section__grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem; /* 12px */
+    gap: 1rem;
   }
 }

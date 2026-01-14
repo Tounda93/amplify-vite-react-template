@@ -33,6 +33,7 @@ import WikiCarsSection from './components/WikiCarsSection';
 
 // NEW: Import the Header component
 import Header from './components/Header';
+import LeftSidebar from './components/LeftSidebar';
 import HomePage from './components/HomePage';
 import Footer from './components/Footer';
 import { useIsMobile } from './hooks/useIsMobile';
@@ -561,145 +562,185 @@ function CarSearch({ user, signOut }: CarSearchProps) {
         onSectionChange={handleSectionChange}
       />
 
+      {/* Main layout with sidebar and content - 10% / 80% / 10% */}
+      <div style={{
+        display: 'flex',
+        width: '100%',
+        minHeight: 'calc(100vh - 60px)',
+        backgroundColor: '#F2F3F5',
+      }}>
+        {/* Left Column - 10% */}
+        {!isMobile && (
+          <div style={{
+            width: '10%',
+            flexShrink: 0,
+            backgroundColor: '#F2F3F5',
+            position: 'relative',
+          }}>
+            <LeftSidebar
+              activeSection={activeSection}
+              onSectionChange={handleSectionChange}
+            />
+          </div>
+        )}
 
-      {/* NEWS SECTION */}
-      {activeSection === 'news' && (
-        <NewsSection />
-      )}
-
-      {/* AUCTIONS SECTION */}
-      {activeSection === 'auctions' && (
+        {/* Main Content Area - 80% */}
         <div style={{
-          width: '100%',
-          padding: `2rem ${horizontalPadding}`
+          width: isMobile ? '100%' : '80%',
+          minWidth: 0,
+          backgroundColor: '#F2F3F5',
         }}>
-          <AuctionsSection />
-        </div>
-      )}
+          {/* NEWS SECTION */}
+          {activeSection === 'news' && (
+            <NewsSection />
+          )}
 
-      {/* EVENTS SECTION */}
-      {activeSection === 'events' && <EventsSection />}
-
-      {/* COMMUNITY SECTION */}
-      {activeSection === 'community' && (
-        <CommunitySection />
-      )}
-
-      {/* SHOP SECTION */}
-      {activeSection === 'shop' && (
-        <ShopSection />
-      )}
-
-      {/* CHAT SECTION */}
-      {activeSection === 'chat' && (
-        <div style={{
-          width: '100%',
-          padding: `2rem ${horizontalPadding}`
-        }}>
-          <ChatSection />
-        </div>
-      )}
-
-      {/* MY GARAGE SECTION */}
-      {activeSection === 'garage' && (
-        <MyGarageSection
-          user={user}
-          signOut={signOut}
-          onSectionChange={handleSectionChange}
-        />
-      )}
-
-      {/* PROFILE SECTION */}
-      {activeSection === 'profile' && (
-        <ProfileSection user={user} signOut={signOut} />
-      )}
-
-      {/* WIKICARS SECTION */}
-      {activeSection === 'wikicars' && (
-        <div style={{ width: '100%' }}>
-          <WikiCarsSection
-            makes={allMakes}
-            selectedMake={wikiSelectedMake}
-            onSelectMake={(make) => {
-              setWikiSelectedMake(make);
-              updateUrlHash('wikicars', make.makeId);
-            }}
-          />
-        </div>
-      )}
-
-      {/* ADMIN SECTION */}
-      {activeSection === 'admin' && (
-        <div style={{ width: '100%' }}>
-          <AdminSection />
-        </div>
-      )}
-
-      {/* HOME SECTION - New HomePage component with all sections */}
-      {activeSection === 'home' && !selectedMake && makes.length === 0 && (
-        <HomePage />
-      )}
-
-      {/* Search Results or Selected Make View */}
-      {activeSection === 'home' && (selectedMake || makes.length > 0) && (
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 2rem' }}>
-          {/* Search Results Dropdown */}
-          {makes.length > 0 && !selectedMake && (
+          {/* AUCTIONS SECTION */}
+          {activeSection === 'auctions' && (
             <div style={{
-              background: 'white',
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-              marginBottom: '1.5rem'
+              width: '100%',
+              padding: `2rem ${horizontalPadding}`
             }}>
-              {makes.map((make) => (
-                <div
-                  key={make.makeId}
-                  onClick={() => handleSelectMake(make)}
-                  style={{ padding: '1rem', cursor: 'pointer', borderBottom: '1px solid #eee' }}
-                  onMouseOver={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'white'}
-                >
-                  <strong>{make.makeName}</strong>
-                  {make.country && <span style={{ color: '#666', marginLeft: '0.5rem' }}>({make.country})</span>}
-                </div>
-              ))}
+              <AuctionsSection />
             </div>
           )}
 
-          {/* Selected Make Details */}
-          {selectedMake && (
-            <>
-              <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
-                <h2>{selectedMake.makeName}</h2>
-                <p><strong>Country:</strong> {selectedMake.country || 'Unknown'}</p>
-                <p><strong>Classic Brand:</strong> {selectedMake.isClassic ? 'Yes' : 'No'}</p>
-                {selectedMake.yearsFrom && <p><strong>Founded:</strong> {selectedMake.yearsFrom}</p>}
-              </div>
+          {/* EVENTS SECTION */}
+          {activeSection === 'events' && <EventsSection />}
 
-              {/* Models List */}
-              {models.length > 0 && (
-                <div>
-                  <h3>Models ({models.length})</h3>
-                  <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))' }}>
-                    {models.map((model) => (
-                      <div key={model.modelId} style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd' }}>
-                        <h4 style={{ margin: '0 0 0.5rem 0' }}>{model.modelName}</h4>
-                        <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>{model.fullName}</p>
-                        {model.yearsFrom && (
-                          <p style={{ margin: '0.5rem 0 0 0', color: '#888', fontSize: '0.8rem' }}>
-                            {model.yearsFrom}{model.yearsTo ? ` - ${model.yearsTo}` : ' - Present'}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+          {/* COMMUNITY SECTION */}
+          {activeSection === 'community' && (
+            <CommunitySection />
+          )}
+
+          {/* SHOP SECTION */}
+          {activeSection === 'shop' && (
+            <ShopSection />
+          )}
+
+          {/* CHAT SECTION */}
+          {activeSection === 'chat' && (
+            <div style={{
+              width: '100%',
+              padding: `2rem ${horizontalPadding}`
+            }}>
+              <ChatSection />
+            </div>
+          )}
+
+          {/* MY GARAGE SECTION */}
+          {activeSection === 'garage' && (
+            <MyGarageSection
+              user={user}
+              signOut={signOut}
+              onSectionChange={handleSectionChange}
+            />
+          )}
+
+          {/* PROFILE SECTION */}
+          {activeSection === 'profile' && (
+            <ProfileSection user={user} signOut={signOut} />
+          )}
+
+          {/* WIKICARS SECTION */}
+          {activeSection === 'wikicars' && (
+            <div style={{ width: '100%' }}>
+              <WikiCarsSection
+                makes={allMakes}
+                selectedMake={wikiSelectedMake}
+                onSelectMake={(make) => {
+                  setWikiSelectedMake(make);
+                  updateUrlHash('wikicars', make.makeId);
+                }}
+              />
+            </div>
+          )}
+
+          {/* ADMIN SECTION */}
+          {activeSection === 'admin' && (
+            <div style={{ width: '100%' }}>
+              <AdminSection />
+            </div>
+          )}
+
+          {/* HOME SECTION - New HomePage component with all sections */}
+          {activeSection === 'home' && !selectedMake && makes.length === 0 && (
+            <HomePage />
+          )}
+
+          {/* Search Results or Selected Make View */}
+          {activeSection === 'home' && (selectedMake || makes.length > 0) && (
+            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 2rem' }}>
+              {/* Search Results Dropdown */}
+              {makes.length > 0 && !selectedMake && (
+                <div style={{
+                  background: 'white',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  marginBottom: '1.5rem'
+                }}>
+                  {makes.map((make) => (
+                    <div
+                      key={make.makeId}
+                      onClick={() => handleSelectMake(make)}
+                      style={{ padding: '1rem', cursor: 'pointer', borderBottom: '1px solid #eee' }}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <strong>{make.makeName}</strong>
+                      {make.country && <span style={{ color: '#666', marginLeft: '0.5rem' }}>({make.country})</span>}
+                    </div>
+                  ))}
                 </div>
               )}
-            </>
+
+              {/* Selected Make Details */}
+              {selectedMake && (
+                <>
+                  <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
+                    <h2>{selectedMake.makeName}</h2>
+                    <p><strong>Country:</strong> {selectedMake.country || 'Unknown'}</p>
+                    <p><strong>Classic Brand:</strong> {selectedMake.isClassic ? 'Yes' : 'No'}</p>
+                    {selectedMake.yearsFrom && <p><strong>Founded:</strong> {selectedMake.yearsFrom}</p>}
+                  </div>
+
+                  {/* Models List */}
+                  {models.length > 0 && (
+                    <div>
+                      <h3>Models ({models.length})</h3>
+                      <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))' }}>
+                        {models.map((model) => (
+                          <div key={model.modelId} style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd' }}>
+                            <h4 style={{ margin: '0 0 0.5rem 0' }}>{model.modelName}</h4>
+                            <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>{model.fullName}</p>
+                            {model.yearsFrom && (
+                              <p style={{ margin: '0.5rem 0 0 0', color: '#888', fontSize: '0.8rem' }}>
+                                {model.yearsFrom}{model.yearsTo ? ` - ${model.yearsTo}` : ' - Present'}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
-      )}
+
+        {/* Right Column - 10% */}
+        {!isMobile && (
+          <div style={{
+            width: '10%',
+            flexShrink: 0,
+            backgroundColor: '#F2F3F5',
+          }}>
+            {/* Empty column for now */}
+          </div>
+        )}
+      </div>
 
       <Footer
         activeSection={activeSection}

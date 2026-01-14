@@ -1,11 +1,11 @@
 /* ===========================================
    Card Component - Base Styles
-   Base font-size: 16px = 1rem
+   New layout: Category → Author → Description → Image → Actions
    =========================================== */
 
 .card {
-  width: 28.2625rem; /* 452px - 70% wider than original 266px */
-  height: 25rem; /* 301px - 3:2 ratio (width:height) */
+  width: 100%;
+  max-width: 600px;
   background-color: #FFFFFF;
   border-radius: 0.3125rem; /* 5px */
   overflow: hidden;
@@ -16,27 +16,72 @@
   position: relative;
 }
 
-/* Dark overlay on hover */
-.card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0);
-  border-radius: 0.3125rem; /* 5px */
-  transition: background-color 0.2s ease;
-  pointer-events: none;
-}
-
-.card:hover::after {
-  background-color: rgba(0, 0, 0, 0.15);
-}
 
 .card:focus {
   outline: 0.125rem solid #3498db;
   outline-offset: 0.125rem;
+}
+
+/* ===========================================
+   Card Header - Category, Author, Description
+   =========================================== */
+
+.card__header {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Category Badge */
+.card__category {
+  display: inline-block;
+  padding: 4px 12px;
+  background-color: #000;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+}
+
+/* Author Info */
+.card__author {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card__author-image {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  background-color: #e5e7eb;
+  flex-shrink: 0;
+}
+
+.card__author-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+}
+
+/* Description */
+.card__description {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: #333;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 /* ===========================================
@@ -45,112 +90,99 @@
 
 .card__image {
   width: 100%;
-  height: 17.5rem; /* 70% of 25rem card height */
-  border-radius: 0.3125rem; /* 5px on all corners */
+  height: 300px;
   background-color: lightgray;
-  background-position: 50%;
+  background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
   flex-shrink: 0;
 }
 
 /* ===========================================
-   Card Content
+   Card Actions - Like, Comment, Share
    =========================================== */
 
-.card__content {
-  padding: 0.75rem 1rem; /* 12px 16px */
+.card__actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid #e5e7eb;
+}
+
+.card__action-btn {
   display: flex;
-  flex-direction: column;
-  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  font-size: 14px;
+  transition: background-color 0.2s, color 0.2s;
 }
 
-/* ===========================================
-   Card Titles
-   =========================================== */
-
-.card__titles {
-  margin-bottom: 0.625rem; /* 10px */
-}
-
-.card__title1 {
-  display: block;
+.card__action-btn:hover {
+  background-color: #f5f5f5;
   color: #000;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.75rem; /* 12px */
-  font-style: normal;
-  font-weight: 400;
-  line-height: normal;
-  margin-bottom: 0.25rem; /* 4px */
 }
 
-.card__title2 {
-  margin: 0;
-  color: #000;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 1rem; /* 16px */
-  font-style: normal;
+.card__action-btn:not(:last-child) {
+  border-right: 1px solid #e5e7eb;
+}
+
+.card__action-count {
+  font-size: 13px;
   font-weight: 500;
-  line-height: 1.25rem; /* 20px / 125% */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
 /* ===========================================
-   Card Separator
+   Card Extras (Separator & Requirement)
+   For backwards compatibility
    =========================================== */
+
+.card__extras {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e5e7eb;
+}
 
 .card__separator {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin: 0.5rem 0; /* 8px 0 */
+  margin-bottom: 0.5rem;
 }
 
 .card__separator-text {
-  color: #000;
-  text-align: left;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.625rem; /* 10px */
-  font-style: normal;
+  color: #666;
+  font-size: 12px;
   font-weight: 400;
-  line-height: normal;
-  margin-bottom: 0.375rem; /* 6px */
+  margin-bottom: 0.25rem;
 }
 
 .card__separator-line {
-  width: 11rem; /* 176px */
-  height: 0.03125rem; /* 0.5px */
-  background: #000;
+  width: 100%;
+  max-width: 176px;
+  height: 1px;
+  background: #e5e7eb;
 }
-
-/* ===========================================
-   Card Requirement Pill
-   =========================================== */
 
 .card__requirement {
   display: flex;
   justify-content: flex-start;
-  margin-top: auto;
-  padding-top: 0.5rem; /* 8px */
 }
 
 .card__requirement-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem 0.75rem; /* 4px 12px */
+  padding: 0.25rem 0.75rem;
   background-color: #f3f4f6;
-  border-radius: 62.4375rem; /* 999px - pill shape */
+  border-radius: 999px;
   color: #374151;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.6875rem; /* 11px */
+  font-size: 11px;
   font-weight: 500;
-  line-height: normal;
-  border: 0.0625rem solid #e5e7eb; /* 1px */
+  border: 1px solid #e5e7eb;
 }
 
 /* ===========================================
@@ -159,65 +191,74 @@
 
 /* --- Compact Variant --- */
 .card--compact {
-  width: 12.5rem; /* 200px */
-  height: 20rem; /* 320px */
+  max-width: 400px;
+}
+
+.card--compact .card__header {
+  padding: 0.75rem;
+  gap: 0.5rem;
+}
+
+.card--compact .card__category {
+  font-size: 10px;
+  padding: 3px 10px;
+}
+
+.card--compact .card__author-image {
+  width: 28px;
+  height: 28px;
+}
+
+.card--compact .card__author-name {
+  font-size: 13px;
+}
+
+.card--compact .card__description {
+  font-size: 14px;
+  -webkit-line-clamp: 2;
 }
 
 .card--compact .card__image {
-  height: 12.5rem; /* 200px */
+  height: 200px;
 }
 
-.card--compact .card__content {
-  padding: 0.625rem 0.75rem; /* 10px 12px */
-}
-
-.card--compact .card__title1 {
-  font-size: 0.625rem; /* 10px */
-}
-
-.card--compact .card__title2 {
-  font-size: 0.875rem; /* 14px */
-  line-height: 1.125rem; /* 18px */
-}
-
-.card--compact .card__separator-text {
-  font-size: 0.5625rem; /* 9px */
-}
-
-.card--compact .card__separator-line {
-  width: 8.75rem; /* 140px */
-}
-
-.card--compact .card__requirement-pill {
-  font-size: 0.625rem; /* 10px */
-  padding: 0.1875rem 0.625rem; /* 3px 10px */
+.card--compact .card__action-btn {
+  padding: 0.5rem;
 }
 
 /* --- Wide Variant --- */
-.card--wide .card__content {
-  padding: 0.875rem 1.125rem; /* 14px 18px */
+.card--wide {
+  max-width: 800px;
 }
 
-.card--wide .card__title1 {
-  font-size: 0.8125rem; /* 13px */
+.card--wide .card__header {
+  padding: 1.25rem;
 }
 
-.card--wide .card__title2 {
-  font-size: 1.125rem; /* 18px */
-  line-height: 1.5rem; /* 24px */
+.card--wide .card__category {
+  font-size: 12px;
+  padding: 5px 14px;
 }
 
-.card--wide .card__separator-text {
-  font-size: 0.6875rem; /* 11px */
+.card--wide .card__author-image {
+  width: 40px;
+  height: 40px;
 }
 
-.card--wide .card__separator-line {
-  width: 13.75rem; /* 220px */
+.card--wide .card__author-name {
+  font-size: 16px;
 }
 
-.card--wide .card__requirement-pill {
-  font-size: 0.75rem; /* 12px */
-  padding: 0.3125rem 0.875rem; /* 5px 14px */
+.card--wide .card__description {
+  font-size: 16px;
+}
+
+.card--wide .card__image {
+  height: 400px;
+}
+
+.card--wide .card__action-btn {
+  padding: 1rem;
 }
 
 /* ===========================================
@@ -252,134 +293,76 @@
    Responsive Breakpoints
    =========================================== */
 
-/* Tablets and smaller desktops */
-@media (max-width: 1200px) {
-  .card {
-    width: 21rem; /* 336px */
-    height: 14rem; /* 224px - 3:2 ratio */
-  }
-
-  .card__image {
-    height: 9.8rem; /* 70% of 14rem */
-  }
-
-  .card__title2 {
-    font-size: 0.9375rem;
-  }
-
-  .card__separator-line {
-    width: 12rem;
-  }
-}
-
 /* Tablets */
-@media (max-width: 992px) {
-  .card {
-    width: 18rem; /* 288px */
-    height: 12rem; /* 192px - 3:2 ratio */
+@media (max-width: 768px) {
+  .card__header {
+    padding: 0.875rem;
+    gap: 0.625rem;
+  }
+
+  .card__category {
+    font-size: 10px;
+    padding: 3px 10px;
+  }
+
+  .card__author-image {
+    width: 28px;
+    height: 28px;
+  }
+
+  .card__author-name {
+    font-size: 13px;
+  }
+
+  .card__description {
+    font-size: 14px;
   }
 
   .card__image {
-    height: 8.4rem; /* 70% of 12rem */
+    height: 220px;
   }
 
-  .card__title1 {
-    font-size: 0.6875rem;
+  .card__action-btn {
+    padding: 0.625rem;
   }
 
-  .card__title2 {
-    font-size: 0.875rem;
-    line-height: 1.125rem;
-  }
-
-  .card__separator-line {
-    width: 10rem;
+  .card__action-count {
+    font-size: 12px;
   }
 }
 
 /* Mobile */
-@media (max-width: 768px) {
-  .card {
-    width: 15rem; /* 240px */
-    height: 10rem; /* 160px - 3:2 ratio */
+@media (max-width: 480px) {
+  .card__header {
+    padding: 0.75rem;
+    gap: 0.5rem;
   }
 
-  .card__image {
-    height: 7rem; /* 70% of 10rem */
+  .card__author-image {
+    width: 24px;
+    height: 24px;
   }
 
-  .card__content {
-    padding: 0.5rem 0.625rem;
+  .card__author-name {
+    font-size: 12px;
   }
 
-  .card__titles {
-    margin-bottom: 0.375rem;
-  }
-
-  .card__title1 {
-    font-size: 0.625rem;
-  }
-
-  .card__title2 {
-    font-size: 0.75rem;
-    line-height: 1rem;
+  .card__description {
+    font-size: 13px;
     -webkit-line-clamp: 2;
   }
 
-  .card__separator {
-    margin: 0.25rem 0;
-  }
-
-  .card__separator-text {
-    font-size: 0.5rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .card__separator-line {
-    width: 8rem;
-  }
-
-  .card__requirement-pill {
-    font-size: 0.5625rem;
-    padding: 0.1875rem 0.5rem;
-  }
-}
-
-/* Small Mobile - Full width cards */
-@media (max-width: 480px) {
-  .card {
-    width: 100%; /* Fill container width */
-    height: auto; /* Auto height based on content */
-    min-height: 18.2rem; /* Minimum height - 30% increase from 14rem */
-  }
-
   .card__image {
-    height: 12.74rem; /* 70% of 18.2rem min-height */
+    height: 180px;
   }
 
-  .card__content {
-    padding: 0.75rem 1rem;
+  .card__action-btn {
+    padding: 0.5rem;
+    font-size: 12px;
   }
 
-  .card__title1 {
-    font-size: 0.6875rem;
-  }
-
-  .card__title2 {
-    font-size: 1rem;
-    line-height: 1.25rem;
-  }
-
-  .card__separator-text {
-    font-size: 0.625rem;
-  }
-
-  .card__separator-line {
-    width: 10rem;
-  }
-
-  .card__requirement-pill {
-    font-size: 0.625rem;
-    padding: 0.25rem 0.5rem;
+  .card__action-btn svg {
+    width: 16px;
+    height: 16px;
   }
 }

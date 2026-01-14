@@ -1,0 +1,58 @@
+diff --git a/src/components/AddCarPopup.tsx b/src/components/AddCarPopup.tsx
+index eabc39c..ca5d2e3 100644
+--- a/src/components/AddCarPopup.tsx
++++ b/src/components/AddCarPopup.tsx
+@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
+ import { X, ChevronDown, Camera, Trash2 } from 'lucide-react';
+ import { generateClient } from 'aws-amplify/data';
+ import { fetchAuthSession } from 'aws-amplify/auth';
+-import { uploadData, getUrl } from 'aws-amplify/storage';
++import { uploadData } from 'aws-amplify/storage';
+ import type { Schema } from '../../amplify/data/resource';
+ 
+ const client = generateClient<Schema>();
+diff --git a/src/components/CarCard.tsx b/src/components/CarCard.tsx
+index 85f0aca..f598b1a 100644
+--- a/src/components/CarCard.tsx
++++ b/src/components/CarCard.tsx
+@@ -19,7 +19,7 @@ const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879c
+ const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
+ 
+ export default function CarCard({ car, makeName, modelName, onClick, compact = false }: CarCardProps) {
+-  const [carImageUrlUrl, setCarImageUrl] = useState<string | null>(null);
++  const [carImageUrl, setCarImageUrl] = useState<string | null>(null);
+   const photoPath = car.photos && car.photos.length > 0 ? car.photos[0] : null;
+ 
+   useEffect(() => {
+diff --git a/src/components/CarDetailPopup.tsx b/src/components/CarDetailPopup.tsx
+index 835f288..365636a 100644
+--- a/src/components/CarDetailPopup.tsx
++++ b/src/components/CarDetailPopup.tsx
+@@ -21,7 +21,6 @@ interface CarDetailPopupProps {
+ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClose }: CarDetailPopupProps) {
+   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+-  const [loading, setLoading] = useState(true);
+ 
+   const photoPaths = car?.photos?.filter(Boolean) as string[] || [];
+ 
+@@ -29,11 +28,9 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
+     const loadPhotos = async () => {
+       if (!car || photoPaths.length === 0) {
+         setPhotoUrls([]);
+-        setLoading(false);
+         return;
+       }
+ 
+-      setLoading(true);
+       const urls: string[] = [];
+ 
+       for (const path of photoPaths) {
+@@ -53,7 +50,6 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
+       }
+ 
+       setPhotoUrls(urls);
+-      setLoading(false);
+     };
+ 
+     loadPhotos();

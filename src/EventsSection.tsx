@@ -4,7 +4,6 @@ import type { Schema } from '../amplify/data/resource';
 import { Card } from './components/Card';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
-import CreateEventPopup from './components/CreateEventPopup';
 import EventDetailPopup from './components/EventDetailPopup';
 import './EventsSection.css';
 
@@ -22,7 +21,6 @@ export function EventsSection() {
   const [events, setEvents] = useState<Event[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<EventWithImageUrl[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreatePopup, setShowCreatePopup] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   useEffect(() => {
@@ -116,31 +114,6 @@ export function EventsSection() {
             height: '1px',
             backgroundColor: '#000'
           }} />
-          <button
-            onClick={() => setShowCreatePopup(true)}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '999px',
-              border: '1px solid #000',
-              backgroundColor: 'transparent',
-              color: '#000',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#000';
-              e.currentTarget.style.color = '#fff';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#000';
-            }}
-          >
-            Create your event
-          </button>
         </div>
 
         {/* Events Grid */}
@@ -150,11 +123,11 @@ export function EventsSection() {
               <Card
                 key={event.id}
                 imageUrl={event.imageUrl || FALLBACK_IMAGE}
-                title1="EVENT"
-                title2={event.title}
-                separatorText={event.city && event.country ? `${event.city}, ${event.country}` : undefined}
-                requirement={event.price || undefined}
+                category="EVENT"
+                authorName={event.venue || 'Event Organizer'}
+                description={event.title}
                 onClick={() => handleCardClick(event)}
+                variant="wide"
               />
             ))}
           </div>
@@ -170,14 +143,23 @@ export function EventsSection() {
             </p>
           </div>
         )}
-      </div>
 
-      {/* Create Event Popup */}
-      <CreateEventPopup
-        isOpen={showCreatePopup}
-        onClose={() => setShowCreatePopup(false)}
-        onEventCreated={loadEvents}
-      />
+        {/* Members Only Events Section */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          marginTop: '3rem',
+          marginBottom: '1rem'
+        }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#000', margin: 0 }}>Members only events</h2>
+          <div style={{
+            flex: 1,
+            height: '1px',
+            backgroundColor: '#000'
+          }} />
+        </div>
+      </div>
 
       {/* Event Detail Popup */}
       <EventDetailPopup
