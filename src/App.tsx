@@ -18,6 +18,7 @@
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
 import { NewsSection } from './NewsSection';
@@ -94,31 +95,46 @@ interface CarSearchProps {
   signOut: () => void;
 }
 
-// Helper to parse URL hash for state
-const parseUrlHash = (): { section: string; makeId?: string } => {
-  const hash = window.location.hash.slice(1); // Remove #
-  if (!hash) return { section: 'home' };
-
-  const params = new URLSearchParams(hash);
-  return {
-    section: params.get('section') || 'home',
-    makeId: params.get('make') || undefined,
-  };
+// Map section IDs to URL paths
+const sectionToPath: Record<string, string> = {
+  home: '/home',
+  events: '/events',
+  news: '/news',
+  community: '/community',
+  garage: '/mygarage',
+  profile: '/profile',
+  chat: '/chat',
+  notifications: '/notifications',
+  shop: '/shop',
+  auctions: '/auctions',
+  admin: '/admin',
 };
 
-// Helper to update URL hash
-const updateUrlHash = (section: string, makeId?: string) => {
-  const params = new URLSearchParams();
-  params.set('section', section);
-  if (makeId) {
-    params.set('make', makeId);
-  }
-  window.location.hash = params.toString();
+// Map URL paths back to section IDs
+const pathToSection: Record<string, string> = {
+  '/home': 'home',
+  '/events': 'events',
+  '/news': 'news',
+  '/community': 'community',
+  '/mygarage': 'garage',
+  '/profile': 'profile',
+  '/chat': 'chat',
+  '/notifications': 'notifications',
+  '/shop': 'shop',
+  '/auctions': 'auctions',
+  '/admin': 'admin',
+  '/': 'home',
 };
 
 function CarSearch({ user, signOut }: CarSearchProps) {
-  // Parse initial state from URL
-  const initialState = parseUrlHash();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get initial section from URL path
+  const getInitialSection = () => {
+    const path = location.pathname;
+    return pathToSection[path] || 'home';
+  };
 
   // Existing state
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,8 +144,8 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [models, setModels] = useState<Model[]>([]);
   const [selectedMake, setSelectedMake] = useState<Make | null>(null);
 
-  // Initialize activeSection from URL
-  const [activeSection, setActiveSection] = useState(initialState.section);
+  // Initialize activeSection from URL path
+  const [activeSection, setActiveSection] = useState(getInitialSection);
   const [newsCache, setNewsCache] = useState<NewsItem[]>([]);
   const [eventsCache, setEventsCache] = useState<EventModel[]>([]);
   const [auctionsCache, setAuctionsCache] = useState<AuctionModel[]>([]);
@@ -185,16 +201,11 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     loadAllModels();
   }, []);
 
-  // Listen for browser back/forward navigation
+  // Sync activeSection with URL path changes (browser back/forward)
   useEffect(() => {
-    const handleHashChange = () => {
-      const { section } = parseUrlHash();
-      setActiveSection(section);
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+    const section = pathToSection[location.pathname] || 'home';
+    setActiveSection(section);
+  }, [location.pathname]);
 
   const loadAllMakes = async () => {
     try {
@@ -409,8 +420,9 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   // NEW: Handler for when a category is clicked in the header
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
-    // Update URL hash
-    updateUrlHash(section);
+    // Navigate to the new path
+    const path = sectionToPath[section] || '/home';
+    navigate(path);
     // Clear selection when switching sections
     if (section !== 'home') {
       setSelectedMake(null);
@@ -435,25 +447,25 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const handleSearchResultSelect = async (result: SearchResultItem) => {
     if (result.category === 'news') {
       setActiveSection('news');
-      updateUrlHash('news');
+      navigate('/news');
       if (result.url) {
         window.open(result.url, '_blank');
       }
     } else if (result.category === 'events') {
       setActiveSection('events');
-      updateUrlHash('events');
+      navigate('/events');
       if (result.url) {
         window.open(result.url, '_blank');
       }
     } else if (result.category === 'auctions') {
       setActiveSection('auctions');
-      updateUrlHash('auctions');
+      navigate('/auctions');
       if (result.url) {
         window.open(result.url, '_blank');
       }
     } else if (result.category === 'community') {
       setActiveSection('community');
-      updateUrlHash('community');
+      navigate('/community');
     }
 
     setSearchTerm('');
@@ -663,15 +675,19 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
 // =====================================================
 // MAIN APP COMPONENT
-// The Authenticator wrapper remains the same
+// Wrapped with BrowserRouter for proper URL routing
 // =====================================================
 function App() {
   return (
-    <Authenticator>
-      {({ signOut, user }) => (
-        <CarSearch user={user} signOut={signOut || (() => {})} />
-      )}
-    </Authenticator>
+    <BrowserRouter>
+      <Authenticator>
+        {({ signOut, user }) => (
+          <Routes>
+            <Route path="*" element={<CarSearch user={user} signOut={signOut || (() => {})} />} />
+          </Routes>
+        )}
+      </Authenticator>
+    </BrowserRouter>
   );
 }
 

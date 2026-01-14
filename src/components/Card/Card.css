@@ -36,7 +36,7 @@
 /* Category Badge */
 .card__category {
   display: inline-block;
-  padding: 4px 12px;
+  padding: 4px 0;
   color: #000000;
   border-radius: 0px;
   font-size: 11px;
@@ -200,7 +200,7 @@
 
 .card--compact .card__category {
   font-size: 10px;
-  padding: 3px 10px;
+  padding: 3px 0;
 }
 
 .card--compact .card__author-image {
@@ -236,7 +236,7 @@
 
 .card--wide .card__category {
   font-size: 12px;
-  padding: 5px 14px;
+  padding: 5px 0;
 }
 
 .card--wide .card__author-image {
@@ -301,7 +301,7 @@
 
   .card__category {
     font-size: 10px;
-    padding: 3px 10px;
+    padding: 3px 0;
   }
 
   .card__author-image {

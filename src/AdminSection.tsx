@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { uploadData, getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../amplify/data/resource';
+import { getImageUrl } from './utils/storageHelpers';
 import {
   Home,
   Calendar,
@@ -358,8 +359,10 @@ function HomeAdmin() {
 // ============================================
 // EVENTS ADMIN
 // ============================================
+type EventWithImageUrl = Event & { imageUrl?: string };
+
 function EventsAdmin() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<EventWithImageUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -414,7 +417,16 @@ function EventsAdmin() {
       const sorted = (data || []).sort((a, b) =>
         new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
       );
-      setEvents(sorted);
+
+      // Resolve image URLs for display
+      const eventsWithUrls = await Promise.all(
+        sorted.map(async (event) => {
+          const imageUrl = await getImageUrl(event.coverImage);
+          return { ...event, imageUrl: imageUrl || undefined };
+        })
+      );
+
+      setEvents(eventsWithUrls);
     } catch (error) {
       console.error('Error loading events:', error);
     }
@@ -424,15 +436,18 @@ function EventsAdmin() {
   const handleImageUpload = async (file: File) => {
     setUploading(true);
     try {
-      const fileName = `events/${Date.now()}-${file.name}`;
-      await uploadData({
-        path: fileName,
+      const timestamp = Date.now();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+      // Use identity-based path pattern that matches storage configuration
+      const result = await uploadData({
+        path: ({ identityId }) => `event-photos/${identityId}/${timestamp}-${sanitizedName}`,
         data: file,
         options: { contentType: file.type }
       }).result;
-      const urlResult = await getUrl({ path: fileName });
-      const imageUrl = urlResult.url.toString().split('?')[0];
-      setFormData(prev => ({ ...prev, coverImage: imageUrl }));
+
+      // Store the path, not the signed URL (which expires)
+      setFormData(prev => ({ ...prev, coverImage: result.path }));
       setImagePreview(URL.createObjectURL(file));
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -499,7 +514,7 @@ function EventsAdmin() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleEdit = (event: Event) => {
+  const handleEdit = async (event: Event) => {
     setEditingEvent(event);
     setFormData({
       title: event.title || '',
@@ -518,7 +533,9 @@ function EventsAdmin() {
       isPublished: event.isPublished !== false,
       isFeatured: event.isFeatured === true,
     });
-    setImagePreview(event.coverImage || null);
+    // Resolve storage path to URL for preview
+    const imageUrl = await getImageUrl(event.coverImage);
+    setImagePreview(imageUrl);
     setShowForm(true);
   };
 
@@ -849,8 +866,8 @@ function EventsAdmin() {
               <tr key={event.id}>
                 <td>
                   <div className="admin-table__title-cell">
-                    {event.coverImage && (
-                      <img src={event.coverImage} alt="" className="admin-table__thumbnail" />
+                    {event.imageUrl && (
+                      <img src={event.imageUrl} alt="" className="admin-table__thumbnail" />
                     )}
                     <span>{event.title}</span>
                   </div>
