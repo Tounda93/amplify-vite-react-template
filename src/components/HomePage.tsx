@@ -5,6 +5,8 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { NewsItem, fetchNewsFeedItems } from '../utils/newsFeed';
 import { getImageUrl } from '../utils/storageHelpers';
 import { Card } from './Card';
+import EventCard from './EventCard';
+import EventDetailPopup from './EventDetailPopup';
 import './HomePage.css';
 
 const client = generateClient<Schema>();
@@ -25,6 +27,7 @@ export default function HomePage() {
 
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -75,6 +78,26 @@ export default function HomePage() {
     setLoading(false);
   };
 
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) {
+      return 'Date TBA';
+    }
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatLocation = (event: Event) => {
+    const parts = [event.city, event.region, event.country].filter(Boolean);
+    if (event.venue) {
+      return `${event.venue}${parts.length > 0 ? `, ${parts.join(', ')}` : ''}`;
+    }
+    return parts.join(', ') || 'Location TBA';
+  };
+
   if (loading) {
     return (
       <div className="home-page" style={{ padding: isMobile ? '1rem' : '2rem 5rem' }}>
@@ -103,13 +126,17 @@ export default function HomePage() {
             if (item.type === 'event') {
               const event = item.data;
               return (
-                <Card
+                <EventCard
                   key={`event-${event.id}-${index}`}
                   imageUrl={event.imageUrl || FALLBACK_IMAGE}
-                  category="EVENT"
-                  authorName={event.venue || 'Event Organizer'}
-                  description={event.title || 'Untitled Event'}
-                  variant="wide"
+                  imageAlt={event.title || 'Event cover'}
+                  imageHeight={400}
+                  dateLabel={formatDate(event.startDate)}
+                  title={event.title || 'Untitled Event'}
+                  locationLabel={formatLocation(event)}
+                  participantCount={event.participantCount ?? 0}
+                  showMenu={false}
+                  onClick={() => setSelectedEvent(event)}
                 />
               );
             }
@@ -188,6 +215,12 @@ export default function HomePage() {
           </button>
         </div>
       </div>
+
+      <EventDetailPopup
+        event={selectedEvent}
+        isOpen={selectedEvent !== null}
+        onClose={() => setSelectedEvent(null)}
+      />
     </div>
   );
 }

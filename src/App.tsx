@@ -24,6 +24,7 @@ import type { Schema } from '../amplify/data/resource';
 import { NewsSection } from './NewsSection';
 import { AuctionsSection } from './AuctionsSection';
 import { EventsSection } from './EventsSection';
+import { SavedEventsSection } from './SavedEventsSection';
 import { CommunitySection } from './CommunitySection';
 import { ChatSection } from './ChatSection';
 import { MyGarageSection } from './MyGarageSection';
@@ -48,6 +49,8 @@ type Make = Schema['Make']['type'];
 type Model = Schema['Model']['type'];
 type EventModel = Schema['Event']['type'];
 type AuctionModel = Schema['Auction']['type'];
+
+const SAVED_EVENTS_STORAGE_KEY = 'collectible.savedEvents';
 
 const COMMUNITY_THREADS = [
   {
@@ -106,6 +109,7 @@ const sectionToPath: Record<string, string> = {
   chat: '/chat',
   notifications: '/notifications',
   shop: '/shop',
+  saved: '/saved',
   auctions: '/auctions',
   admin: '/admin',
 };
@@ -121,6 +125,7 @@ const pathToSection: Record<string, string> = {
   '/chat': 'chat',
   '/notifications': 'notifications',
   '/shop': 'shop',
+  '/saved': 'saved',
   '/auctions': 'auctions',
   '/admin': 'admin',
   '/': 'home',
@@ -151,6 +156,20 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [auctionsCache, setAuctionsCache] = useState<AuctionModel[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResultGroups>(getEmptySearchResults());
   const [searchLoading, setSearchLoading] = useState(false);
+  const [savedEvents, setSavedEvents] = useState<EventModel[]>(() => {
+    if (typeof window === 'undefined') {
+      return [];
+    }
+    try {
+      const stored = window.localStorage.getItem(SAVED_EVENTS_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored) as EventModel[];
+      }
+    } catch (error) {
+      console.error('Failed to load saved events:', error);
+    }
+    return [];
+  });
   const isMobile = useIsMobile();
   // Mobile horizontal padding reduced by 80%: 2rem -> 0.4rem
   const horizontalPadding = isMobile ? '0.4rem' : '5rem';
@@ -472,6 +491,26 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     setSearchResults(getEmptySearchResults());
   };
 
+  const persistSavedEvents = (updater: (prev: EventModel[]) => EventModel[]) => {
+    setSavedEvents((prev) => {
+      const next = updater(prev);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(SAVED_EVENTS_STORAGE_KEY, JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
+  const handleSaveEvent = (event: EventModel) => {
+    persistSavedEvents((prev) => {
+      if (prev.some((saved) => saved.id === event.id)) {
+        return prev;
+      }
+      return [...prev, event];
+    });
+  };
+
+
   // Use the same background color for all pages
   const mainBackgroundColor = '#FFFFFF';
 
@@ -538,7 +577,9 @@ function CarSearch({ user, signOut }: CarSearchProps) {
           )}
 
           {/* EVENTS SECTION */}
-          {activeSection === 'events' && <EventsSection />}
+          {activeSection === 'events' && (
+            <EventsSection onSaveEvent={handleSaveEvent} />
+          )}
 
           {/* COMMUNITY SECTION */}
           {activeSection === 'community' && (
@@ -548,6 +589,11 @@ function CarSearch({ user, signOut }: CarSearchProps) {
           {/* SHOP SECTION */}
           {activeSection === 'shop' && (
             <ShopSection />
+          )}
+
+          {/* SAVED EVENTS SECTION */}
+          {activeSection === 'saved' && (
+            <SavedEventsSection savedEvents={savedEvents} onSaveEvent={handleSaveEvent} />
           )}
 
           {/* CHAT SECTION */}

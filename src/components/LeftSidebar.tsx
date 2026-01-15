@@ -1,4 +1,4 @@
-import { MessageSquare, Bell, ShoppingBag, LucideIcon } from "lucide-react";
+import { MessageSquare, Bell, ShoppingBag, Bookmark, LucideIcon } from "lucide-react";
 import { useIsMobile } from '../hooks/useIsMobile';
 
 /**
@@ -43,6 +43,7 @@ export default function LeftSidebar({
     { id: "chat", label: "Chat", icon: MessageSquare },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "shop", label: "Shop", icon: ShoppingBag },
+    { id: "saved", label: "Save", icon: Bookmark },
   ];
 
   const textColor = '#000000';

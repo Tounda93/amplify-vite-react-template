@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
-import { Card } from './components/Card';
+import EventCard from './components/EventCard';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
 import EventDetailPopup from './components/EventDetailPopup';
@@ -15,7 +15,11 @@ type EventWithImageUrl = Event & { imageUrl?: string };
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
-export function EventsSection() {
+interface EventsSectionProps {
+  onSaveEvent: (event: Event) => void;
+}
+
+export function EventsSection({ onSaveEvent }: EventsSectionProps) {
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -25,6 +29,7 @@ export function EventsSection() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     loadEvents();
@@ -66,11 +71,13 @@ export function EventsSection() {
       new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
     );
 
-    // Load image URLs for events
     const eventsWithUrls = await Promise.all(
       sorted.map(async (event) => {
-        const imageUrl = await getImageUrl(event.coverImage);
-        return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
+        if (event.coverImage) {
+          const imageUrl = await getImageUrl(event.coverImage);
+          return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
+        }
+        return { ...event, imageUrl: FALLBACK_IMAGE };
       })
     );
 
@@ -111,6 +118,73 @@ export function EventsSection() {
         behavior: 'smooth'
       });
     }
+  };
+
+  useEffect(() => {
+    if (!openMenuId) {
+      return;
+    }
+
+    const handleClick = () => {
+      setOpenMenuId(null);
+    };
+
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [openMenuId]);
+
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) {
+      return 'Date TBA';
+    }
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatLocation = (event: Event) => {
+    const parts = [event.city, event.region, event.country].filter(Boolean);
+    if (event.venue) {
+      return `${event.venue}${parts.length > 0 ? `, ${parts.join(', ')}` : ''}`;
+    }
+    return parts.join(', ') || 'Location TBA';
+  };
+
+  const handleShareEvent = async (event: Event) => {
+    const shareUrl = event.website || event.ticketUrl || window.location.href;
+    const shareText = `${event.title} • ${formatDate(event.startDate)}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      } catch {
+        // Fall through to clipboard fallback.
+      }
+    }
+
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        window.alert('Event link copied to clipboard.');
+        return;
+      } catch {
+        // Fall through to prompt fallback.
+      }
+    }
+
+    window.prompt('Copy this event link:', shareUrl);
+  };
+
+  const handleReportEvent = () => {
+    window.alert('Thanks for the report. Our team will review this event.');
   };
 
   if (loading) {
@@ -165,13 +239,30 @@ export function EventsSection() {
             >
               {allEvents.map((event) => (
                 <div key={event.id} className="events-carousel__item">
-                  <Card
+                  <EventCard
                     imageUrl={event.imageUrl || FALLBACK_IMAGE}
-                    category="EVENT"
-                    authorName={event.venue || 'Event Organizer'}
-                    description={event.title}
+                    imageAlt={event.title || 'Event cover'}
+                    dateLabel={formatDate(event.startDate)}
+                    title={event.title}
+                    locationLabel={formatLocation(event)}
+                    participantCount={event.participantCount ?? 0}
+                    isMenuOpen={openMenuId === event.id}
+                    onMenuToggle={() => {
+                      setOpenMenuId((prev) => (prev === event.id ? null : event.id));
+                    }}
+                    onShare={() => {
+                      setOpenMenuId(null);
+                      handleShareEvent(event);
+                    }}
+                    onSave={() => {
+                      setOpenMenuId(null);
+                      onSaveEvent(event);
+                    }}
+                    onReport={() => {
+                      setOpenMenuId(null);
+                      handleReportEvent();
+                    }}
                     onClick={() => handleCardClick(event)}
-                    variant="default"
                   />
                 </div>
               ))}
