@@ -25,6 +25,12 @@ type Magazine = Schema['Magazine']['type'];
 
 type AdminTab = 'home' | 'events' | 'magazines' | 'settings';
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export function AdminSection() {
   const [activeTab, setActiveTab] = useState<AdminTab>('home');
 
@@ -369,16 +375,26 @@ function EventsAdmin() {
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const locationInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<any>(null);
 
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
     eventType: 'car_show' | 'race' | 'auction' | 'meet' | 'rally' | 'festival' | 'exhibition' | 'track_day' | 'other';
     venue: string;
+    address: string;
     city: string;
+    region: string;
     country: string;
+    latitude: number | null;
+    longitude: number | null;
     startDate: string;
+    startTime: string;
+    startTimeZone: string;
     endDate: string;
+    endTime: string;
+    endTimeZone: string;
     coverImage: string;
     website: string;
     ticketUrl: string;
@@ -389,12 +405,20 @@ function EventsAdmin() {
   }>({
     title: '',
     description: '',
-    eventType: 'car_show',
+    eventType: 'other',
     venue: '',
+    address: '',
     city: '',
+    region: '',
     country: '',
+    latitude: null,
+    longitude: null,
     startDate: '',
+    startTime: '',
+    startTimeZone: '',
     endDate: '',
+    endTime: '',
+    endTimeZone: '',
     coverImage: '',
     website: '',
     ticketUrl: '',
@@ -404,10 +428,34 @@ function EventsAdmin() {
     isFeatured: false,
   });
   const [restrictionInput, setRestrictionInput] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
 
   useEffect(() => {
     loadEvents();
   }, []);
+
+  useEffect(() => {
+    if (!showForm) return;
+    if (autocompleteRef.current || !locationInputRef.current) return;
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+    if (!apiKey) return;
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[data-google-maps="places"]'
+    );
+    if (existingScript) {
+      initializePlacesAutocomplete();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleMaps = 'places';
+    script.onload = () => initializePlacesAutocomplete();
+    document.head.appendChild(script);
+  }, [showForm]);
 
   const loadEvents = async () => {
     setLoading(true);
@@ -456,6 +504,43 @@ function EventsAdmin() {
     setUploading(false);
   };
 
+  const initializePlacesAutocomplete = () => {
+    if (!locationInputRef.current || !window.google?.maps?.places) return;
+
+    autocompleteRef.current = new window.google.maps.places.Autocomplete(
+      locationInputRef.current,
+      { fields: ['address_components', 'formatted_address', 'geometry'] }
+    );
+
+    autocompleteRef.current.addListener('place_changed', () => {
+      const place = autocompleteRef.current?.getPlace();
+      if (!place) return;
+
+      const addressComponents = place.address_components || [];
+      const getComponent = (type: string) =>
+        addressComponents.find(component => component.types.includes(type))?.long_name || '';
+
+      const city = getComponent('locality') || getComponent('postal_town');
+      const region = getComponent('administrative_area_level_1');
+      const country = getComponent('country');
+      const formattedAddress = place.formatted_address || locationQuery;
+
+      const latitude = place.geometry?.location?.lat?.() ?? null;
+      const longitude = place.geometry?.location?.lng?.() ?? null;
+
+      setLocationQuery(formattedAddress);
+      setFormData(prev => ({
+        ...prev,
+        address: formattedAddress,
+        city,
+        region,
+        country,
+        latitude,
+        longitude,
+      }));
+    });
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -489,16 +574,63 @@ function EventsAdmin() {
     }));
   };
 
-  const resetForm = () => {
-    setFormData({
+  const padNumber = (value: number) => value.toString().padStart(2, '0');
+
+  const toLocalDateInput = (date: Date) =>
+    `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
+
+  const toLocalTimeInput = (date: Date) =>
+    `${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`;
+
+  const getLocalTimeZone = () =>
+    Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+  const getDefaultStartDateTime = () => {
+    const start = new Date();
+    start.setHours(start.getHours() + 1);
+    return {
+      date: toLocalDateInput(start),
+      time: toLocalTimeInput(start),
+    };
+  };
+
+  const addHoursToLocal = (date: string, time: string, hours: number) => {
+    if (!date || !time) {
+      return { date: '', time: '' };
+    }
+    const base = new Date(`${date}T${time}`);
+    if (Number.isNaN(base.getTime())) {
+      return { date: '', time: '' };
+    }
+    base.setHours(base.getHours() + hours);
+    return {
+      date: toLocalDateInput(base),
+      time: toLocalTimeInput(base),
+    };
+  };
+
+  const buildEmptyFormData = () => {
+    const defaultStart = getDefaultStartDateTime();
+    const defaultEnd = addHoursToLocal(defaultStart.date, defaultStart.time, 2);
+    const timeZone = getLocalTimeZone();
+
+    return {
       title: '',
       description: '',
-      eventType: 'car_show',
+      eventType: 'other',
       venue: '',
+      address: '',
       city: '',
+      region: '',
       country: '',
-      startDate: '',
-      endDate: '',
+      latitude: null,
+      longitude: null,
+      startDate: defaultStart.date,
+      startTime: defaultStart.time,
+      startTimeZone: timeZone,
+      endDate: defaultEnd.date,
+      endTime: defaultEnd.time,
+      endTimeZone: timeZone,
       coverImage: '',
       website: '',
       ticketUrl: '',
@@ -506,25 +638,54 @@ function EventsAdmin() {
       restrictions: [],
       isPublished: true,
       isFeatured: false,
-    });
+    };
+  };
+
+  const resetForm = () => {
+    setFormData(buildEmptyFormData());
     setEditingEvent(null);
     setShowForm(false);
     setImagePreview(null);
     setRestrictionInput('');
+    setLocationQuery('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const openNewEventForm = () => {
+    setFormData(buildEmptyFormData());
+    setEditingEvent(null);
+    setImagePreview(null);
+    setRestrictionInput('');
+    setLocationQuery('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setShowForm(true);
+  };
+
   const handleEdit = async (event: Event) => {
+    const startDate = event.startDate ? new Date(event.startDate) : null;
+    const endDate = event.endDate ? new Date(event.endDate) : null;
+    const fallbackEnd = startDate ? new Date(startDate) : null;
+    if (fallbackEnd) fallbackEnd.setHours(fallbackEnd.getHours() + 2);
+    const timeZone = getLocalTimeZone();
+
     setEditingEvent(event);
     setFormData({
       title: event.title || '',
       description: event.description || '',
-      eventType: event.eventType || 'car_show',
+      eventType: event.eventType || 'other',
       venue: event.venue || '',
+      address: event.address || '',
       city: event.city || '',
+      region: event.region || '',
       country: event.country || '',
-      startDate: event.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : '',
-      endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : '',
+      latitude: event.latitude ?? null,
+      longitude: event.longitude ?? null,
+      startDate: startDate ? toLocalDateInput(startDate) : '',
+      startTime: startDate ? toLocalTimeInput(startDate) : '',
+      startTimeZone: timeZone,
+      endDate: endDate ? toLocalDateInput(endDate) : fallbackEnd ? toLocalDateInput(fallbackEnd) : '',
+      endTime: endDate ? toLocalTimeInput(endDate) : fallbackEnd ? toLocalTimeInput(fallbackEnd) : '',
+      endTimeZone: timeZone,
       coverImage: event.coverImage || '',
       website: event.website || '',
       ticketUrl: event.ticketUrl || '',
@@ -533,6 +694,7 @@ function EventsAdmin() {
       isPublished: event.isPublished !== false,
       isFeatured: event.isFeatured === true,
     });
+    setLocationQuery(event.address || [event.city, event.country].filter(Boolean).join(', '));
     // Resolve storage path to URL for preview
     const imageUrl = await getImageUrl(event.coverImage);
     setImagePreview(imageUrl);
@@ -542,10 +704,25 @@ function EventsAdmin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.city || !formData.country || !formData.startDate) {
+    if (!formData.title || !formData.startDate || !formData.startTime) {
       alert('Please fill in all required fields');
       return;
     }
+
+    if (!formData.city || !formData.country) {
+      alert('Please select a location from the suggestions.');
+      return;
+    }
+
+    const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
+    if (Number.isNaN(startDateTime.getTime())) {
+      alert('Please enter a valid start date and time.');
+      return;
+    }
+
+    const endDateTime = formData.endDate && formData.endTime
+      ? new Date(`${formData.endDate}T${formData.endTime}`)
+      : null;
 
     try {
       const eventData = {
@@ -553,10 +730,14 @@ function EventsAdmin() {
         description: formData.description || undefined,
         eventType: formData.eventType,
         venue: formData.venue || undefined,
+        address: formData.address || undefined,
         city: formData.city,
+        region: formData.region || undefined,
         country: formData.country,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
+        latitude: formData.latitude ?? undefined,
+        longitude: formData.longitude ?? undefined,
+        startDate: startDateTime.toISOString(),
+        endDate: endDateTime && !Number.isNaN(endDateTime.getTime()) ? endDateTime.toISOString() : undefined,
         coverImage: formData.coverImage || undefined,
         website: formData.website || undefined,
         ticketUrl: formData.ticketUrl || undefined,
@@ -626,7 +807,7 @@ function EventsAdmin() {
       <div className="admin-panel__header">
         <h2>Events Management</h2>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={openNewEventForm}
           className="admin-btn admin-btn--primary"
         >
           <Plus size={18} />
@@ -645,9 +826,33 @@ function EventsAdmin() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="admin-form">
-              <div className="admin-form__grid">
+                <div className="admin-form__grid">
                 <div className="admin-form__field admin-form__field--full">
-                  <label>Event Title *</label>
+                  <label>Cover image</label>
+                  <div
+                    className="admin-form__cover-upload"
+                    style={imagePreview ? { backgroundImage: `url(${imagePreview})` } : undefined}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="admin-btn admin-btn--secondary admin-form__cover-button"
+                      disabled={uploading}
+                    >
+                      {uploading ? 'Uploading...' : '+ Add'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Event name *</label>
                   <input
                     type="text"
                     value={formData.title}
@@ -657,77 +862,90 @@ function EventsAdmin() {
                 </div>
 
                 <div className="admin-form__field admin-form__field--full">
-                  <label>Description</label>
+                  <label>Start date *</label>
+                  <div className="admin-form__row">
+                    <input
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => {
+                        const nextDate = e.target.value;
+                        setFormData(prev => {
+                          const updated = { ...prev, startDate: nextDate };
+                          const end = addHoursToLocal(updated.startDate, updated.startTime, 2);
+                          return { ...updated, endDate: end.date, endTime: end.time, endTimeZone: updated.startTimeZone };
+                        });
+                      }}
+                      required
+                    />
+                    <input
+                      type="time"
+                      value={formData.startTime}
+                      onChange={(e) => {
+                        const nextTime = e.target.value;
+                        setFormData(prev => {
+                          const updated = { ...prev, startTime: nextTime };
+                          const end = addHoursToLocal(updated.startDate, updated.startTime, 2);
+                          return { ...updated, endDate: end.date, endTime: end.time, endTimeZone: updated.startTimeZone };
+                        });
+                      }}
+                      required
+                    />
+                    <input
+                      type="text"
+                      value={formData.startTimeZone}
+                      readOnly
+                    />
+                  </div>
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>End date</label>
+                  <div className="admin-form__row">
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      readOnly
+                    />
+                    <input
+                      type="time"
+                      value={formData.endTime}
+                      readOnly
+                    />
+                    <input
+                      type="text"
+                      value={formData.endTimeZone}
+                      readOnly
+                    />
+                  </div>
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Location *</label>
+                  <input
+                    ref={locationInputRef}
+                    type="text"
+                    value={locationQuery}
+                    onChange={(e) => {
+                      setLocationQuery(e.target.value);
+                      setFormData(prev => ({ ...prev, address: e.target.value }));
+                    }}
+                    placeholder="Search for an address"
+                    required
+                  />
+                  {!import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
+                    <span className="admin-form__helper">
+                      Add `VITE_GOOGLE_MAPS_API_KEY` to enable address search.
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>What are the details?</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
-                  />
-                </div>
-
-                <div className="admin-form__field">
-                  <label>Event Type</label>
-                  <select
-                    value={formData.eventType}
-                    onChange={(e) => setFormData(prev => ({ ...prev, eventType: e.target.value as typeof formData.eventType }))}
-                  >
-                    <option value="car_show">Car Show</option>
-                    <option value="race">Race</option>
-                    <option value="auction">Auction</option>
-                    <option value="meet">Meet</option>
-                    <option value="rally">Rally</option>
-                    <option value="festival">Festival</option>
-                    <option value="exhibition">Exhibition</option>
-                    <option value="track_day">Track Day</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                <div className="admin-form__field">
-                  <label>Venue</label>
-                  <input
-                    type="text"
-                    value={formData.venue}
-                    onChange={(e) => setFormData(prev => ({ ...prev, venue: e.target.value }))}
-                  />
-                </div>
-
-                <div className="admin-form__field">
-                  <label>City *</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                <div className="admin-form__field">
-                  <label>Country *</label>
-                  <input
-                    type="text"
-                    value={formData.country}
-                    onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                <div className="admin-form__field">
-                  <label>Start Date *</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                <div className="admin-form__field">
-                  <label>End Date</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                    placeholder="Describe the event..."
                   />
                 </div>
 
@@ -760,32 +978,7 @@ function EventsAdmin() {
                 </div>
 
                 <div className="admin-form__field admin-form__field--full">
-                  <label>Cover Image</label>
-                  <div className="admin-form__image-upload">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      style={{ display: 'none' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="admin-btn admin-btn--secondary"
-                      disabled={uploading}
-                    >
-                      <Upload size={16} />
-                      {uploading ? 'Uploading...' : 'Upload Image'}
-                    </button>
-                    {imagePreview && (
-                      <img src={imagePreview} alt="Preview" className="admin-form__image-preview" />
-                    )}
-                  </div>
-                </div>
-
-                <div className="admin-form__field admin-form__field--full">
-                  <label>Restrictions (max 3, max 3 words each)</label>
+                  <label>Requirements (max 3, max 3 words each)</label>
                   <div className="admin-form__restrictions">
                     <div className="admin-form__restriction-input">
                       <input
@@ -811,28 +1004,6 @@ function EventsAdmin() {
                     </div>
                   </div>
                 </div>
-
-                <div className="admin-form__field">
-                  <label className="admin-form__checkbox">
-                    <input
-                      type="checkbox"
-                      checked={formData.isPublished}
-                      onChange={(e) => setFormData(prev => ({ ...prev, isPublished: e.target.checked }))}
-                    />
-                    Published
-                  </label>
-                </div>
-
-                <div className="admin-form__field">
-                  <label className="admin-form__checkbox">
-                    <input
-                      type="checkbox"
-                      checked={formData.isFeatured}
-                      onChange={(e) => setFormData(prev => ({ ...prev, isFeatured: e.target.checked }))}
-                    />
-                    Featured
-                  </label>
-                </div>
               </div>
 
               <div className="admin-form__actions">
@@ -840,7 +1011,7 @@ function EventsAdmin() {
                   Cancel
                 </button>
                 <button type="submit" className="admin-btn admin-btn--primary" disabled={uploading}>
-                  {editingEvent ? 'Update Event' : 'Create Event'}
+                  {editingEvent ? 'Update event' : 'Create event'}
                 </button>
               </div>
             </form>
