@@ -518,7 +518,7 @@ function EventsAdmin() {
 
       const addressComponents = place.address_components || [];
       const getComponent = (type: string) =>
-        addressComponents.find(component => component.types.includes(type))?.long_name || '';
+        addressComponents.find((component: { types: string[]; long_name: string }) => component.types.includes(type))?.long_name || '';
 
       const city = getComponent('locality') || getComponent('postal_town');
       const region = getComponent('administrative_area_level_1');
@@ -617,7 +617,7 @@ function EventsAdmin() {
     return {
       title: '',
       description: '',
-      eventType: 'other',
+      eventType: 'other' as const,
       venue: '',
       address: '',
       city: '',
@@ -635,7 +635,7 @@ function EventsAdmin() {
       website: '',
       ticketUrl: '',
       price: '',
-      restrictions: [],
+      restrictions: [] as string[],
       isPublished: true,
       isFeatured: false,
     };
