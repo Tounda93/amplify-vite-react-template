@@ -1827,7 +1827,8 @@ function WikiCarsAdmin() {
         country: makeForm.country.trim() || undefined,
       });
       if (created.data) {
-        setMakes((prev) => [...prev, created.data].sort((a, b) => a.makeName.localeCompare(b.makeName)));
+        const newMake = created.data;
+        setMakes((prev) => [...prev, newMake].sort((a, b) => a.makeName.localeCompare(b.makeName)));
       }
       setMakeForm({ makeId: '', makeName: '', country: '' });
     } catch (error) {
@@ -1852,7 +1853,8 @@ function WikiCarsAdmin() {
         fullName: `${makeName} ${modelForm.modelName.trim()}`,
       });
       if (created.data) {
-        setModels((prev) => [...prev, created.data].sort((a, b) => a.modelName.localeCompare(b.modelName)));
+        const newModel = created.data;
+        setModels((prev) => [...prev, newModel].sort((a, b) => a.modelName.localeCompare(b.modelName)));
       }
       setModelForm({ makeId: '', modelName: '' });
     } catch (error) {
