@@ -182,91 +182,104 @@ export default function Header({
       color: textColor,
     }}>
       <div style={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        padding: "8px 2rem",
-        justifyContent: "flex-start",
-        gap: "16px"
+        width: "100%",
+        padding: "8px clamp(1rem, 4vw, 5rem)",
+        margin: "0 auto",
+        maxWidth: "2000px"
       }}>
-        {/* Left: Logo + Search */}
-        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
-            style={{
-              fontSize: "26px",
-              fontWeight: 700,
-              letterSpacing: "0.02em",
-              color: "#0b0b0b"
-            }}
-            aria-label="Collectible"
-          >
-            C
-          </div>
-          <SearchBar
-            searchTerm={searchTerm}
-            onSearchChange={onSearchChange}
-            searchResults={searchResults}
-            searchLoading={searchLoading}
-            onSearchResultSelect={onSearchResultSelect}
-            isMobile={false}
-            style={{ width: "280px" }}
-            appearance="light"
-          />
-        </div>
-
-        {/* Center: Main Navigation */}
-        <nav style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          justifyContent: "center",
-          position: "absolute",
-          left: "50%",
-          transform: "translateX(-50%)"
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 960px) minmax(0, 320px)",
+          gap: "2rem",
+          alignItems: "center"
         }}>
-          {categories.map((category) => {
-            const IconComponent = category.icon;
-            const isActive = activeSection === category.id;
+          {/* Left: Logo + Search */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            minWidth: 0,
+            width: "100%",
+            justifyContent: "flex-start",
+            gridColumn: " / 2"
+          }}>
+            <div
+              style={{
+                fontSize: "26px",
+                fontWeight: 700,
+                letterSpacing: "0.02em",
+                color: "#0b0b0b"
+              }}
+              aria-label="Collectible"
+            >
+              C
+            </div>
+            <SearchBar
+              searchTerm={searchTerm}
+              onSearchChange={onSearchChange}
+              searchResults={searchResults}
+              searchLoading={searchLoading}
+              onSearchResultSelect={onSearchResultSelect}
+              isMobile={false}
+              style={{ width: "280px" }}
+              appearance="light"
+            />
+          </div>
 
-            return (
-              <button
-                key={category.id}
-                onClick={() => onSectionChange(category.id)}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "2px",
-                  padding: "8px 12px",
-                  borderRadius: "10px",
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "color 0.2s",
-                  backgroundColor: "transparent",
-                  color: isActive ? textColor : navInactiveColor,
-                  position: "relative"
-                }}
-              >
-                <IconComponent
-                  size={24}
-                  strokeWidth={isActive ? 2 : 1.5}
-                />
-                <div style={{
-                  position: "absolute",
-                  bottom: "4px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  width: "40%",
-                  height: "1.5px",
-                  borderRadius: "999px",
-                  backgroundColor: textColor,
-                  opacity: isActive ? 1 : 0,
-                  transition: "opacity 0.2s"
-                }} />
-              </button>
-            );
-          })}
-        </nav>
+          {/* Center: Main Navigation */}
+          <nav style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            justifyContent: "center",
+            width: "100%",
+            gridColumn: "2 / 3"
+          }}>
+            {categories.map((category) => {
+              const IconComponent = category.icon;
+              const isActive = activeSection === category.id;
+
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => onSectionChange(category.id)}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "2px",
+                    padding: "8px 12px",
+                    borderRadius: "10px",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "color 0.2s",
+                    backgroundColor: "transparent",
+                    color: isActive ? textColor : navInactiveColor,
+                    position: "relative"
+                  }}
+                >
+                  <IconComponent
+                    size={24}
+                    strokeWidth={isActive ? 2 : 1.5}
+                  />
+                  <div style={{
+                    position: "absolute",
+                    bottom: "4px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "40%",
+                    height: "1.5px",
+                    borderRadius: "999px",
+                    backgroundColor: textColor,
+                    opacity: isActive ? 1 : 0,
+                    transition: "opacity 0.2s"
+                  }} />
+                </button>
+              );
+            })}
+          </nav>
+          <div aria-hidden="true" style={{ gridColumn: "3 / 4" }} />
+        </div>
       </div>
     </header>
   );

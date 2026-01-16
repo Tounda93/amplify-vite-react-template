@@ -12,6 +12,52 @@
 }
 
 /* ===========================================
+   Three-column layout
+   =========================================== */
+
+.home-page__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 960px) minmax(0, 320px);
+  gap: 2rem;
+  align-items: start;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.home-page__left-rail {
+  min-height: 1px;
+}
+
+.home-feed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 960px;
+}
+
+.home-page__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: visible;
+}
+
+.home-page__sidebar-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
+  margin: 0;
+}
+
+.home-page__sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ===========================================
    Card Grid - 5 columns with 13px spacing
    =========================================== */
 
@@ -82,6 +128,30 @@
 @media (max-width: 1100px) {
   .home-page__grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .home-page__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  }
+
+  .home-page__left-rail {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .home-page__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .home-feed {
+    order: 1;
+  }
+
+  .home-page__sidebar {
+    order: 2;
   }
 }
 
