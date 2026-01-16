@@ -1,4 +1,4 @@
-import { X, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
+import { X, MoreVertical } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { getUrl, uploadData } from 'aws-amplify/storage';
@@ -146,18 +146,6 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
   const currentImage = photoUrls.length > 0 ? photoUrls[currentPhotoIndex] : FALLBACK_CAR_IMAGE;
   const displayMakeName = makes.find((make) => make.makeId === carData.makeId)?.makeName || makeName;
   const displayModelName = models.find((model) => model.modelId === carData.modelId)?.modelName || modelName;
-
-  const nextPhoto = () => {
-    if (photoUrls.length > 1) {
-      setCurrentPhotoIndex((prev) => (prev + 1) % photoUrls.length);
-    }
-  };
-
-  const prevPhoto = () => {
-    if (photoUrls.length > 1) {
-      setCurrentPhotoIndex((prev) => (prev - 1 + photoUrls.length) % photoUrls.length);
-    }
-  };
 
   const formatTransmission = (transmission: string | null | undefined) => {
     if (!transmission) return null;
@@ -393,6 +381,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                 style={{
                   width: '36px',
                   height: '36px',
+                  minWidth: '36px',
+                  minHeight: '36px',
                   borderRadius: '50%',
                   border: '1px solid rgba(0,0,0,0.4)',
                   background: 'rgba(255, 255, 255, 0.9)',
@@ -401,7 +391,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                   alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  color: '#000',
+                  color: '#111',
+                  padding: 0,
                 }}
                 aria-label="More actions"
               >
@@ -463,6 +454,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
               style={{
                 width: '36px',
                 height: '36px',
+                minWidth: '36px',
+                minHeight: '36px',
                 borderRadius: '50%',
                 border: '1px solid rgba(0,0,0,0.4)',
                 background: 'rgba(255, 255, 255, 0.9)',
@@ -471,7 +464,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                color: '#000',
+                color: '#111',
+                padding: 0,
               }}
               aria-label="Close"
             >
@@ -482,49 +476,6 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
           {/* Photo Navigation */}
           {photoUrls.length > 1 && (
             <>
-              <button
-                onClick={prevPhoto}
-                style={{
-                  position: 'absolute',
-                  left: '1rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                }}
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                onClick={nextPhoto}
-                style={{
-                  position: 'absolute',
-                  right: '1rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                }}
-              >
-                <ChevronRight size={20} />
-              </button>
-
               {/* Photo Indicators */}
               <div
                 style={{
@@ -569,14 +520,14 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
         {/* Scrollable Content */}
         <div style={{ overflowY: 'auto', padding: '1.5rem' }}>
           <h2 style={{ margin: '0 0 1.5rem 0', fontSize: '1.5rem', fontWeight: 600, color: '#000' }}>
-            {displayMakeName} {displayModelName}
+            {carData.year ? `${carData.year} ` : ''}{displayMakeName} {displayModelName}
           </h2>
 
           {!isEditing ? (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
-                <span>Car name</span>
-                <span>{displayMakeName} {displayModelName}</span>
+              <div style={{ display: 'grid', gap: '0.35rem', color: '#111' }}>
+                <span style={{ fontWeight: 600 }}>Description</span>
+                <span style={{ color: '#374151' }}>{carData.description || '—'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
                 <span>Date</span>

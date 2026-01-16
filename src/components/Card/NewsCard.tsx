@@ -1,9 +1,9 @@
 import { Heart, MessageCircle, Share2 } from 'lucide-react';
 import './Card.css';
 
-export type CardVariant = 'default' | 'compact' | 'wide';
+export type NewsCardVariant = 'default' | 'compact' | 'wide';
 
-export interface CardProps {
+export interface NewsCardProps {
   /** Image URL for the card */
   imageUrl: string;
   /** Category title (e.g., "Event", "News", "Rooms") */
@@ -19,7 +19,7 @@ export interface CardProps {
   /** Requirement text shown in pill (e.g., "Members Only", "Free", "Premium") */
   requirement?: string;
   /** Card variant for different layouts */
-  variant?: CardVariant;
+  variant?: NewsCardVariant;
   /** Click handler when card is clicked */
   onClick?: () => void;
   /** Additional CSS class names */
@@ -46,7 +46,7 @@ export interface CardProps {
   title2?: string;
 }
 
-export default function Card({
+export default function NewsCard({
   imageUrl,
   category,
   authorName,
@@ -67,7 +67,7 @@ export default function Card({
   // Legacy props
   title1,
   title2,
-}: CardProps) {
+}: NewsCardProps) {
   const cardClassName = `card card--${variant} ${className}`.trim();
 
   // Support legacy props
@@ -102,10 +102,6 @@ export default function Card({
 
         {/* Author Info */}
         <div className="card__author">
-          <div
-            className="card__author-image"
-            style={{ backgroundImage: `url(${authorImage || defaultProfilePic})` }}
-          />
           <span className="card__author-name">{authorName || 'Anonymous'}</span>
         </div>
 

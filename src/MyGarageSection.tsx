@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Car, Plus, Heart, Settings, User, Shield } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../amplify/data/resource';
 import AddCarPopup from './components/AddCarPopup';
 import CarDetailPopup from './components/CarDetailPopup';
+import CarCard from './components/CarCard';
 import { useIsMobile } from './hooks/useIsMobile';
 import { isAdminEmail } from './constants/admins';
 
@@ -28,16 +28,12 @@ interface MyGarageSectionProps {
   onSectionChange?: (section: string) => void;
 }
 
-const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80';
-const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
-
 export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps) {
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
   const [loading, setLoading] = useState(true);
   const [showAddCarPopup, setShowAddCarPopup] = useState(false);
   const [userCars, setUserCars] = useState<CarType[]>([]);
-  const [carImageUrls, setCarImageUrls] = useState<Map<string, string>>(new Map());
   const [makes, setMakes] = useState<Map<string, Make>>(new Map());
   const [models, setModels] = useState<Map<string, Model>>(new Map());
   const [selectedCar, setSelectedCar] = useState<CarType | null>(null);
@@ -46,40 +42,6 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
   useEffect(() => {
     loadUserCars();
   }, []);
-
-  useEffect(() => {
-    if (userCars.length === 0) {
-      setCarImageUrls(new Map());
-      return;
-    }
-
-    const loadCarImages = async () => {
-      const entries = await Promise.all(
-        userCars.map(async (car) => {
-          const photoPath = car.photos && car.photos.length > 0 ? car.photos[0] : null;
-          if (!photoPath) {
-            return [car.id, FALLBACK_CAR_IMAGE] as const;
-          }
-
-          if (!isStoragePath(photoPath)) {
-            return [car.id, photoPath] as const;
-          }
-
-          try {
-            const result = await getUrl({ path: photoPath });
-            return [car.id, result.url.toString()] as const;
-          } catch (error) {
-            console.error('Error loading car image:', error);
-            return [car.id, FALLBACK_CAR_IMAGE] as const;
-          }
-        })
-      );
-
-      setCarImageUrls(new Map(entries));
-    };
-
-    loadCarImages();
-  }, [userCars]);
 
   const loadUserCars = async () => {
     try {
@@ -244,11 +206,6 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
           marginBottom: '1rem'
         }}>
           <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#000', margin: 0 }}>My Garage</h2>
-          <div style={{
-            flex: 1,
-            height: '1px',
-            backgroundColor: '#000'
-          }} />
           <button
             onClick={() => setShowAddCarPopup(true)}
             style={{
@@ -435,99 +392,24 @@ export function MyGarageSection({ user, onSectionChange }: MyGarageSectionProps)
               }}
             >
               {userCars.map((car) => {
-                const carImage = carImageUrls.get(car.id) || FALLBACK_CAR_IMAGE;
                 const makeName = getMakeName(car.makeId);
                 const modelName = getModelName(car.modelId);
 
                 return (
                   <div
                     key={car.id}
-                    onClick={() => setSelectedCar(car)}
                     style={{
                       flexShrink: 0,
                       width: isMobile ? 'calc(100vw - 2rem)' : '28.2625rem',
-                      height: isMobile ? '18.2rem' : '25rem',
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '0.625rem',
-                      overflow: 'hidden',
-                      cursor: 'pointer',
                       scrollSnapAlign: 'start',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
                     }}
                   >
-                    {/* Car Image */}
-                    <div
-                      style={{
-                        width: '100%',
-                        flex: '0 0 70%',
-                        backgroundImage: `url(${carImage})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundColor: '#f3f4f6',
-                        position: 'relative',
-                      }}
-                    >
-                      {/* Year Badge */}
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '0.75rem',
-                          left: '0.75rem',
-                          padding: '0.25rem 0.75rem',
-                          backgroundColor: 'rgba(0,0,0,0.7)',
-                          color: '#fff',
-                          borderRadius: '999px',
-                          fontSize: '0.75rem',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {car.year}
-                      </div>
-                    </div>
-
-                    {/* Car Info */}
-                    <div style={{ padding: '0.75rem 1rem', flex: '1 0 30%' }}>
-                      <span style={{
-                        display: 'block',
-                        color: '#000',
-                        fontSize: '0.75rem',
-                        fontWeight: 400,
-                        marginBottom: '0.25rem',
-                      }}>
-                        MY CAR
-                      </span>
-                      <h3 style={{
-                        margin: 0,
-                        color: '#000',
-                        fontSize: '1rem',
-                        fontWeight: 500,
-                        lineHeight: '1.25rem',
-                      }}>
-                        {makeName} {modelName}
-                      </h3>
-
-                      <div style={{ margin: '0.5rem 0' }}>
-                        <span style={{
-                          display: 'block',
-                          color: '#000',
-                          fontSize: '0.625rem',
-                          fontWeight: 400,
-                        }}>
-                          {[car.color, car.transmission?.replace('_', ' ')].filter(Boolean).join(' • ') || 'No details'}
-                        </span>
-                      </div>
-                    </div>
+                    <CarCard
+                      car={car}
+                      makeName={makeName}
+                      modelName={modelName}
+                      onClick={() => setSelectedCar(car)}
+                    />
                   </div>
                 );
               })}

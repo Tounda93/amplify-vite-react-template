@@ -3,6 +3,7 @@ import {
   Newspaper,
   Users,
   Calendar,
+  Gavel,
   LucideIcon
 } from "lucide-react";
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -73,8 +74,9 @@ export default function Header({
   const categories: Category[] = [
     { id: "home", label: "Home", icon: Home },
     { id: "events", label: "Events", icon: Calendar },
-    { id: "news", label: "News", icon: Newspaper },
     { id: "community", label: "Rooms", icon: Users },
+    { id: "news", label: "News", icon: Newspaper },
+    { id: "auctions", label: "Auctions", icon: Gavel },
   ];
 
   // Glass effect styling
@@ -84,7 +86,7 @@ export default function Header({
   const textColor = '#010101';
   const navInactiveColor = 'rgba(0, 0, 0, 0.5)';
 
-  const mobileCategoryOrder = ["home", "events", "news", "community"];
+  const mobileCategoryOrder = ["home", "events", "community", "news", "auctions"];
   const mobileCategories = mobileCategoryOrder
     .map(id => categories.find(category => category.id === id))
     .filter((category): category is Category => Boolean(category));

@@ -160,29 +160,12 @@ export default function CarCard({ car, makeName, modelName, onClick, compact = f
             <CarIcon size={48} style={{ color: 'rgba(255,255,255,0.7)' }} />
           </div>
         )}
-
-        {/* Year badge */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '0.75rem',
-            left: '0.75rem',
-            padding: '0.25rem 0.75rem',
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            color: '#fff',
-            borderRadius: '999px',
-            fontSize: '0.75rem',
-            fontWeight: 500,
-          }}
-        >
-          {car.year}
-        </div>
       </div>
 
       {/* Car Info */}
       <div style={{ padding: '1rem' }}>
         <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.125rem', fontWeight: 600, color: '#111' }}>
-          {makeName} {modelName}
+          {car.year ? `${car.year} ` : ''}{makeName} {modelName}
         </h3>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>

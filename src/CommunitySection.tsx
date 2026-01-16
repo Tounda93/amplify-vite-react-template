@@ -24,11 +24,6 @@ export function CommunitySection() {
         }}>
           Rooms
         </h2>
-        <div style={{
-          flex: 1,
-          height: '1px',
-          backgroundColor: '#000'
-        }} />
         <button
           onClick={() => setShowCreatePopup(true)}
           style={{

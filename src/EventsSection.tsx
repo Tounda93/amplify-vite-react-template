@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
-import EventCard from './components/EventCard';
+import EventCard from './components/Card/EventCard';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
 import EventDetailPopup from './components/EventDetailPopup';
@@ -211,11 +211,6 @@ export function EventsSection({ onSaveEvent }: EventsSectionProps) {
           marginBottom: '1.5rem'
         }}>
           <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#000', margin: 0 }}>All Events</h2>
-          <div style={{
-            flex: 1,
-            height: '1px',
-            backgroundColor: '#000'
-          }} />
         </div>
 
         {/* Events Carousel */}
@@ -296,11 +291,6 @@ export function EventsSection({ onSaveEvent }: EventsSectionProps) {
           marginBottom: '1rem'
         }}>
           <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#000', margin: 0 }}>Members only events</h2>
-          <div style={{
-            flex: 1,
-            height: '1px',
-            backgroundColor: '#000'
-          }} />
         </div>
       </div>
 

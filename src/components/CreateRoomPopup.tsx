@@ -238,6 +238,8 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              padding: 0,
+              color: '#111',
             }}
           >
             <X size={18} />

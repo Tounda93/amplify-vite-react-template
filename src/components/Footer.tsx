@@ -194,7 +194,7 @@ export default function Footer({
         margin: '0 auto',
         padding: '3rem 2rem',
       }}>
-        {activeSection !== 'home' && (
+        {activeSection !== 'home' && !['events', 'news', 'community'].includes(activeSection) && (
           <>
             <div style={{
               textAlign: 'center',

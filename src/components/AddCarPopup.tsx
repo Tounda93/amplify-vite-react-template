@@ -22,6 +22,19 @@ const TRANSMISSIONS = [
   { value: 'semi_automatic', label: 'Semi-Automatic' },
 ];
 
+const DRIVETRAINS = [
+  { value: 'lhd', label: 'LHD' },
+  { value: 'rhd', label: 'RHD' },
+];
+
+const FUEL_TYPES = [
+  'Petrol',
+  'Diesel',
+  'Hybrid',
+  'Electric',
+  'Other',
+];
+
 const EXTERIOR_COLORS = [
   'Black', 'White', 'Silver', 'Grey', 'Red', 'Blue', 'Green', 'Yellow',
   'Orange', 'Brown', 'Beige', 'Gold', 'Bronze', 'Purple', 'Other'
@@ -45,12 +58,19 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
     makeId: '',
     modelId: '',
     year: '',
-    purchaseDate: '',
+    mileage: '',
+    mileageUnit: 'km' as 'km' | 'miles',
+    vin: '',
+    driveType: '' as '' | 'lhd' | 'rhd',
     engineVariantId: '',
     transmission: '' as '' | 'manual' | 'automatic' | 'semi_automatic',
     color: '',
     interiorColor: '',
+    description: '',
+    fuelType: '',
+    price: '',
   });
+  const [isForSale, setIsForSale] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -142,7 +162,7 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
     return uploadedPaths;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, listForSale = false) => {
     e.preventDefault();
 
     if (!formData.makeId || !formData.modelId || !formData.year) {
@@ -153,6 +173,11 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
     const year = parseInt(formData.year);
     if (isNaN(year) || year < 1900 || year > new Date().getFullYear() + 1) {
       alert('Please enter a valid year');
+      return;
+    }
+
+    if (listForSale && !formData.price) {
+      alert('Please enter a price to list the car.');
       return;
     }
 
@@ -168,16 +193,30 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
         return;
       }
 
+      const priceValue = formData.price ? Number(formData.price) : undefined;
+      const descriptionParts = [
+        formData.fuelType ? `Fuel type: ${formData.fuelType}` : null,
+        formData.description,
+      ].filter(Boolean);
+      const combinedDescription = descriptionParts.join('\n\n');
+
       // Create car first to get the ID
       const carResult = await client.models.Car.create({
         ownerId: userId,
         makeId: formData.makeId,
         modelId: formData.modelId,
         year: year,
+        vin: formData.vin || undefined,
+        mileage: formData.mileage ? Number(formData.mileage) : undefined,
+        mileageUnit: formData.mileage ? formData.mileageUnit : undefined,
+        driveType: formData.driveType || undefined,
         engineVariantId: formData.engineVariantId || undefined,
         transmission: formData.transmission || undefined,
         color: formData.color || undefined,
         interiorColor: formData.interiorColor || undefined,
+        description: combinedDescription || undefined,
+        saleStatus: listForSale ? 'for_sale' : 'off_market',
+        price: listForSale ? priceValue : undefined,
         isPublic: true,
       });
 
@@ -194,7 +233,7 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
         }
       }
 
-      alert('Car added to your garage!');
+      alert(listForSale ? 'Car listed successfully!' : 'Car added to your garage!');
       resetForm();
       onCarAdded?.();
       onClose();
@@ -211,12 +250,19 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
       makeId: '',
       modelId: '',
       year: '',
-      purchaseDate: '',
+      mileage: '',
+      mileageUnit: 'km',
+      vin: '',
+      driveType: '',
       engineVariantId: '',
       transmission: '',
       color: '',
       interiorColor: '',
+      description: '',
+      fuelType: '',
+      price: '',
     });
+    setIsForSale(false);
     // Clean up photo previews
     photoPreviews.forEach(url => URL.revokeObjectURL(url));
     setPhotos([]);
@@ -251,6 +297,10 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
   const selectWrapperStyle = {
     position: 'relative' as const,
   };
+  const yearOptions = Array.from(
+    { length: new Date().getFullYear() - 1899 },
+    (_, index) => String(new Date().getFullYear() - index)
+  );
 
   return (
     <div
@@ -321,6 +371,123 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
           ) : (
             <form onSubmit={handleSubmit}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Upload car images */}
+                <div>
+                  <label style={labelStyle}>Upload car images</label>
+                  <p style={{ fontSize: '0.75rem', color: '#666', margin: '0 0 0.75rem 0' }}>
+                    Add up to 10 photos of your car
+                  </p>
+
+                  {photoPreviews.length > 0 && (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+                      gap: '0.5rem',
+                      marginBottom: '0.75rem',
+                    }}>
+                      {photoPreviews.map((preview, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            position: 'relative',
+                            aspectRatio: '1',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            border: '1px solid #ddd',
+                          }}
+                        >
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(index)}
+                            style={{
+                              position: 'absolute',
+                              top: '4px',
+                              right: '4px',
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              border: 'none',
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              color: 'white',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: 0,
+                            }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                          {index === 0 && (
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '4px',
+                              left: '4px',
+                              padding: '2px 6px',
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              color: 'white',
+                              fontSize: '0.625rem',
+                              borderRadius: '4px',
+                            }}>
+                              Cover
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {photos.length < 10 && (
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoSelect}
+                        style={{ display: 'none' }}
+                        id="photo-upload"
+                      />
+                      <label
+                        htmlFor="photo-upload"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          padding: '1rem',
+                          border: '2px dashed #ddd',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          backgroundColor: '#f9f9f9',
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.borderColor = '#999';
+                          e.currentTarget.style.backgroundColor = '#f0f0f0';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.borderColor = '#ddd';
+                          e.currentTarget.style.backgroundColor = '#f9f9f9';
+                        }}
+                      >
+                        <Camera size={20} style={{ color: '#666' }} />
+                        <span style={{ color: '#666', fontSize: '0.875rem' }}>
+                          {photos.length === 0 ? 'Add Photos' : `Add More (${10 - photos.length} remaining)`}
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                </div>
 
                 {/* Make (required) */}
                 <div>
@@ -393,30 +560,143 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
                   </div>
                 </div>
 
-                {/* Year (required) */}
+                {/* Year of manufacture (required) */}
                 <div>
-                  <label style={labelStyle}>Year *</label>
+                  <label style={labelStyle}>Year of manufacture *</label>
+                  <div style={selectWrapperStyle}>
+                    <select
+                      value={formData.year}
+                      onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                      required
+                      style={{ ...inputStyle, appearance: 'none', paddingRight: '2.5rem', cursor: 'pointer' }}
+                    >
+                      <option value="">Select year...</option>
+                      {yearOptions.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={18}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                        color: '#666',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Mileage */}
+                <div>
+                  <label style={labelStyle}>Mileage</label>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <input
+                      type="number"
+                      value={formData.mileage}
+                      onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+                      placeholder="e.g., 48000"
+                      min="0"
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    <div style={{ width: '130px', position: 'relative' }}>
+                      <select
+                        value={formData.mileageUnit}
+                        onChange={(e) => setFormData({ ...formData, mileageUnit: e.target.value as 'km' | 'miles' })}
+                        style={{ ...inputStyle, appearance: 'none', paddingRight: '2.5rem', cursor: 'pointer' }}
+                      >
+                        <option value="km">km</option>
+                        <option value="miles">miles</option>
+                      </select>
+                      <ChevronDown
+                        size={18}
+                        style={{
+                          position: 'absolute',
+                          right: '0.75rem',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          pointerEvents: 'none',
+                          color: '#666',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chassis number */}
+                <div>
+                  <label style={labelStyle}>Chassis number</label>
                   <input
-                    type="number"
-                    value={formData.year}
-                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                    required
-                    placeholder="e.g., 2020"
-                    min="1900"
-                    max={new Date().getFullYear() + 1}
+                    type="text"
+                    value={formData.vin}
+                    onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
+                    placeholder="e.g., WBA1234567890"
                     style={inputStyle}
                   />
                 </div>
 
-                {/* Date of Purchase */}
+                {/* Drive */}
                 <div>
-                  <label style={labelStyle}>Date of Purchase</label>
-                  <input
-                    type="date"
-                    value={formData.purchaseDate}
-                    onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-                    style={inputStyle}
-                  />
+                  <label style={labelStyle}>Drive</label>
+                  <div style={selectWrapperStyle}>
+                    <select
+                      value={formData.driveType}
+                      onChange={(e) => setFormData({ ...formData, driveType: e.target.value as typeof formData.driveType })}
+                      style={{ ...inputStyle, appearance: 'none', paddingRight: '2.5rem', cursor: 'pointer' }}
+                    >
+                      <option value="">Select drive...</option>
+                      {DRIVETRAINS.map((drive) => (
+                        <option key={drive.value} value={drive.value}>
+                          {drive.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={18}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                        color: '#666',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Gearbox */}
+                <div>
+                  <label style={labelStyle}>Gearbox</label>
+                  <div style={selectWrapperStyle}>
+                    <select
+                      value={formData.transmission}
+                      onChange={(e) => setFormData({ ...formData, transmission: e.target.value as typeof formData.transmission })}
+                      style={{ ...inputStyle, appearance: 'none', paddingRight: '2.5rem', cursor: 'pointer' }}
+                    >
+                      <option value="">Select transmission...</option>
+                      {TRANSMISSIONS.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={18}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                        color: '#666',
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {/* Engine */}
@@ -431,19 +711,19 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
                   />
                 </div>
 
-                {/* Transmission */}
+                {/* Fuel type */}
                 <div>
-                  <label style={labelStyle}>Transmission</label>
+                  <label style={labelStyle}>Fuel type</label>
                   <div style={selectWrapperStyle}>
                     <select
-                      value={formData.transmission}
-                      onChange={(e) => setFormData({ ...formData, transmission: e.target.value as typeof formData.transmission })}
+                      value={formData.fuelType}
+                      onChange={(e) => setFormData({ ...formData, fuelType: e.target.value })}
                       style={{ ...inputStyle, appearance: 'none', paddingRight: '2.5rem', cursor: 'pointer' }}
                     >
-                      <option value="">Select transmission...</option>
-                      {TRANSMISSIONS.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
+                      <option value="">Select fuel type...</option>
+                      {FUEL_TYPES.map((fuel) => (
+                        <option key={fuel} value={fuel}>
+                          {fuel}
                         </option>
                       ))}
                     </select>
@@ -521,122 +801,67 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
                   </div>
                 </div>
 
-                {/* Photos */}
+                {/* Description */}
                 <div>
-                  <label style={labelStyle}>Photos</label>
-                  <p style={{ fontSize: '0.75rem', color: '#666', margin: '0 0 0.75rem 0' }}>
-                    Add up to 10 photos of your car
-                  </p>
+                  <label style={labelStyle}>Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Share key details about your car..."
+                    rows={4}
+                    style={{ ...inputStyle, resize: 'vertical' }}
+                  />
+                </div>
 
-                  {/* Photo Previews */}
-                  {photoPreviews.length > 0 && (
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-                      gap: '0.5rem',
-                      marginBottom: '0.75rem',
-                    }}>
-                      {photoPreviews.map((preview, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            position: 'relative',
-                            aspectRatio: '1',
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            border: '1px solid #ddd',
-                          }}
-                        >
-                          <img
-                            src={preview}
-                            alt={`Preview ${index + 1}`}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removePhoto(index)}
-                            style={{
-                              position: 'absolute',
-                              top: '4px',
-                              right: '4px',
-                              width: '24px',
-                              height: '24px',
-                              borderRadius: '50%',
-                              border: 'none',
-                              backgroundColor: 'rgba(0,0,0,0.6)',
-                              color: 'white',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: 0,
-                            }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                          {index === 0 && (
-                            <div style={{
-                              position: 'absolute',
-                              bottom: '4px',
-                              left: '4px',
-                              padding: '2px 6px',
-                              backgroundColor: 'rgba(0,0,0,0.6)',
-                              color: 'white',
-                              fontSize: '0.625rem',
-                              borderRadius: '4px',
-                            }}>
-                              Cover
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Upload Button */}
-                  {photos.length < 10 && (
-                    <div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handlePhotoSelect}
-                        style={{ display: 'none' }}
-                        id="photo-upload"
-                      />
-                      <label
-                        htmlFor="photo-upload"
+                {/* For sale */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setIsForSale((prev) => !prev)}
+                    style={{
+                      padding: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#000',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    For sale
+                  </button>
+                  {isForSale && (
+                    <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.75rem' }}>
+                      <div>
+                        <label style={labelStyle}>Price</label>
+                        <input
+                          type="number"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          placeholder="e.g., 45000"
+                          min="0"
+                          style={inputStyle}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={(e) => handleSubmit(e as unknown as React.FormEvent, true)}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          padding: '1rem',
-                          border: '2px dashed #ddd',
+                          padding: '0.75rem 1.5rem',
+                          background: saving ? '#ccc' : '#111',
+                          color: 'white',
+                          border: 'none',
                           borderRadius: '8px',
-                          cursor: 'pointer',
-                          backgroundColor: '#f9f9f9',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.borderColor = '#999';
-                          e.currentTarget.style.backgroundColor = '#f0f0f0';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.borderColor = '#ddd';
-                          e.currentTarget.style.backgroundColor = '#f9f9f9';
+                          cursor: saving ? 'not-allowed' : 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          alignSelf: 'flex-start',
                         }}
                       >
-                        <Camera size={20} style={{ color: '#666' }} />
-                        <span style={{ color: '#666', fontSize: '0.875rem' }}>
-                          {photos.length === 0 ? 'Add Photos' : `Add More (${10 - photos.length} remaining)`}
-                        </span>
-                      </label>
+                        {saving ? 'Listing...' : 'List the car'}
+                      </button>
                     </div>
                   )}
                 </div>

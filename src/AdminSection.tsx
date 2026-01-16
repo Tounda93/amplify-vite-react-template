@@ -7,6 +7,7 @@ import {
   Home,
   Calendar,
   BookOpen,
+  Gavel,
   Settings,
   Plus,
   Pencil,
@@ -23,7 +24,7 @@ const client = generateClient<Schema>();
 type Event = Schema['Event']['type'];
 type Magazine = Schema['Magazine']['type'];
 
-type AdminTab = 'home' | 'events' | 'magazines' | 'settings';
+type AdminTab = 'home' | 'events' | 'magazines' | 'auctions' | 'settings';
 
 declare global {
   interface Window {
@@ -38,6 +39,7 @@ export function AdminSection() {
     { id: 'home', label: 'Home', icon: Home },
     { id: 'events', label: 'Events', icon: Calendar },
     { id: 'magazines', label: 'Magazines', icon: BookOpen },
+    { id: 'auctions', label: 'Auctions', icon: Gavel },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -70,6 +72,7 @@ export function AdminSection() {
         {activeTab === 'home' && <HomeAdmin />}
         {activeTab === 'events' && <EventsAdmin />}
         {activeTab === 'magazines' && <MagazinesAdmin />}
+        {activeTab === 'auctions' && <AuctionsAdmin />}
         {activeTab === 'settings' && <SettingsAdmin />}
       </div>
     </div>
@@ -582,15 +585,26 @@ function EventsAdmin() {
   const toLocalTimeInput = (date: Date) =>
     `${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`;
 
+  const roundToNearestHour = (date: Date) => {
+    const rounded = new Date(date);
+    const minutes = rounded.getMinutes();
+    if (minutes >= 30) {
+      rounded.setHours(rounded.getHours() + 1);
+    }
+    rounded.setMinutes(0, 0, 0);
+    return rounded;
+  };
+
   const getLocalTimeZone = () =>
     Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
   const getDefaultStartDateTime = () => {
     const start = new Date();
     start.setHours(start.getHours() + 1);
+    const roundedStart = roundToNearestHour(start);
     return {
-      date: toLocalDateInput(start),
-      time: toLocalTimeInput(start),
+      date: toLocalDateInput(roundedStart),
+      time: toLocalTimeInput(roundedStart),
     };
   };
 
@@ -603,9 +617,10 @@ function EventsAdmin() {
       return { date: '', time: '' };
     }
     base.setHours(base.getHours() + hours);
+    const rounded = roundToNearestHour(base);
     return {
-      date: toLocalDateInput(base),
-      time: toLocalTimeInput(base),
+      date: toLocalDateInput(rounded),
+      time: toLocalTimeInput(rounded),
     };
   };
 
@@ -1413,6 +1428,280 @@ function MagazinesAdmin() {
           <div className="admin-empty">No magazines found. Create your first magazine!</div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================
+// AUCTIONS ADMIN - Basic Auction Intake
+// ============================================
+interface AuctionFormData {
+  coverImage: string;
+  title: string;
+  startDate: string;
+  startTime: string;
+  startTimeZone: string;
+  endDate: string;
+  endTime: string;
+  endTimeZone: string;
+  location: string;
+  website: string;
+}
+
+function AuctionsAdmin() {
+  const [showForm, setShowForm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const padNumber = (value: number) => value.toString().padStart(2, '0');
+
+  const toLocalDateInput = (date: Date) =>
+    `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
+
+  const toLocalTimeInput = (date: Date) =>
+    `${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`;
+
+  const roundToNearestHour = (date: Date) => {
+    const rounded = new Date(date);
+    const minutes = rounded.getMinutes();
+    if (minutes >= 30) {
+      rounded.setHours(rounded.getHours() + 1);
+    }
+    rounded.setMinutes(0, 0, 0);
+    return rounded;
+  };
+
+  const getLocalTimeZone = () =>
+    Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+  const getDefaultStartDateTime = () => {
+    const start = new Date();
+    start.setHours(start.getHours() + 1);
+    const roundedStart = roundToNearestHour(start);
+    return {
+      date: toLocalDateInput(roundedStart),
+      time: toLocalTimeInput(roundedStart),
+    };
+  };
+
+  const addHoursToLocal = (date: string, time: string, hours: number) => {
+    if (!date || !time) {
+      return { date: '', time: '' };
+    }
+    const base = new Date(`${date}T${time}`);
+    if (Number.isNaN(base.getTime())) {
+      return { date: '', time: '' };
+    }
+    base.setHours(base.getHours() + hours);
+    const rounded = roundToNearestHour(base);
+    return {
+      date: toLocalDateInput(rounded),
+      time: toLocalTimeInput(rounded),
+    };
+  };
+
+  const buildEmptyForm = (): AuctionFormData => {
+    const defaultStart = getDefaultStartDateTime();
+    const defaultEnd = addHoursToLocal(defaultStart.date, defaultStart.time, 2);
+    const timeZone = getLocalTimeZone();
+    return {
+      coverImage: '',
+      title: '',
+      startDate: defaultStart.date,
+      startTime: defaultStart.time,
+      startTimeZone: timeZone,
+      endDate: defaultEnd.date,
+      endTime: defaultEnd.time,
+      endTimeZone: timeZone,
+      location: '',
+      website: '',
+    };
+  };
+
+  const [formData, setFormData] = useState<AuctionFormData>(buildEmptyForm());
+
+  const resetForm = () => {
+    setFormData(buildEmptyForm());
+    setImagePreview(null);
+    setShowForm(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const timestamp = Date.now();
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const result = await uploadData({
+        path: ({ identityId }) => `auction-photos/${identityId}/${timestamp}-${safeName}`,
+        data: file,
+        options: { contentType: file.type },
+      }).result;
+      setFormData(prev => ({ ...prev, coverImage: result.path }));
+      const url = await getImageUrl(result.path);
+      setImagePreview(url);
+    } catch (error) {
+      console.error('Error uploading auction image:', error);
+      alert('Failed to upload image');
+    }
+    setUploading(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title || !formData.startDate || !formData.startTime || !formData.location) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+    alert('Auction saved. You can now add auction lots.');
+    resetForm();
+  };
+
+  return (
+    <div className="admin-panel">
+      <div className="admin-panel__header">
+        <h2>Auctions</h2>
+        <button
+          onClick={() => setShowForm(true)}
+          className="admin-btn admin-btn--primary"
+        >
+          <Plus size={18} />
+          + Add auction
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="admin-modal-overlay" onClick={resetForm}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal__header">
+              <h3>Add new auction</h3>
+              <button onClick={resetForm} className="admin-modal__close">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="admin-form">
+              <div className="admin-form__grid">
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Cover image</label>
+                  <div
+                    className="admin-form__cover-upload"
+                    style={imagePreview ? { backgroundImage: `url(${imagePreview})` } : undefined}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="admin-btn admin-btn--secondary admin-form__cover-button"
+                      disabled={uploading}
+                    >
+                      {uploading ? 'Uploading...' : '+ Add'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Auction name *</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Start date *</label>
+                  <div className="admin-form__row">
+                    <input
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => {
+                        const nextDate = e.target.value;
+                        setFormData(prev => {
+                          const updated = { ...prev, startDate: nextDate };
+                          const end = addHoursToLocal(updated.startDate, updated.startTime, 2);
+                          return { ...updated, endDate: end.date, endTime: end.time, endTimeZone: updated.startTimeZone };
+                        });
+                      }}
+                      required
+                    />
+                    <input
+                      type="time"
+                      value={formData.startTime}
+                      onChange={(e) => {
+                        const nextTime = e.target.value;
+                        setFormData(prev => {
+                          const updated = { ...prev, startTime: nextTime };
+                          const end = addHoursToLocal(updated.startDate, updated.startTime, 2);
+                          return { ...updated, endDate: end.date, endTime: end.time, endTimeZone: updated.startTimeZone };
+                        });
+                      }}
+                      required
+                    />
+                    <input
+                      type="text"
+                      value={formData.startTimeZone}
+                      readOnly
+                    />
+                  </div>
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>End date</label>
+                  <div className="admin-form__row">
+                    <input type="date" value={formData.endDate} readOnly />
+                    <input type="time" value={formData.endTime} readOnly />
+                    <input type="text" value={formData.endTimeZone} readOnly />
+                  </div>
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Location *</label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Search for an address"
+                    required
+                  />
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Website URL</label>
+                  <input
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="admin-form__actions">
+                <button type="button" className="admin-btn admin-btn--secondary" onClick={resetForm}>
+                  Cancel
+                </button>
+                <button type="submit" className="admin-btn admin-btn--primary">
+                  Save auction
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

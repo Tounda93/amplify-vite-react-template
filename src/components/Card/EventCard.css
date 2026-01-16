@@ -39,6 +39,8 @@
   right: 20px;
   width: 32px;
   height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   border-radius: 50%;
   border: 1px solid #e5e7eb;
   background: #ffffff;
@@ -46,6 +48,7 @@
   align-items: center;
   justify-content: center;
   color: #111827;
+  padding: 0;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }

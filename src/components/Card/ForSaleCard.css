@@ -1,0 +1,64 @@
+.for-sale-card {
+  width: 100%;
+  max-width: 700px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.for-sale-card__image {
+  width: 100%;
+  height: 320px;
+  background-size: cover;
+  background-position: center;
+  background-color: #e5e7eb;
+}
+
+.for-sale-card__body {
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.for-sale-card__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.for-sale-card__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.for-sale-card__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.for-sale-card__price {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.for-sale-card__details {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+@media (max-width: 480px) {
+  .for-sale-card__image {
+    height: 260px;
+  }
+}

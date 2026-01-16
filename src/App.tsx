@@ -22,7 +22,7 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-ro
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
 import { NewsSection } from './NewsSection';
-import { AuctionsSection } from './AuctionsSection';
+import { AuctionsPage } from './AuctionsPage';
 import { EventsSection } from './EventsSection';
 import { SavedEventsSection } from './SavedEventsSection';
 import { CommunitySection } from './CommunitySection';
@@ -177,6 +177,24 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const topPadding = '0';
   const [hasEnsuredSeedData, setHasEnsuredSeedData] = useState(false);
   const adminEmail = user?.signInDetails?.loginId?.toLowerCase();
+
+  const computeUserInitials = () => {
+    const loginId = user?.signInDetails?.loginId || user?.username || '';
+    if (!loginId) {
+      return 'UU';
+    }
+    const cleaned = loginId.replace(/@.*/, '');
+    const segments = cleaned.split(/[\s._-]+/).filter(Boolean);
+    if (segments.length >= 2) {
+      return `${segments[0][0]}${segments[segments.length - 1][0]}`.toUpperCase();
+    }
+    if (segments.length === 1) {
+      return segments[0].slice(0, 2).toUpperCase();
+    }
+    return loginId.slice(0, 2).toUpperCase();
+  };
+
+  const userInitials = computeUserInitials();
 
   useEffect(() => {
     if (hasEnsuredSeedData || !adminEmail) {
@@ -551,6 +569,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
             <LeftSidebar
               activeSection={activeSection}
               onSectionChange={handleSectionChange}
+              userInitials={userInitials}
             />
           </div>
         )}
@@ -568,12 +587,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
           {/* AUCTIONS SECTION */}
           {activeSection === 'auctions' && (
-            <div style={{
-              width: '100%',
-              padding: `2rem ${horizontalPadding}`
-            }}>
-              <AuctionsSection />
-            </div>
+            <AuctionsPage />
           )}
 
           {/* EVENTS SECTION */}

@@ -17,6 +17,7 @@ interface LeftSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
   userProfilePicture?: string;
+  userInitials?: string;
 }
 
 interface SidebarItem {
@@ -29,7 +30,8 @@ interface SidebarItem {
 export default function LeftSidebar({
   activeSection,
   onSectionChange,
-  userProfilePicture
+  userProfilePicture,
+  userInitials
 }: LeftSidebarProps) {
   const isMobile = useIsMobile();
 
@@ -48,9 +50,6 @@ export default function LeftSidebar({
 
   const textColor = '#000000';
   const navInactiveColor = '#000000';
-
-  // Default profile picture placeholder
-  const defaultProfilePic = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face';
 
   return (
     <aside style={{
@@ -96,20 +95,56 @@ export default function LeftSidebar({
             }}
           >
             {item.useProfilePicture ? (
-              <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                backgroundImage: `url(${userProfilePicture || defaultProfilePic})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                border: isActive ? '2px solid #000' : '1px solid #ccc',
-              }} />
+              userProfilePicture ? (
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  minWidth: '24px',
+                  minHeight: '24px',
+                  flexShrink: 0,
+                  borderRadius: '50%',
+                  backgroundImage: `url(${userProfilePicture})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  border: isActive ? '2px solid #000' : '1px solid #ccc',
+                }} />
+              ) : (
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  minWidth: '24px',
+                  minHeight: '24px',
+                  flexShrink: 0,
+                  borderRadius: '50%',
+                  background: '#111',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
+                  border: isActive ? '2px solid #000' : '1px solid #ccc',
+                }}>
+                  {(userInitials || 'UU').slice(0, 2).toUpperCase()}
+                </div>
+              )
             ) : IconComponent ? (
-              <IconComponent
-                size={30}
-                strokeWidth={isActive ? 2 : 1.5}
-              />
+              <span style={{
+                width: '30px',
+                height: '30px',
+                minWidth: '30px',
+                minHeight: '30px',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <IconComponent
+                  size={30}
+                  strokeWidth={isActive ? 2 : 1.5}
+                />
+              </span>
             ) : null}
             <span style={{
               fontSize: '17px',

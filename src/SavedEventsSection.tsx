@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Schema } from '../amplify/data/resource';
-import EventCard from './components/EventCard';
+import EventCard from './components/Card/EventCard';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
 import './EventsSection.css';

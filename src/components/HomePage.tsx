@@ -4,13 +4,19 @@ import type { Schema } from '../../amplify/data/resource';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { NewsItem, fetchNewsFeedItems } from '../utils/newsFeed';
 import { getImageUrl } from '../utils/storageHelpers';
-import { Card } from './Card';
-import EventCard from './EventCard';
+import { NewsCard } from './Card';
+import ForSaleCard from './Card/ForSaleCard';
+import EventCard from './Card/EventCard';
 import EventDetailPopup from './EventDetailPopup';
+import RoomsCard from './Card/RoomsCard';
 import './HomePage.css';
 
 const client = generateClient<Schema>();
 
+type Car = Schema['Car']['type'];
+type Make = Schema['Make']['type'];
+type Model = Schema['Model']['type'];
+type CarWithImageUrl = Car & { imageUrl?: string; makeName?: string; modelName?: string };
 type Event = Schema['Event']['type'];
 type EventWithImageUrl = Event & { imageUrl?: string };
 
@@ -20,7 +26,29 @@ const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9
 type FeedItem =
   | { type: 'event'; data: EventWithImageUrl }
   | { type: 'news'; data: NewsItem }
-  | { type: 'room'; data: { id: string; name: string } };
+  | { type: 'car'; data: CarWithImageUrl }
+  | { type: 'room'; data: { id: string; name: string; excerpt: string; members: number } };
+
+const FEATURED_ROOMS = [
+  {
+    id: 'lotus-owners-meet',
+    name: 'Lotus Owners Meet 2024',
+    excerpt: 'Share itineraries, road books, and favorite routes for Lotus gatherings.',
+    members: 128,
+  },
+  {
+    id: 'lightweight-track-tools',
+    name: 'Lightweight Track Tools & Lotus Elise builds',
+    excerpt: 'Compare suspension setups and lap times for Elise and Exige owners.',
+    members: 86,
+  },
+  {
+    id: 'british-icons',
+    name: 'British Icons Appreciation Thread',
+    excerpt: 'Celebrating Lotus, Aston Martin, and all things brilliantly British.',
+    members: 204,
+  },
+];
 
 export default function HomePage() {
   const isMobile = useIsMobile();
@@ -44,23 +72,52 @@ export default function HomePage() {
       const { data: events } = await client.models.Event.list({
         limit: 20,
       });
-      // Filter for published events and sort by startDate
       const publishedEvents = (events || [])
         .filter((e) => e.isPublished !== false && e.startDate)
         .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime())
         .slice(0, 7);
 
-      // Load image URLs for events
-      const eventsWithUrls = await Promise.all(
+      const eventsWithUrls: EventWithImageUrl[] = await Promise.all(
         publishedEvents.map(async (event) => {
           const imageUrl = await getImageUrl(event.coverImage);
           return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
         })
       );
 
+      const [{ data: cars }, { data: makes }, { data: models }] = await Promise.all([
+        client.models.Car.list({
+          limit: 12,
+          filter: { saleStatus: { eq: 'for_sale' } },
+        }),
+        client.models.Make.list({ limit: 500 }),
+        client.models.Model.list({ limit: 1000 }),
+      ]);
+
+      const makesMap = new Map<string, string>();
+      const modelsMap = new Map<string, string>();
+      (makes || []).forEach((make: Make) => {
+        makesMap.set(make.makeId, make.makeName);
+      });
+      (models || []).forEach((model: Model) => {
+        modelsMap.set(model.modelId, model.modelName);
+      });
+
+      const carsWithUrls: CarWithImageUrl[] = await Promise.all(
+        (cars || []).map(async (car) => {
+          const photo = car.photos?.[0];
+          const imageUrl = await getImageUrl(photo);
+          return {
+            ...car,
+            imageUrl: imageUrl || FALLBACK_IMAGE,
+            makeName: makesMap.get(car.makeId) || car.makeId,
+            modelName: modelsMap.get(car.modelId) || car.modelId,
+          };
+        })
+      );
+
       // Combine into a unified feed - interleave events and news
       const combinedFeed: FeedItem[] = [];
-      const maxItems = Math.max(eventsWithUrls.length, news.length);
+      const maxItems = Math.max(news.length, carsWithUrls.length, FEATURED_ROOMS.length, eventsWithUrls.length);
 
       for (let i = 0; i < maxItems; i++) {
         if (i < eventsWithUrls.length) {
@@ -68,6 +125,12 @@ export default function HomePage() {
         }
         if (i < news.length) {
           combinedFeed.push({ type: 'news', data: news[i] });
+        }
+        if (i < carsWithUrls.length) {
+          combinedFeed.push({ type: 'car', data: carsWithUrls[i] });
+        }
+        if (i < FEATURED_ROOMS.length) {
+          combinedFeed.push({ type: 'room', data: FEATURED_ROOMS[i] });
         }
       }
 
@@ -82,8 +145,7 @@ export default function HomePage() {
     if (!dateString) {
       return 'Date TBA';
     }
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -91,10 +153,7 @@ export default function HomePage() {
   };
 
   const formatLocation = (event: Event) => {
-    const parts = [event.city, event.region, event.country].filter(Boolean);
-    if (event.venue) {
-      return `${event.venue}${parts.length > 0 ? `, ${parts.join(', ')}` : ''}`;
-    }
+    const parts = [event.venue, event.city, event.region, event.country].filter(Boolean);
     return parts.join(', ') || 'Location TBA';
   };
 
@@ -144,7 +203,7 @@ export default function HomePage() {
             if (item.type === 'news') {
               const newsItem = item.data;
               return (
-                <Card
+                <NewsCard
                   key={`news-${index}`}
                   imageUrl={newsItem.thumbnail || FALLBACK_IMAGE}
                   category="NEWS"
@@ -152,6 +211,37 @@ export default function HomePage() {
                   description={newsItem.title}
                   onClick={() => window.open(newsItem.link, '_blank', 'noopener,noreferrer')}
                   variant="wide"
+                />
+              );
+            }
+
+            if (item.type === 'car') {
+              const car = item.data;
+              const detailParts = [
+                car.mileage ? `${car.mileage.toLocaleString('en-US')} ${car.mileageUnit || 'km'}` : null,
+                car.transmission ? car.transmission.replace('_', ' ') : null,
+                car.color || null,
+              ].filter(Boolean) as string[];
+              const priceLabel = car.price ? `€${car.price.toLocaleString('en-US')}` : 'Price on request';
+              return (
+                <ForSaleCard
+                  key={`car-${car.id}-${index}`}
+                  imageUrl={car.imageUrl || FALLBACK_IMAGE}
+                  title={`${car.year || ''} ${car.makeName || ''} ${car.modelName || ''}`.trim()}
+                  priceLabel={priceLabel}
+                  detailLine={detailParts.join(' • ')}
+                />
+              );
+            }
+
+            if (item.type === 'room') {
+              const room = item.data;
+              return (
+                <RoomsCard
+                  key={`room-${room.id}-${index}`}
+                  title={room.name}
+                  description={room.excerpt}
+                  memberCount={room.members}
                 />
               );
             }

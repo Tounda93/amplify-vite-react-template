@@ -1,6 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Mail, Calendar, MapPin, Edit, Camera, Shield, LogOut } from 'lucide-react';
+import { generateClient } from 'aws-amplify/data';
+import { uploadData } from 'aws-amplify/storage';
+import type { Schema } from '../amplify/data/resource';
 import { useIsMobile } from './hooks/useIsMobile';
+import { getImageUrl } from './utils/storageHelpers';
+
+const client = generateClient<Schema>();
 
 interface AmplifyUser {
   signInDetails?: {
@@ -18,10 +24,46 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Simulate loading
     setTimeout(() => setLoading(false), 500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const { data } = await client.models.Profile.list({ limit: 1 });
+        const profile = data?.[0];
+        if (profile?.id) {
+          setProfileId(profile.id);
+        }
+        if (profile?.avatarUrl) {
+          const resolved = await getImageUrl(profile.avatarUrl);
+          if (resolved) {
+            setAvatarPreview(resolved);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load profile', error);
+      }
+    };
+
+    loadProfile();
   }, []);
 
   if (loading) {
@@ -35,8 +77,62 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const userEmail = user?.signInDetails?.loginId || 'user@example.com';
   const userInitial = userEmail.charAt(0).toUpperCase();
 
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+    }
+    blobUrlRef.current = previewUrl;
+    setAvatarPreview(previewUrl);
+    setUploadingAvatar(true);
+
+    try {
+      const timestamp = Date.now();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const result = await uploadData({
+        path: ({ identityId }) => `profile-photos/${identityId}/${timestamp}-${sanitizedName}`,
+        data: file,
+        options: {
+          contentType: file.type,
+        },
+      }).result;
+
+      if (profileId) {
+        await client.models.Profile.update({
+          id: profileId,
+          avatarUrl: result.path,
+        });
+      } else {
+        const created = await client.models.Profile.create({
+          avatarUrl: result.path,
+        });
+        setProfileId(created.data?.id ?? null);
+      }
+
+      const resolved = await getImageUrl(result.path);
+      if (resolved) {
+        setAvatarPreview(resolved);
+      }
+    } catch (error) {
+      console.error('Failed to upload profile image', error);
+      alert('Failed to upload profile image. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
-    <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', backgroundColor: '#FFFFFF', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
+    <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', backgroundColor: '#F2F3F5', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
       {/* Profile Header */}
       <div style={{
         backgroundColor: '#f8f9fa',
@@ -52,35 +148,40 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
             width: '120px',
             height: '120px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #3498db, #2980b9)',
+            background: avatarPreview ? `url(${avatarPreview})` : '#ffffff',
+            backgroundSize: avatarPreview ? 'contain' : 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
+            color: 'black',
             fontSize: '3rem',
             fontWeight: 'bold',
             border: '4px solid white',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-          }}>
-            {userInitial}
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            cursor: 'pointer'
+          }}
+          onClick={() => setIsAvatarModalOpen(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsAvatarModalOpen(true);
+            }
+          }}
+          aria-label="Open profile photo"
+          >
+            {!avatarPreview && userInitial}
           </div>
-          <button style={{
-            position: 'absolute',
-            bottom: '5px',
-            right: '5px',
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: '#3498db',
-            border: '2px solid white',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-          }}>
-            <Camera size={18} style={{ color: 'white' }} />
-          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarSelect}
+            style={{ display: 'none' }}
+          />
         </div>
 
         <h1 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>
@@ -339,6 +440,81 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
           </button>
         </div>
       </div>
+
+      {isAvatarModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '1.5rem',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsAvatarModalOpen(false);
+            }
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              backgroundColor: '#fff',
+              borderRadius: '12px',
+              padding: '1rem',
+              maxWidth: '600px',
+              width: '100%',
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                height: '420px',
+                borderRadius: '10px',
+                backgroundColor: '#f3f4f6',
+                backgroundImage: avatarPreview ? `url(${avatarPreview})` : 'none',
+                backgroundSize: 'contain',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#111',
+                fontSize: '3rem',
+                fontWeight: 700,
+              }}
+            >
+              {!avatarPreview && userInitial}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (!uploadingAvatar) {
+                  fileInputRef.current?.click();
+                }
+              }}
+              style={{
+                position: 'absolute',
+                right: '24px',
+                bottom: '24px',
+                padding: '0.6rem 1.25rem',
+                borderRadius: '999px',
+                backgroundColor: '#e1e1e1b6',
+                color: '#020202',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                cursor: uploadingAvatar ? 'not-allowed' : 'pointer',
+                opacity: uploadingAvatar ? 0.6 : 1,
+              }}
+            >
+              {avatarPreview ? 'Change photo' : 'Upload photo'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
