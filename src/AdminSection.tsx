@@ -10,6 +10,7 @@ import {
   BookOpen,
   Gavel,
   Users,
+  Car,
   Settings,
   Plus,
   Pencil,
@@ -25,8 +26,10 @@ const client = generateClient<Schema>();
 
 type Event = Schema['Event']['type'];
 type Magazine = Schema['Magazine']['type'];
+type Make = Schema['Make']['type'];
+type Model = Schema['Model']['type'];
 
-type AdminTab = 'home' | 'events' | 'rooms' | 'magazines' | 'auctions' | 'settings';
+type AdminTab = 'home' | 'events' | 'rooms' | 'magazines' | 'auctions' | 'wikicars' | 'settings';
 
 declare global {
   interface Window {
@@ -43,6 +46,7 @@ export function AdminSection() {
     { id: 'rooms', label: 'Rooms', icon: Users },
     { id: 'magazines', label: 'Magazines', icon: BookOpen },
     { id: 'auctions', label: 'Auctions', icon: Gavel },
+    { id: 'wikicars', label: 'WikiCars', icon: Car },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -77,6 +81,7 @@ export function AdminSection() {
         {activeTab === 'rooms' && <RoomsAdmin />}
         {activeTab === 'magazines' && <MagazinesAdmin />}
         {activeTab === 'auctions' && <AuctionsAdmin />}
+        {activeTab === 'wikicars' && <WikiCarsAdmin />}
         {activeTab === 'settings' && <SettingsAdmin />}
       </div>
     </div>
@@ -1771,6 +1776,299 @@ function AuctionsAdmin() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================
+// WIKICARS ADMIN - Manage Makes/Models
+// ============================================
+function WikiCarsAdmin() {
+  const [makes, setMakes] = useState<Make[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [makeForm, setMakeForm] = useState({ makeId: '', makeName: '', country: '' });
+  const [modelForm, setModelForm] = useState({ makeId: '', modelName: '' });
+  const [editingMakeId, setEditingMakeId] = useState<string | null>(null);
+  const [editingModelId, setEditingModelId] = useState<string | null>(null);
+  const [makeEditValues, setMakeEditValues] = useState({ makeName: '', country: '' });
+  const [modelEditValues, setModelEditValues] = useState({ modelName: '' });
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [makesResult, modelsResult] = await Promise.all([
+          client.models.Make.list({ limit: 500 }),
+          client.models.Model.list({ limit: 1000 }),
+        ]);
+        const sortedMakes = (makesResult.data || []).sort((a, b) => a.makeName.localeCompare(b.makeName));
+        const sortedModels = (modelsResult.data || []).sort((a, b) => a.modelName.localeCompare(b.modelName));
+        setMakes(sortedMakes);
+        setModels(sortedModels);
+      } catch (error) {
+        console.error('Failed to load WikiCars data', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const handleAddMake = async () => {
+    if (!makeForm.makeId.trim() || !makeForm.makeName.trim()) {
+      alert('Please enter a make ID and name.');
+      return;
+    }
+    try {
+      const created = await client.models.Make.create({
+        makeId: makeForm.makeId.trim(),
+        makeName: makeForm.makeName.trim(),
+        country: makeForm.country.trim() || undefined,
+      });
+      if (created.data) {
+        setMakes((prev) => [...prev, created.data].sort((a, b) => a.makeName.localeCompare(b.makeName)));
+      }
+      setMakeForm({ makeId: '', makeName: '', country: '' });
+    } catch (error) {
+      console.error('Failed to add make', error);
+      alert('Failed to add make.');
+    }
+  };
+
+  const handleAddModel = async () => {
+    if (!modelForm.makeId || !modelForm.modelName.trim()) {
+      alert('Please select a make and enter a model name.');
+      return;
+    }
+    const makeName = makes.find((make) => make.makeId === modelForm.makeId)?.makeName || modelForm.makeId;
+    const slug = modelForm.modelName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const modelId = `${modelForm.makeId}-${slug}`;
+    try {
+      const created = await client.models.Model.create({
+        modelId,
+        makeId: modelForm.makeId,
+        modelName: modelForm.modelName.trim(),
+        fullName: `${makeName} ${modelForm.modelName.trim()}`,
+      });
+      if (created.data) {
+        setModels((prev) => [...prev, created.data].sort((a, b) => a.modelName.localeCompare(b.modelName)));
+      }
+      setModelForm({ makeId: '', modelName: '' });
+    } catch (error) {
+      console.error('Failed to add model', error);
+      alert('Failed to add model.');
+    }
+  };
+
+  const startEditMake = (make: Make) => {
+    setEditingMakeId(make.makeId);
+    setMakeEditValues({ makeName: make.makeName, country: make.country || '' });
+  };
+
+  const saveEditMake = async () => {
+    if (!editingMakeId) return;
+    try {
+      const updated = await client.models.Make.update({
+        makeId: editingMakeId,
+        makeName: makeEditValues.makeName.trim(),
+        country: makeEditValues.country.trim() || undefined,
+      });
+      if (updated.data) {
+        setMakes((prev) => prev.map((make) => (make.makeId === editingMakeId ? updated.data as Make : make)));
+      }
+      setEditingMakeId(null);
+    } catch (error) {
+      console.error('Failed to update make', error);
+      alert('Failed to update make.');
+    }
+  };
+
+  const startEditModel = (model: Model) => {
+    setEditingModelId(model.modelId);
+    setModelEditValues({ modelName: model.modelName });
+  };
+
+  const saveEditModel = async () => {
+    if (!editingModelId) return;
+    const model = models.find((entry) => entry.modelId === editingModelId);
+    if (!model) return;
+    const makeName = makes.find((make) => make.makeId === model.makeId)?.makeName || model.makeId;
+    try {
+      const updated = await client.models.Model.update({
+        modelId: model.modelId,
+        makeId: model.makeId,
+        modelName: modelEditValues.modelName.trim(),
+        fullName: `${makeName} ${modelEditValues.modelName.trim()}`,
+      });
+      if (updated.data) {
+        setModels((prev) => prev.map((entry) => (entry.modelId === editingModelId ? updated.data as Model : entry)));
+      }
+      setEditingModelId(null);
+    } catch (error) {
+      console.error('Failed to update model', error);
+      alert('Failed to update model.');
+    }
+  };
+
+  if (loading) {
+    return <div className="admin-panel">Loading makes and models...</div>;
+  }
+
+  return (
+    <div className="admin-panel">
+      <div className="admin-panel__header">
+        <h2>WikiCars</h2>
+      </div>
+
+      <div style={{ display: 'grid', gap: '2rem' }}>
+        <div>
+          <h3 style={{ marginBottom: '0.75rem' }}>Makes</h3>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <input
+              type="text"
+              placeholder="Make ID"
+              value={makeForm.makeId}
+              onChange={(e) => setMakeForm((prev) => ({ ...prev, makeId: e.target.value }))}
+            />
+            <input
+              type="text"
+              placeholder="Make name"
+              value={makeForm.makeName}
+              onChange={(e) => setMakeForm((prev) => ({ ...prev, makeName: e.target.value }))}
+            />
+            <input
+              type="text"
+              placeholder="Country"
+              value={makeForm.country}
+              onChange={(e) => setMakeForm((prev) => ({ ...prev, country: e.target.value }))}
+            />
+            <button className="admin-btn admin-btn--primary" type="button" onClick={handleAddMake}>
+              Add make
+            </button>
+          </div>
+
+          <div className="admin-table-container">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Make ID</th>
+                  <th>Make name</th>
+                  <th>Country</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {makes.map((make) => (
+                  <tr key={make.makeId}>
+                    <td>{make.makeId}</td>
+                    <td>
+                      {editingMakeId === make.makeId ? (
+                        <input
+                          type="text"
+                          value={makeEditValues.makeName}
+                          onChange={(e) => setMakeEditValues((prev) => ({ ...prev, makeName: e.target.value }))}
+                        />
+                      ) : (
+                        make.makeName
+                      )}
+                    </td>
+                    <td>
+                      {editingMakeId === make.makeId ? (
+                        <input
+                          type="text"
+                          value={makeEditValues.country}
+                          onChange={(e) => setMakeEditValues((prev) => ({ ...prev, country: e.target.value }))}
+                        />
+                      ) : (
+                        make.country || '—'
+                      )}
+                    </td>
+                    <td>
+                      {editingMakeId === make.makeId ? (
+                        <button className="admin-btn admin-btn--primary" type="button" onClick={saveEditMake}>
+                          Save
+                        </button>
+                      ) : (
+                        <button className="admin-btn admin-btn--secondary" type="button" onClick={() => startEditMake(make)}>
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <h3 style={{ marginBottom: '0.75rem' }}>Models</h3>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <select
+              value={modelForm.makeId}
+              onChange={(e) => setModelForm((prev) => ({ ...prev, makeId: e.target.value }))}
+            >
+              <option value="">Select make</option>
+              {makes.map((make) => (
+                <option key={make.makeId} value={make.makeId}>
+                  {make.makeName}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="Model name"
+              value={modelForm.modelName}
+              onChange={(e) => setModelForm((prev) => ({ ...prev, modelName: e.target.value }))}
+            />
+            <button className="admin-btn admin-btn--primary" type="button" onClick={handleAddModel}>
+              Add model
+            </button>
+          </div>
+
+          <div className="admin-table-container">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Make</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {models.map((model) => (
+                  <tr key={model.modelId}>
+                    <td>
+                      {editingModelId === model.modelId ? (
+                        <input
+                          type="text"
+                          value={modelEditValues.modelName}
+                          onChange={(e) => setModelEditValues({ modelName: e.target.value })}
+                        />
+                      ) : (
+                        model.modelName
+                      )}
+                    </td>
+                    <td>{makes.find((make) => make.makeId === model.makeId)?.makeName || model.makeId}</td>
+                    <td>
+                      {editingModelId === model.modelId ? (
+                        <button className="admin-btn admin-btn--primary" type="button" onClick={saveEditModel}>
+                          Save
+                        </button>
+                      ) : (
+                        <button className="admin-btn admin-btn--secondary" type="button" onClick={() => startEditModel(model)}>
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

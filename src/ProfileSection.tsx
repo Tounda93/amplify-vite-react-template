@@ -25,6 +25,8 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
@@ -56,10 +58,24 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
           const resolved = await getImageUrl(profile.avatarUrl);
           if (resolved) {
             setAvatarPreview(resolved);
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem('collectible.profileAvatar', resolved);
+            }
+          }
+        } else if (typeof window !== 'undefined') {
+          const cached = window.localStorage.getItem('collectible.profileAvatar');
+          if (cached) {
+            setAvatarPreview(cached);
           }
         }
       } catch (error) {
         console.error('Failed to load profile', error);
+        if (typeof window !== 'undefined') {
+          const cached = window.localStorage.getItem('collectible.profileAvatar');
+          if (cached) {
+            setAvatarPreview(cached);
+          }
+        }
       }
     };
 
@@ -77,7 +93,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const userEmail = user?.signInDetails?.loginId || 'user@example.com';
   const userInitial = userEmail.charAt(0).toUpperCase();
 
-  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
@@ -90,17 +106,26 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
       URL.revokeObjectURL(blobUrlRef.current);
     }
     blobUrlRef.current = previewUrl;
-    setAvatarPreview(previewUrl);
-    setUploadingAvatar(true);
+    setPendingAvatar(previewUrl);
+    setPendingFile(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
+  const handleConfirmAvatar = async () => {
+    if (!pendingFile) {
+      return;
+    }
+    setUploadingAvatar(true);
     try {
       const timestamp = Date.now();
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const sanitizedName = pendingFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const result = await uploadData({
         path: ({ identityId }) => `profile-photos/${identityId}/${timestamp}-${sanitizedName}`,
-        data: file,
+        data: pendingFile,
         options: {
-          contentType: file.type,
+          contentType: pendingFile.type,
         },
       }).result;
 
@@ -119,15 +144,17 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
       const resolved = await getImageUrl(result.path);
       if (resolved) {
         setAvatarPreview(resolved);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('collectible.profileAvatar', resolved);
+        }
       }
+      setPendingAvatar(null);
+      setPendingFile(null);
     } catch (error) {
       console.error('Failed to upload profile image', error);
       alert('Failed to upload profile image. Please try again.');
     } finally {
       setUploadingAvatar(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
@@ -148,8 +175,8 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
             width: '120px',
             height: '120px',
             borderRadius: '50%',
-            background: avatarPreview ? `url(${avatarPreview})` : '#ffffff',
-            backgroundSize: avatarPreview ? 'contain' : 'cover',
+            background: (pendingAvatar || avatarPreview) ? `url(${pendingAvatar || avatarPreview})` : '#ffffff',
+            backgroundSize: (pendingAvatar || avatarPreview) ? 'contain' : 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
             display: 'flex',
@@ -173,7 +200,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
           }}
           aria-label="Open profile photo"
           >
-            {!avatarPreview && userInitial}
+            {!pendingAvatar && !avatarPreview && userInitial}
           </div>
           <input
             ref={fileInputRef}
@@ -475,7 +502,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
                 height: '420px',
                 borderRadius: '10px',
                 backgroundColor: '#f3f4f6',
-                backgroundImage: avatarPreview ? `url(${avatarPreview})` : 'none',
+                backgroundImage: (pendingAvatar || avatarPreview) ? `url(${pendingAvatar || avatarPreview})` : 'none',
                 backgroundSize: 'contain',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
@@ -487,14 +514,19 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
                 fontWeight: 700,
               }}
             >
-              {!avatarPreview && userInitial}
+              {!pendingAvatar && !avatarPreview && userInitial}
             </div>
             <button
               type="button"
               onClick={() => {
-                if (!uploadingAvatar) {
-                  fileInputRef.current?.click();
+                if (uploadingAvatar) {
+                  return;
                 }
+                if (pendingAvatar) {
+                  handleConfirmAvatar();
+                  return;
+                }
+                fileInputRef.current?.click();
               }}
               style={{
                 position: 'absolute',
@@ -510,7 +542,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
                 opacity: uploadingAvatar ? 0.6 : 1,
               }}
             >
-              {avatarPreview ? 'Change photo' : 'Upload photo'}
+              {pendingAvatar ? 'Confirm photo' : avatarPreview ? 'Change photo' : 'Upload photo'}
             </button>
           </div>
         </div>

@@ -50,6 +50,13 @@ export const addRoom = (room: RoomRecord) => {
   return next;
 };
 
+export const updateRoom = (roomId: string, updates: Partial<RoomRecord>) => {
+  const rooms = loadRooms();
+  const next = rooms.map((room) => (room.id === roomId ? { ...room, ...updates } : room));
+  saveRooms(next);
+  return next.find((room) => room.id === roomId) || null;
+};
+
 export const getRoomById = (roomId: string) => {
   const rooms = loadRooms();
   return rooms.find((room) => room.id === roomId) || null;

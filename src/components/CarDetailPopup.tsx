@@ -671,6 +671,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                     background: '#fff',
                     cursor: isUploading ? 'not-allowed' : 'pointer',
                     fontSize: '0.875rem',
+                    color: '#111',
                   }}
                 >
                   {isUploading ? 'Uploading…' : 'Upload photos'}

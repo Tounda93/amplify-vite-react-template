@@ -50,6 +50,7 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [customModelName, setCustomModelName] = useState('');
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +85,7 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
       setFilteredModels(filtered);
       // Reset model selection when make changes
       if (!filtered.find(m => m.modelId === formData.modelId)) {
-        setFormData(prev => ({ ...prev, modelId: '' }));
+        setFormData(prev => ({ ...prev, modelId: filtered.length === 0 ? 'custom' : '' }));
       }
     } else {
       setFilteredModels([]);
@@ -200,11 +201,32 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
       ].filter(Boolean);
       const combinedDescription = descriptionParts.join('\n\n');
 
+      let modelIdToUse = formData.modelId;
+      if (formData.modelId === 'custom') {
+        const trimmedModel = customModelName.trim();
+        if (!trimmedModel) {
+          alert('Please enter a model name.');
+          setSaving(false);
+          return;
+        }
+        const makeName = makes.find((make) => make.makeId === formData.makeId)?.makeName || formData.makeId;
+        const safeModelId = `${formData.makeId}-${trimmedModel.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
+        const createdModel = await client.models.Model.create({
+          modelId: safeModelId,
+          makeId: formData.makeId,
+          modelName: trimmedModel,
+          fullName: `${makeName} ${trimmedModel}`,
+        });
+        modelIdToUse = createdModel.data?.modelId || safeModelId;
+        setModels((prev) => [...prev, createdModel.data as Model]);
+        setFilteredModels((prev) => [...prev, createdModel.data as Model]);
+      }
+
       // Create car first to get the ID
       const carResult = await client.models.Car.create({
         ownerId: userId,
         makeId: formData.makeId,
-        modelId: formData.modelId,
+        modelId: modelIdToUse,
         year: year,
         vin: formData.vin || undefined,
         mileage: formData.mileage ? Number(formData.mileage) : undefined,
@@ -262,6 +284,7 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
       fuelType: '',
       price: '',
     });
+    setCustomModelName('');
     setIsForSale(false);
     // Clean up photo previews
     photoPreviews.forEach(url => URL.revokeObjectURL(url));
@@ -545,6 +568,9 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
                           {model.modelName}
                         </option>
                       ))}
+                      {formData.makeId && (
+                        <option value="custom">Add a new model...</option>
+                      )}
                     </select>
                     <ChevronDown
                       size={18}
@@ -558,6 +584,15 @@ export default function AddCarPopup({ isOpen, onClose, onCarAdded }: AddCarPopup
                       }}
                     />
                   </div>
+                  {(formData.modelId === 'custom' || (formData.makeId && filteredModels.length === 0)) && (
+                    <input
+                      type="text"
+                      value={customModelName}
+                      onChange={(e) => setCustomModelName(e.target.value)}
+                      placeholder="Enter model name"
+                      style={{ ...inputStyle, marginTop: '0.5rem' }}
+                    />
+                  )}
                 </div>
 
                 {/* Year of manufacture (required) */}

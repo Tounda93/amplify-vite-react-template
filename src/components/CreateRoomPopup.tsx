@@ -48,7 +48,9 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
     try {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        const preview = reader.result as string;
+        setImagePreview(preview);
+        setNewRoom((prev) => ({ ...prev, coverImage: preview }));
       };
       reader.readAsDataURL(file);
 
@@ -63,11 +65,9 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
         },
       }).result;
 
-      setNewRoom({ ...newRoom, coverImage: result.path });
+      setNewRoom((prev) => ({ ...prev, coverImage: result.path }));
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
-      setImagePreview(null);
     } finally {
       setUploading(false);
     }
