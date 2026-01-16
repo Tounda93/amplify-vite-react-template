@@ -602,7 +602,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
           )}
 
           {/* ROOMS SECTION */}
-          {activeSection === 'rooms' && (
+          {activeSection === 'rooms' && !location.pathname.startsWith('/rooms/') && (
             <CommunitySection />
           )}
 
