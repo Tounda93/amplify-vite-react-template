@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Mail, Calendar, MapPin, Edit, Camera, Shield, LogOut } from 'lucide-react';
+import { User, Mail, Calendar, MapPin, Edit, Shield, LogOut } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { uploadData } from 'aws-amplify/storage';
 import type { Schema } from '../amplify/data/resource';

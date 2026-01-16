@@ -50,7 +50,7 @@ export default function NewsCard({
   imageUrl,
   category,
   authorName,
-  authorImage,
+  authorImage: _authorImage,
   description,
   separatorText,
   requirement,
@@ -73,9 +73,6 @@ export default function NewsCard({
   // Support legacy props
   const displayCategory = category || title1 || 'Post';
   const displayDescription = description || title2;
-
-  // Default profile picture
-  const defaultProfilePic = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face';
 
   const handleActionClick = (e: React.MouseEvent, handler?: () => void) => {
     e.stopPropagation();
