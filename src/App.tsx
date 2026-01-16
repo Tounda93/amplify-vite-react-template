@@ -42,6 +42,7 @@ import { importAllData } from './importData';
 import { isAdminEmail } from './constants/admins';
 import { NewsItem, fetchNewsFeedItems } from './utils/newsFeed';
 import { SearchResultItem, SearchResultGroups } from './types/search';
+import RoomPage from './components/RoomPage';
 
 const client = generateClient<Schema>();
 
@@ -52,7 +53,7 @@ type AuctionModel = Schema['Auction']['type'];
 
 const SAVED_EVENTS_STORAGE_KEY = 'collectible.savedEvents';
 
-const COMMUNITY_THREADS = [
+const ROOM_THREADS = [
   {
     id: 'lotus-owners-meet',
     title: 'Lotus Owners Meet 2024',
@@ -79,7 +80,7 @@ const getEmptySearchResults = (): SearchResultGroups => ({
   news: [],
   events: [],
   auctions: [],
-  community: [],
+  rooms: [],
 });
 
 // =====================================================
@@ -103,7 +104,7 @@ const sectionToPath: Record<string, string> = {
   home: '/home',
   events: '/events',
   news: '/news',
-  community: '/community',
+  rooms: '/rooms',
   garage: '/mygarage',
   profile: '/profile',
   chat: '/chat',
@@ -119,7 +120,7 @@ const pathToSection: Record<string, string> = {
   '/home': 'home',
   '/events': 'events',
   '/news': 'news',
-  '/community': 'community',
+  '/rooms': 'rooms',
   '/mygarage': 'garage',
   '/profile': 'profile',
   '/chat': 'chat',
@@ -138,6 +139,9 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   // Get initial section from URL path
   const getInitialSection = () => {
     const path = location.pathname;
+    if (path.startsWith('/rooms/')) {
+      return 'rooms';
+    }
     return pathToSection[path] || 'home';
   };
 
@@ -240,7 +244,9 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
   // Sync activeSection with URL path changes (browser back/forward)
   useEffect(() => {
-    const section = pathToSection[location.pathname] || 'home';
+    const section = location.pathname.startsWith('/rooms/')
+      ? 'rooms'
+      : (pathToSection[location.pathname] || 'home');
     setActiveSection(section);
   }, [location.pathname]);
 
@@ -373,17 +379,17 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       }));
   };
 
-  const getCommunityResults = (term: string): SearchResultItem[] => {
+  const getRoomsResults = (term: string): SearchResultItem[] => {
     const query = term.toLowerCase();
-    return COMMUNITY_THREADS
+    return ROOM_THREADS
       .filter((thread) => {
         const haystack = `${thread.title} ${thread.excerpt}`.toLowerCase();
         return haystack.includes(query);
       })
       .slice(0, 5)
       .map((thread) => ({
-        id: `community-${thread.id}`,
-        category: 'community',
+        id: `room-${thread.id}`,
+        category: 'rooms',
         title: thread.title,
         description: thread.excerpt,
       }));
@@ -402,11 +408,11 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     const runSearch = async () => {
       setSearchLoading(true);
       try {
-        const [news, events, auctions, community] = await Promise.all([
+        const [news, events, auctions, rooms] = await Promise.all([
           getNewsResults(term),
           getEventResults(term),
           getAuctionResults(term),
-          Promise.resolve(getCommunityResults(term)),
+          Promise.resolve(getRoomsResults(term)),
         ]);
 
         if (!cancelled) {
@@ -414,7 +420,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
             news,
             events,
             auctions,
-            community,
+            rooms,
           });
         }
       } catch (error) {
@@ -500,9 +506,9 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       if (result.url) {
         window.open(result.url, '_blank');
       }
-    } else if (result.category === 'community') {
-      setActiveSection('community');
-      navigate('/community');
+    } else if (result.category === 'rooms') {
+      setActiveSection('rooms');
+      navigate('/rooms');
     }
 
     setSearchTerm('');
@@ -595,8 +601,8 @@ function CarSearch({ user, signOut }: CarSearchProps) {
             <EventsSection onSaveEvent={handleSaveEvent} />
           )}
 
-          {/* COMMUNITY SECTION */}
-          {activeSection === 'community' && (
+          {/* ROOMS SECTION */}
+          {activeSection === 'rooms' && (
             <CommunitySection />
           )}
 
@@ -641,8 +647,13 @@ function CarSearch({ user, signOut }: CarSearchProps) {
             </div>
           )}
 
+          {/* ROOM DETAIL PAGE */}
+          {location.pathname.startsWith('/rooms/') && (
+            <RoomPage />
+          )}
+
           {/* HOME SECTION - New HomePage component with all sections */}
-          {activeSection === 'home' && !selectedMake && makes.length === 0 && (
+          {!location.pathname.startsWith('/rooms/') && activeSection === 'home' && !selectedMake && makes.length === 0 && (
             <HomePage />
           )}
 

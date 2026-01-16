@@ -19,7 +19,7 @@ const searchSections: Array<{ key: keyof SearchResultGroups; label: string; acce
   { key: 'news', label: 'News', accent: '#dc2626' },
   { key: 'events', label: 'Events', accent: '#059669' },
   { key: 'auctions', label: 'Auctions', accent: '#b45309' },
-  { key: 'community', label: 'Community', accent: '#7c3aed' },
+  { key: 'rooms', label: 'Rooms', accent: '#7c3aed' },
 ];
 
 export default function SearchBar({

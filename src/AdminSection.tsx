@@ -3,11 +3,13 @@ import { generateClient } from 'aws-amplify/data';
 import { uploadData, getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../amplify/data/resource';
 import { getImageUrl } from './utils/storageHelpers';
+import { getRoomShareUrl, loadRooms, RoomRecord } from './utils/roomsStorage';
 import {
   Home,
   Calendar,
   BookOpen,
   Gavel,
+  Users,
   Settings,
   Plus,
   Pencil,
@@ -24,7 +26,7 @@ const client = generateClient<Schema>();
 type Event = Schema['Event']['type'];
 type Magazine = Schema['Magazine']['type'];
 
-type AdminTab = 'home' | 'events' | 'magazines' | 'auctions' | 'settings';
+type AdminTab = 'home' | 'events' | 'rooms' | 'magazines' | 'auctions' | 'settings';
 
 declare global {
   interface Window {
@@ -38,6 +40,7 @@ export function AdminSection() {
   const tabs: { id: AdminTab; label: string; icon: typeof Calendar }[] = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'events', label: 'Events', icon: Calendar },
+    { id: 'rooms', label: 'Rooms', icon: Users },
     { id: 'magazines', label: 'Magazines', icon: BookOpen },
     { id: 'auctions', label: 'Auctions', icon: Gavel },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -71,6 +74,7 @@ export function AdminSection() {
       <div className="admin-section__content">
         {activeTab === 'home' && <HomeAdmin />}
         {activeTab === 'events' && <EventsAdmin />}
+        {activeTab === 'rooms' && <RoomsAdmin />}
         {activeTab === 'magazines' && <MagazinesAdmin />}
         {activeTab === 'auctions' && <AuctionsAdmin />}
         {activeTab === 'settings' && <SettingsAdmin />}
@@ -1090,6 +1094,71 @@ function EventsAdmin() {
           <div className="admin-empty">No events found. Create your first event!</div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================
+// ROOMS ADMIN
+// ============================================
+function RoomsAdmin() {
+  const [rooms, setRooms] = useState<RoomRecord[]>([]);
+
+  useEffect(() => {
+    setRooms(loadRooms());
+  }, []);
+
+  return (
+    <div className="admin-panel">
+      <div className="admin-panel__header">
+        <h2>Rooms</h2>
+      </div>
+
+      {rooms.length === 0 ? (
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          padding: '2rem',
+          color: '#6b7280',
+          textAlign: 'center'
+        }}>
+          No rooms have been created yet.
+        </div>
+      ) : (
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Room name</th>
+                <th>Visibility</th>
+                <th>Created</th>
+                <th>Room link</th>
+                <th>Members</th>
+                <th>User</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rooms.map((room) => (
+                <tr key={room.id}>
+                  <td>{room.name}</td>
+                  <td>{room.isPublic ? 'Public' : 'Private'}</td>
+                  <td>{new Date(room.createdAt).toLocaleDateString('en-GB')}</td>
+                  <td>
+                    <a href={getRoomShareUrl(room.id)} target="_blank" rel="noreferrer">
+                      {getRoomShareUrl(room.id)}
+                    </a>
+                  </td>
+                  <td>{room.memberCount ?? 0}</td>
+                  <td>
+                    <a href="/profile">{room.creatorName || 'Owner'}</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

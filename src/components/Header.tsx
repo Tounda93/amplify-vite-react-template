@@ -74,7 +74,7 @@ export default function Header({
   const categories: Category[] = [
     { id: "home", label: "Home", icon: Home },
     { id: "events", label: "Events", icon: Calendar },
-    { id: "community", label: "Rooms", icon: Users },
+    { id: "rooms", label: "Rooms", icon: Users },
     { id: "news", label: "News", icon: Newspaper },
     { id: "auctions", label: "Auctions", icon: Gavel },
   ];
@@ -86,7 +86,7 @@ export default function Header({
   const textColor = '#010101';
   const navInactiveColor = 'rgba(0, 0, 0, 0.5)';
 
-  const mobileCategoryOrder = ["home", "events", "community", "news", "auctions"];
+  const mobileCategoryOrder = ["home", "events", "rooms", "news", "auctions"];
   const mobileCategories = mobileCategoryOrder
     .map(id => categories.find(category => category.id === id))
     .filter((category): category is Category => Boolean(category));

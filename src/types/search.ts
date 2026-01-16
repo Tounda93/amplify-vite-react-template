@@ -1,4 +1,4 @@
-export type SearchCategory = 'news' | 'events' | 'auctions' | 'community';
+export type SearchCategory = 'news' | 'events' | 'auctions' | 'rooms';
 
 export interface SearchResultItem {
   id: string;

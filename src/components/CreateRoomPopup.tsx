@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
 import { uploadData } from 'aws-amplify/storage';
-import { Upload, X, Plus, Link, Users } from 'lucide-react';
+import { Upload, X, Plus, Link } from 'lucide-react';
+import { addRoom, generateRoomId, RoomRecord } from '../utils/roomsStorage';
 
 interface CreateRoomPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onRoomCreated?: () => void;
+  onRoomCreated?: (room: RoomRecord) => void;
 }
 
 export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: CreateRoomPopupProps) {
@@ -24,19 +25,9 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
     links: [] as { title: string; url: string }[],
     allowMemberEvents: false,
     isPublic: true,
-    members: [] as string[],
     applicationRules: '',
     coverImage: '',
   });
-
-  // Mock friends list (placeholder until friends feature is implemented)
-  const mockFriends = [
-    { id: '1', name: 'John Doe', avatar: '' },
-    { id: '2', name: 'Jane Smith', avatar: '' },
-    { id: '3', name: 'Mike Johnson', avatar: '' },
-    { id: '4', name: 'Sarah Williams', avatar: '' },
-    { id: '5', name: 'Chris Brown', avatar: '' },
-  ];
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,7 +83,7 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
 
   const addRule = () => {
     const trimmed = ruleInput.trim();
-    if (trimmed && newRoom.rules.length < 10) {
+    if (trimmed) {
       setNewRoom({ ...newRoom, rules: [...newRoom.rules, trimmed] });
       setRuleInput('');
     }
@@ -103,7 +94,7 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
   };
 
   const addLink = () => {
-    if (linkInput.title.trim() && linkInput.url.trim() && newRoom.links.length < 10) {
+    if (linkInput.title.trim() && linkInput.url.trim()) {
       setNewRoom({ ...newRoom, links: [...newRoom.links, { title: linkInput.title.trim(), url: linkInput.url.trim() }] });
       setLinkInput({ title: '', url: '' });
     }
@@ -113,24 +104,27 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
     setNewRoom({ ...newRoom, links: newRoom.links.filter((_, i) => i !== index) });
   };
 
-  const toggleMember = (memberId: string) => {
-    if (newRoom.members.includes(memberId)) {
-      setNewRoom({ ...newRoom, members: newRoom.members.filter(id => id !== memberId) });
-    } else {
-      setNewRoom({ ...newRoom, members: [...newRoom.members, memberId] });
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      // TODO: Save room to database when Room model is added
-      console.log('Creating room:', newRoom);
-      alert('Room created successfully!');
-
+      const newRoomRecord: RoomRecord = {
+        id: generateRoomId(newRoom.title),
+        name: newRoom.title.trim(),
+        description: newRoom.description.trim(),
+        coverImage: newRoom.coverImage || undefined,
+        isPublic: newRoom.isPublic,
+        allowMemberEvents: newRoom.allowMemberEvents,
+        rules: newRoom.rules,
+        links: newRoom.links,
+        requirementsToJoin: newRoom.applicationRules.trim(),
+        createdAt: new Date().toISOString(),
+        memberCount: 1,
+        creatorName: 'Owner',
+      };
+      addRoom(newRoomRecord);
       resetForm();
-      onRoomCreated?.();
+      onRoomCreated?.(newRoomRecord);
       onClose();
     } catch (error) {
       console.error('Error saving room:', error);
@@ -146,7 +140,6 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
       links: [],
       allowMemberEvents: false,
       isPublic: true,
-      members: [],
       applicationRules: '',
       coverImage: '',
     });
@@ -251,31 +244,6 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-              {/* Title */}
-              <div>
-                <label style={labelStyle}>Room Title *</label>
-                <input
-                  type="text"
-                  value={newRoom.title}
-                  onChange={(e) => setNewRoom({ ...newRoom, title: e.target.value })}
-                  required
-                  placeholder="e.g., Classic Porsche Enthusiasts"
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label style={labelStyle}>Description</label>
-                <textarea
-                  value={newRoom.description}
-                  onChange={(e) => setNewRoom({ ...newRoom, description: e.target.value })}
-                  placeholder="Describe your room..."
-                  rows={4}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-              </div>
-
               {/* Cover Image */}
               <div>
                 <label style={labelStyle}>Cover Image</label>
@@ -351,9 +319,34 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
                 )}
               </div>
 
+              {/* Room name */}
+              <div>
+                <label style={labelStyle}>Room name *</label>
+                <input
+                  type="text"
+                  value={newRoom.title}
+                  onChange={(e) => setNewRoom({ ...newRoom, title: e.target.value })}
+                  required
+                  placeholder="e.g., Classic Porsche Enthusiasts"
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label style={labelStyle}>Description</label>
+                <textarea
+                  value={newRoom.description}
+                  onChange={(e) => setNewRoom({ ...newRoom, description: e.target.value })}
+                  placeholder="Describe your room..."
+                  rows={4}
+                  style={{ ...inputStyle, resize: 'vertical' }}
+                />
+              </div>
+
               {/* Public/Private Toggle */}
               <div>
-                <label style={labelStyle}>Room Visibility *</label>
+                <label style={{ ...labelStyle, color: '#000' }}>Room Visibility *</label>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <button
                     type="button"
@@ -366,6 +359,7 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
                       backgroundColor: newRoom.isPublic ? '#f8f8f8' : '#fff',
                       cursor: 'pointer',
                       fontWeight: newRoom.isPublic ? 600 : 400,
+                      color: '#000',
                     }}
                   >
                     Public Room
@@ -381,6 +375,7 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
                       backgroundColor: !newRoom.isPublic ? '#f8f8f8' : '#fff',
                       cursor: 'pointer',
                       fontWeight: !newRoom.isPublic ? 600 : 400,
+                      color: '#000',
                     }}
                   >
                     Private Room
@@ -390,7 +385,7 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
 
               {/* Allow Member Events Toggle */}
               <div>
-                <label style={labelStyle}>Allow members to create public events</label>
+                <label style={{ ...labelStyle, color: '#000' }}>Allow members to create events</label>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <button
                     type="button"
@@ -403,6 +398,7 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
                       backgroundColor: newRoom.allowMemberEvents ? '#f8f8f8' : '#fff',
                       cursor: 'pointer',
                       fontWeight: newRoom.allowMemberEvents ? 600 : 400,
+                      color: '#000',
                     }}
                   >
                     Yes
@@ -418,6 +414,7 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
                       backgroundColor: !newRoom.allowMemberEvents ? '#f8f8f8' : '#fff',
                       cursor: 'pointer',
                       fontWeight: !newRoom.allowMemberEvents ? 600 : 400,
+                      color: '#000',
                     }}
                   >
                     No
@@ -505,9 +502,6 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
                     ))}
                   </div>
                 )}
-                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#666' }}>
-                  {newRoom.rules.length}/10 rules added
-                </p>
               </div>
 
               {/* Links (up to 10) */}
@@ -605,84 +599,11 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
                     ))}
                   </div>
                 )}
-                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#666' }}>
-                  {newRoom.links.length}/10 links added
-                </p>
               </div>
 
-              {/* Add Members */}
+              {/* Requirements to join */}
               <div>
-                <label style={labelStyle}>
-                  <Users size={16} style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                  Add Members (from your friends)
-                </label>
-                <div style={{
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                }}>
-                  {mockFriends.length > 0 ? (
-                    mockFriends.map((friend) => (
-                      <div
-                        key={friend.id}
-                        onClick={() => toggleMember(friend.id)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          padding: '0.75rem 1rem',
-                          cursor: 'pointer',
-                          backgroundColor: newRoom.members.includes(friend.id) ? '#f0f7ff' : 'transparent',
-                          borderBottom: '1px solid #eee',
-                          transition: 'background-color 0.2s',
-                        }}
-                      >
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '50%',
-                          backgroundColor: '#e0e0e0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          color: '#666',
-                        }}>
-                          {friend.name.charAt(0)}
-                        </div>
-                        <span style={{ flex: 1, fontSize: '0.875rem' }}>{friend.name}</span>
-                        <div style={{
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '4px',
-                          border: newRoom.members.includes(friend.id) ? '2px solid #000' : '2px solid #ccc',
-                          backgroundColor: newRoom.members.includes(friend.id) ? '#000' : 'transparent',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
-                          {newRoom.members.includes(friend.id) && (
-                            <span style={{ color: 'white', fontSize: '12px' }}>✓</span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p style={{ padding: '1rem', color: '#666', textAlign: 'center', margin: 0 }}>
-                      No friends to add. Add friends from your profile first.
-                    </p>
-                  )}
-                </div>
-                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#666' }}>
-                  {newRoom.members.length} member{newRoom.members.length !== 1 ? 's' : ''} selected
-                </p>
-              </div>
-
-              {/* Application Rules */}
-              <div>
-                <label style={labelStyle}>Application Rules</label>
+                <label style={labelStyle}>Requirements to join</label>
                 <textarea
                   value={newRoom.applicationRules}
                   onChange={(e) => setNewRoom({ ...newRoom, applicationRules: e.target.value })}
@@ -690,9 +611,6 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
                   rows={3}
                   style={{ ...inputStyle, resize: 'vertical' }}
                 />
-                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#666' }}>
-                  Leave empty if no application is required
-                </p>
               </div>
             </div>
 
