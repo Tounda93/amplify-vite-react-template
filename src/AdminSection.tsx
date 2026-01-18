@@ -1526,6 +1526,7 @@ function AuctionsAdmin() {
   const [showForm, setShowForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [coverUrlInput, setCoverUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const padNumber = (value: number) => value.toString().padStart(2, '0');
@@ -1598,6 +1599,7 @@ function AuctionsAdmin() {
   const resetForm = () => {
     setFormData(buildEmptyForm());
     setImagePreview(null);
+    setCoverUrlInput('');
     setShowForm(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -1627,6 +1629,23 @@ function AuctionsAdmin() {
     if (file) {
       handleImageUpload(file);
     }
+  };
+
+  const handleCoverUrlApply = () => {
+    const trimmed = coverUrlInput.trim();
+    if (!trimmed) {
+      alert('Please enter an image URL.');
+      return;
+    }
+    try {
+      new URL(trimmed);
+    } catch {
+      alert('Please enter a valid URL.');
+      return;
+    }
+    setFormData(prev => ({ ...prev, coverImage: trimmed }));
+    setImagePreview(trimmed);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1683,6 +1702,22 @@ function AuctionsAdmin() {
                       disabled={uploading}
                     >
                       {uploading ? 'Uploading...' : '+ Add'}
+                    </button>
+                  </div>
+                  <div className="admin-form__row" style={{ marginTop: '0.75rem' }}>
+                    <input
+                      type="url"
+                      placeholder="Paste image URL"
+                      value={coverUrlInput}
+                      onChange={(e) => setCoverUrlInput(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCoverUrlApply}
+                      className="admin-btn admin-btn--secondary"
+                      disabled={uploading}
+                    >
+                      Use URL
                     </button>
                   </div>
                 </div>

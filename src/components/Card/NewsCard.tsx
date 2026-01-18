@@ -20,6 +20,8 @@ export interface NewsCardProps {
   requirement?: string;
   /** Card variant for different layouts */
   variant?: NewsCardVariant;
+  /** Hide the category badge */
+  hideCategory?: boolean;
   /** Click handler when card is clicked */
   onClick?: () => void;
   /** Additional CSS class names */
@@ -55,6 +57,7 @@ export default function NewsCard({
   separatorText,
   requirement,
   variant = 'default',
+  hideCategory = false,
   onClick,
   className = '',
   imageAlt = '',
@@ -73,6 +76,7 @@ export default function NewsCard({
   // Support legacy props
   const displayCategory = category || title1 || 'Post';
   const displayDescription = description || title2;
+  const shouldShowCategory = !hideCategory && displayCategory;
 
   const handleActionClick = (e: React.MouseEvent, handler?: () => void) => {
     e.stopPropagation();
@@ -95,7 +99,9 @@ export default function NewsCard({
       {/* Card Header - Category, Author, Description */}
       <div className="card__header">
         {/* Category Badge */}
-        <span className="card__category">{displayCategory}</span>
+        {shouldShowCategory && (
+          <span className="card__category">{displayCategory}</span>
+        )}
 
         {/* Author Info */}
         <div className="card__author">

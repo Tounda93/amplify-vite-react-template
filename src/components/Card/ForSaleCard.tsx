@@ -20,9 +20,10 @@ export default function ForSaleCard({
         style={{ backgroundImage: `url(${imageUrl})` }}
         role="img"
         aria-label={title}
-      />
-      <div className="for-sale-card__body">
+      >
         <div className="for-sale-card__eyebrow">FOR SALE</div>
+      </div>
+      <div className="for-sale-card__body">
         <div className="for-sale-card__header">
           <h3 className="for-sale-card__title">{title}</h3>
           <span className="for-sale-card__price">{priceLabel}</span>

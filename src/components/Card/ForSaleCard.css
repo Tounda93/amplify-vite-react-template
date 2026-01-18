@@ -15,6 +15,7 @@
   background-size: cover;
   background-position: center;
   background-color: #e5e7eb;
+  position: relative;
 }
 
 .for-sale-card__body {
@@ -25,10 +26,16 @@
 }
 
 .for-sale-card__eyebrow {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.8);
+  color: #f9fafb;
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #6b7280;
   font-weight: 600;
 }
 

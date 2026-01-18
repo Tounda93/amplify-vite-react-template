@@ -2,7 +2,10 @@ import { getUrl } from 'aws-amplify/storage';
 
 // Helper to check if a string is a storage path or a URL
 export const isStoragePath = (str: string): boolean => {
-  return str.startsWith('car-photos/') || str.startsWith('event-photos/') || str.startsWith('hero/');
+  return str.startsWith('car-photos/')
+    || str.startsWith('event-photos/')
+    || str.startsWith('auction-photos/')
+    || str.startsWith('hero/');
 };
 
 // Convert a storage path to a URL, or return the string if it's already a URL

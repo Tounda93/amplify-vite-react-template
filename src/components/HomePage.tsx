@@ -197,6 +197,7 @@ export default function HomePage() {
                     key={`news-${index}`}
                     imageUrl={newsItem.thumbnail || FALLBACK_IMAGE}
                     category="NEWS"
+                    hideCategory
                     authorName={newsItem.source}
                     description={newsItem.title}
                     onClick={() => window.open(newsItem.link, '_blank', 'noopener,noreferrer')}

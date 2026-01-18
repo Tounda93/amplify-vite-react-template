@@ -24,6 +24,8 @@ export default function RoomPage() {
   const [isJoined, setIsJoined] = useState(false);
   const [showJoinMenu, setShowJoinMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const postImageInputRef = useRef<HTMLInputElement>(null);
+  const postFileInputRef = useRef<HTMLInputElement>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
 
@@ -161,6 +163,24 @@ export default function RoomPage() {
     const updated = addRoomPost(post);
     setPosts(updated);
     setNewPost('');
+  };
+
+  const handlePostImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      e.target.value = '';
+    }
+  };
+
+  const handlePostFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type.startsWith('image/')) {
+      alert('Please use Upload image for image files');
+      e.target.value = '';
+    }
   };
 
   if (!room) {
@@ -311,6 +331,19 @@ export default function RoomPage() {
           flexDirection: 'column',
           gap: '0.75rem',
         }}>
+          <input
+            ref={postImageInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePostImageSelect}
+            style={{ display: 'none' }}
+          />
+          <input
+            ref={postFileInputRef}
+            type="file"
+            onChange={handlePostFileSelect}
+            style={{ display: 'none' }}
+          />
           <textarea
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
@@ -326,7 +359,37 @@ export default function RoomPage() {
               boxSizing: 'border-box',
             }}
           />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => postImageInputRef.current?.click()}
+              style={{
+                padding: '0.36rem 0.8rem',
+                borderRadius: '999px',
+                border: '1px solid #d1d5db',
+                background: '#fff',
+                color: '#111',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Upload image
+            </button>
+            <button
+              type="button"
+              onClick={() => postFileInputRef.current?.click()}
+              style={{
+                padding: '0.36rem 0.8rem',
+                borderRadius: '999px',
+                border: '1px solid #d1d5db',
+                background: '#fff',
+                color: '#111',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Upload file
+            </button>
             <button
               type="button"
               onClick={handleCreatePost}
