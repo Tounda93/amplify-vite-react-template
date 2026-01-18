@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
+import { getImageUrl } from './utils/storageHelpers';
 
 const client = generateClient<Schema>();
 
@@ -259,8 +260,7 @@ export function AuctionsSection() {
     loadAuctions();
     const subscription = client.models.Auction.observeQuery().subscribe({
       next: ({ items }) => {
-        groupAuctionsByEvent(items);
-        setLoading(false);
+        void handleAuctionsUpdate(items);
       },
     });
     return () => subscription.unsubscribe();
@@ -279,10 +279,27 @@ export function AuctionsSection() {
   const loadAuctions = async () => {
     try {
       const { data } = await client.models.Auction.list({ limit: 500 });
-      groupAuctionsByEvent(data || []);
+      await handleAuctionsUpdate(data || []);
     } catch (error) {
       console.error('Error loading auctions:', error);
     }
+    setLoading(false);
+  };
+
+  const hydrateAuctionImages = async (lots: Auction[]) => {
+    const resolved = await Promise.all(
+      lots.map(async (lot) => {
+        if (!lot.imageUrl) return lot;
+        const imageUrl = await getImageUrl(lot.imageUrl);
+        return imageUrl ? { ...lot, imageUrl } : lot;
+      })
+    );
+    return resolved;
+  };
+
+  const handleAuctionsUpdate = async (items: Auction[]) => {
+    const resolved = await hydrateAuctionImages(items);
+    groupAuctionsByEvent(resolved);
     setLoading(false);
   };
 

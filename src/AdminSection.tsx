@@ -28,6 +28,7 @@ type Event = Schema['Event']['type'];
 type Magazine = Schema['Magazine']['type'];
 type Make = Schema['Make']['type'];
 type Model = Schema['Model']['type'];
+type Auction = Schema['Auction']['type'];
 
 type AdminTab = 'home' | 'events' | 'rooms' | 'magazines' | 'auctions' | 'wikicars' | 'settings';
 
@@ -1512,6 +1513,7 @@ function MagazinesAdmin() {
 interface AuctionFormData {
   coverImage: string;
   title: string;
+  auctionHouse: string;
   startDate: string;
   startTime: string;
   startTimeZone: string;
@@ -1524,10 +1526,23 @@ interface AuctionFormData {
 
 function AuctionsAdmin() {
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [auctionEvents, setAuctionEvents] = useState<Array<{
+    id: string;
+    name: string;
+    location: string;
+    date: string;
+    auctionHouse: string;
+    coverImage: string;
+    lotCount: number;
+    lots: Auction[];
+  }>>([]);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [coverUrlInput, setCoverUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const FALLBACK_AUCTION_IMAGE = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80';
 
   const padNumber = (value: number) => value.toString().padStart(2, '0');
 
@@ -1583,6 +1598,7 @@ function AuctionsAdmin() {
     return {
       coverImage: '',
       title: '',
+      auctionHouse: '',
       startDate: defaultStart.date,
       startTime: defaultStart.time,
       startTimeZone: timeZone,
@@ -1595,6 +1611,101 @@ function AuctionsAdmin() {
   };
 
   const [formData, setFormData] = useState<AuctionFormData>(buildEmptyForm());
+
+  useEffect(() => {
+    const subscription = client.models.Auction.observeQuery().subscribe({
+      next: ({ items }) => {
+        void refreshAuctionEvents(items);
+      },
+    });
+    void loadAuctions();
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadAuctions = async () => {
+    try {
+      const { data } = await client.models.Auction.list({ limit: 500 });
+      await refreshAuctionEvents(data || []);
+    } catch (error) {
+      console.error('Error loading auctions:', error);
+    }
+    setLoading(false);
+  };
+
+  const hydrateAuctionImages = async (lots: Auction[]) => {
+    const resolved = await Promise.all(
+      lots.map(async (lot) => {
+        if (!lot.imageUrl) return lot;
+        const imageUrl = await getImageUrl(lot.imageUrl);
+        return imageUrl ? { ...lot, imageUrl } : lot;
+      })
+    );
+    return resolved;
+  };
+
+  const refreshAuctionEvents = async (lots: Auction[]) => {
+    const resolvedLots = await hydrateAuctionImages(lots);
+    const eventMap = new Map<string, {
+      id: string;
+      name: string;
+      location: string;
+      date: string;
+      auctionHouse: string;
+      coverImage: string;
+      lotCount: number;
+      lots: Auction[];
+    }>();
+
+    resolvedLots.forEach((lot) => {
+      const name = lot.auctionName || lot.auctionLocation || lot.title || 'Upcoming Auction';
+      const eventKey = `${lot.auctionHouse}-${name}`;
+      if (!eventMap.has(eventKey)) {
+        eventMap.set(eventKey, {
+          id: eventKey,
+          name,
+          location: lot.auctionLocation || 'TBA',
+          date: lot.auctionDate || '',
+          auctionHouse: lot.auctionHouse || 'Unknown',
+          coverImage: '',
+          lotCount: 0,
+          lots: [],
+        });
+      }
+      const event = eventMap.get(eventKey)!;
+      event.lots.push(lot);
+      event.lotCount = event.lots.length;
+    });
+
+    eventMap.forEach((event) => {
+      const lotWithImage = event.lots.find((lot) => lot.imageUrl && lot.imageUrl.length > 0);
+      event.coverImage = lotWithImage?.imageUrl || FALLBACK_AUCTION_IMAGE;
+    });
+
+    const events = Array.from(eventMap.values()).sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+
+    setAuctionEvents(events);
+    setLoading(false);
+  };
+
+  const toIsoDateTime = (date: string, time: string) => {
+    if (!date || !time) return null;
+    const value = new Date(`${date}T${time}`);
+    if (Number.isNaN(value.getTime())) return null;
+    return value.toISOString();
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Date TBA';
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
 
   const resetForm = () => {
     setFormData(buildEmptyForm());
@@ -1648,14 +1759,49 @@ function AuctionsAdmin() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.startDate || !formData.startTime || !formData.location) {
+    if (!formData.title || !formData.auctionHouse || !formData.startDate || !formData.startTime || !formData.location) {
       alert('Please fill in all required fields.');
       return;
     }
-    alert('Auction saved. You can now add auction lots.');
-    resetForm();
+    setSaving(true);
+    try {
+      const auctionDate = toIsoDateTime(formData.startDate, formData.startTime);
+      await client.models.Auction.create({
+        auctionHouse: formData.auctionHouse,
+        lotNumber: '1',
+        title: formData.title,
+        description: '',
+        imageUrl: formData.coverImage || undefined,
+        currency: 'USD',
+        reserveStatus: 'unknown',
+        status: 'upcoming',
+        auctionDate: auctionDate || undefined,
+        auctionLocation: formData.location,
+        auctionName: formData.title,
+        lotUrl: formData.website || undefined,
+        lastUpdated: new Date().toISOString(),
+      });
+      alert('Auction saved.');
+      resetForm();
+    } catch (error) {
+      console.error('Error saving auction:', error);
+      alert('Failed to save auction. Please try again.');
+    }
+    setSaving(false);
+  };
+
+  const deleteAuctionEvent = async (eventId: string, lots: Auction[]) => {
+    if (!confirm('Delete this auction and all associated lots?')) return;
+    try {
+      for (const lot of lots) {
+        await client.models.Auction.delete({ id: lot.id });
+      }
+      setAuctionEvents(prev => prev.filter(event => event.id !== eventId));
+    } catch (error) {
+      console.error('Error deleting auction:', error);
+    }
   };
 
   return (
@@ -1733,6 +1879,17 @@ function AuctionsAdmin() {
                 </div>
 
                 <div className="admin-form__field admin-form__field--full">
+                  <label>Auction house *</label>
+                  <input
+                    type="text"
+                    value={formData.auctionHouse}
+                    onChange={(e) => setFormData(prev => ({ ...prev, auctionHouse: e.target.value }))}
+                    placeholder="RM Sotheby's, Bonhams, Broad Arrow"
+                    required
+                  />
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
                   <label>Start date *</label>
                   <div className="admin-form__row">
                     <input
@@ -1803,14 +1960,62 @@ function AuctionsAdmin() {
                 <button type="button" className="admin-btn admin-btn--secondary" onClick={resetForm}>
                   Cancel
                 </button>
-                <button type="submit" className="admin-btn admin-btn--primary">
-                  Save auction
+                <button type="submit" className="admin-btn admin-btn--primary" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save auction'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <div className="admin-table-container" style={{ marginTop: '1.5rem' }}>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Auction</th>
+              <th>House</th>
+              <th>Location</th>
+              <th>Date</th>
+              <th>Lots</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {auctionEvents.map((event) => (
+              <tr key={event.id}>
+                <td>
+                  <div className="admin-table__title-cell">
+                    <img src={event.coverImage} alt="" className="admin-table__thumbnail" />
+                    <span>{event.name}</span>
+                  </div>
+                </td>
+                <td>{event.auctionHouse}</td>
+                <td>{event.location}</td>
+                <td>{formatDate(event.date)}</td>
+                <td>{event.lotCount}</td>
+                <td>
+                  <div className="admin-table__actions">
+                    <button
+                      onClick={() => deleteAuctionEvent(event.id, event.lots)}
+                      className="admin-action-btn admin-action-btn--danger"
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!loading && auctionEvents.length === 0 && (
+          <div className="admin-empty">No auctions found. Create your first auction!</div>
+        )}
+        {loading && (
+          <div className="admin-empty">Loading auctions...</div>
+        )}
+      </div>
     </div>
   );
 }

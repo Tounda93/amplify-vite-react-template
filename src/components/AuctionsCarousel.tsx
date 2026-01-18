@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, MapPin, ExternalLink } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import { getImageUrl } from '../utils/storageHelpers';
 
 const client = generateClient<Schema>();
 
@@ -21,9 +22,16 @@ export default function AuctionsCarousel() {
   const loadAuctions = async () => {
     try {
       const { data } = await client.models.Auction.list({ limit: 50 });
+      const resolved = await Promise.all(
+        (data || []).map(async (auction) => {
+          if (!auction.imageUrl) return auction;
+          const imageUrl = await getImageUrl(auction.imageUrl);
+          return imageUrl ? { ...auction, imageUrl } : auction;
+        })
+      );
 
       // Filter upcoming and live auctions, sort by date
-      const relevantAuctions = (data || [])
+      const relevantAuctions = resolved
         .filter(auction => {
           if (!auction.auctionDate) return false;
           const auctionDate = new Date(auction.auctionDate);

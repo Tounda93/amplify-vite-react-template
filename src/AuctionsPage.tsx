@@ -1,3 +1,5 @@
+import { AuctionsSection } from './AuctionsSection';
+
 export function AuctionsPage() {
   return (
     <div style={{ width: '100%', backgroundColor: '#F2F3F5', padding: '2rem 5rem' }}>
@@ -16,16 +18,7 @@ export function AuctionsPage() {
           Auctions
         </h2>
       </div>
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '12px',
-        border: '1px solid #e5e7eb',
-        padding: '2rem',
-        color: '#6b7280',
-        textAlign: 'center'
-      }}>
-        Auctions content coming soon.
-      </div>
+      <AuctionsSection />
     </div>
   );
 }

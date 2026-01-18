@@ -199,6 +199,11 @@
   color: #333;
 }
 
+/* Ensure Google Places suggestions appear above the modal overlay. */
+.pac-container {
+  z-index: 3000 !important;
+}
+
 /* ===========================================
    Form Styles
    =========================================== */
