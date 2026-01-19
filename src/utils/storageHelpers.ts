@@ -5,7 +5,7 @@ export const isStoragePath = (str: string): boolean => {
   return str.startsWith('car-photos/')
     || str.startsWith('event-photos/')
     || str.startsWith('auction-photos/')
-    || str.startsWith('hero/');
+    || str.startsWith('magazine-photos/');
 };
 
 // Convert a storage path to a URL, or return the string if it's already a URL

@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import { uploadData, getUrl } from 'aws-amplify/storage';
+import { uploadData } from 'aws-amplify/storage';
 import type { Schema } from '../amplify/data/resource';
 import { getImageUrl } from './utils/storageHelpers';
 import { getRoomShareUrl, loadRooms, RoomRecord } from './utils/roomsStorage';
 import { FALLBACKS } from './utils/fallbacks';
 import {
-  Home,
   Calendar,
   BookOpen,
   Gavel,
@@ -16,7 +15,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Upload,
   X,
   Eye,
   EyeOff
@@ -31,7 +29,9 @@ type Make = Schema['Make']['type'];
 type Model = Schema['Model']['type'];
 type Auction = Schema['Auction']['type'];
 
-type AdminTab = 'home' | 'events' | 'rooms' | 'magazines' | 'auctions' | 'wikicars' | 'settings';
+type MagazineWithImageUrl = Magazine & { imageUrl?: string };
+
+type AdminTab = 'events' | 'rooms' | 'magazines' | 'auctions' | 'wikicars' | 'settings';
 
 declare global {
   interface Window {
@@ -40,10 +40,9 @@ declare global {
 }
 
 export function AdminSection() {
-  const [activeTab, setActiveTab] = useState<AdminTab>('home');
+  const [activeTab, setActiveTab] = useState<AdminTab>('events');
 
   const tabs: { id: AdminTab; label: string; icon: typeof Calendar }[] = [
-    { id: 'home', label: 'Home', icon: Home },
     { id: 'events', label: 'Events', icon: Calendar },
     { id: 'rooms', label: 'Rooms', icon: Users },
     { id: 'magazines', label: 'Magazines', icon: BookOpen },
@@ -78,299 +77,12 @@ export function AdminSection() {
 
       {/* Tab Content */}
       <div className="admin-section__content">
-        {activeTab === 'home' && <HomeAdmin />}
         {activeTab === 'events' && <EventsAdmin />}
         {activeTab === 'rooms' && <RoomsAdmin />}
         {activeTab === 'magazines' && <MagazinesAdmin />}
         {activeTab === 'auctions' && <AuctionsAdmin />}
         {activeTab === 'wikicars' && <WikiCarsAdmin />}
         {activeTab === 'settings' && <SettingsAdmin />}
-      </div>
-    </div>
-  );
-}
-
-// ============================================
-// HOME ADMIN - Hero Content Management
-// ============================================
-const HERO_STORAGE_KEY = 'collectible_hero_content';
-
-interface HeroContent {
-  imageUrl?: string;
-  videoUrl?: string;
-  title: string;
-  subtitle: string;
-  ctaText?: string;
-  ctaLink?: string;
-  todaysHighlight?: string;
-}
-
-const DEFAULT_HERO_CONTENT: HeroContent = {
-  videoUrl: 'https://www.youtube.com/watch?v=bI_mT2SWWOI',
-  imageUrl: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=2000&q=80&auto=format&fit=crop',
-  title: 'Welcome to Collectible',
-  subtitle: 'Curated encyclopedia for enthusiasts by enthusiasts.',
-  ctaText: 'Explore Events',
-  ctaLink: '#section=events',
-  todaysHighlight: "Today's pick",
-};
-
-function HomeAdmin() {
-  const [formData, setFormData] = useState<HeroContent>(DEFAULT_HERO_CONTENT);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Load saved hero content on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(HERO_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as HeroContent;
-        setFormData({ ...DEFAULT_HERO_CONTENT, ...parsed });
-      }
-    } catch (err) {
-      console.error('Failed to load saved hero content', err);
-    }
-  }, []);
-
-  const handleImageUpload = async (file: File) => {
-    setUploading(true);
-    try {
-      const fileName = `hero/${Date.now()}-${file.name}`;
-      await uploadData({
-        path: fileName,
-        data: file,
-        options: { contentType: file.type }
-      }).result;
-      const urlResult = await getUrl({ path: fileName });
-      const imageUrl = urlResult.url.toString().split('?')[0];
-      setFormData(prev => ({ ...prev, imageUrl }));
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image');
-    }
-    setUploading(false);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleImageUpload(file);
-    }
-  };
-
-  const handleSave = () => {
-    setSaving(true);
-    try {
-      localStorage.setItem(HERO_STORAGE_KEY, JSON.stringify(formData));
-      alert('Hero content saved successfully! Refresh the homepage to see changes.');
-    } catch (err) {
-      console.error('Failed to save hero content', err);
-      alert('Failed to save hero content');
-    }
-    setSaving(false);
-  };
-
-  const handleReset = () => {
-    if (confirm('Reset to default hero content?')) {
-      setFormData(DEFAULT_HERO_CONTENT);
-      localStorage.removeItem(HERO_STORAGE_KEY);
-      alert('Hero content reset to defaults.');
-    }
-  };
-
-  return (
-    <div className="admin-panel">
-      <div className="admin-panel__header">
-        <h2>Homepage Hero Management</h2>
-      </div>
-
-      <div style={{ maxWidth: '800px' }}>
-        {/* Preview */}
-        <div style={{
-          marginBottom: '2rem',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          position: 'relative',
-          height: '300px',
-          backgroundColor: '#1a1a2e',
-        }}>
-          {formData.videoUrl ? (
-            <div style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#000',
-            }}>
-              <p style={{ color: '#fff', fontSize: '0.875rem' }}>
-                Video preview: {formData.videoUrl}
-              </p>
-            </div>
-          ) : formData.imageUrl ? (
-            <div style={{
-              width: '100%',
-              height: '100%',
-              backgroundImage: `url(${formData.imageUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }} />
-          ) : (
-            <div style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#2d2d4a',
-            }}>
-              <p style={{ color: '#888' }}>No media selected</p>
-            </div>
-          )}
-          {/* Overlay preview */}
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '1.5rem',
-            background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
-            color: 'white',
-          }}>
-            {formData.todaysHighlight && (
-              <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.5rem 0', opacity: 0.8 }}>
-                {formData.todaysHighlight}
-              </p>
-            )}
-            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem' }}>{formData.title || 'Hero Title'}</h3>
-            <p style={{ margin: 0, fontSize: '0.875rem', opacity: 0.85 }}>{formData.subtitle || 'Subtitle text'}</p>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="admin-form">
-          <div className="admin-form__grid">
-            {/* Media Section */}
-            <div className="admin-form__field admin-form__field--full">
-              <label>YouTube Video URL</label>
-              <input
-                type="url"
-                value={formData.videoUrl || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, videoUrl: e.target.value }))}
-                placeholder="https://www.youtube.com/watch?v=..."
-              />
-              <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                If a video URL is provided, it will be used instead of the image
-              </p>
-            </div>
-
-            <div className="admin-form__field admin-form__field--full">
-              <label>Fallback Image</label>
-              <div className="admin-form__image-upload">
-                <input
-                  type="url"
-                  value={formData.imageUrl || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-                  placeholder="https://..."
-                  style={{ flex: 1 }}
-                />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="admin-btn admin-btn--secondary"
-                  disabled={uploading}
-                >
-                  <Upload size={16} />
-                  {uploading ? 'Uploading...' : 'Upload'}
-                </button>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                Used when video is not available or as background
-              </p>
-            </div>
-
-            {/* Content Section */}
-            <div className="admin-form__field admin-form__field--full">
-              <label>Today's Highlight Label</label>
-              <input
-                type="text"
-                value={formData.todaysHighlight || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, todaysHighlight: e.target.value }))}
-                placeholder="e.g., Today's pick"
-              />
-            </div>
-
-            <div className="admin-form__field admin-form__field--full">
-              <label>Hero Title *</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Main headline"
-                required
-              />
-            </div>
-
-            <div className="admin-form__field admin-form__field--full">
-              <label>Subtitle / Description *</label>
-              <textarea
-                value={formData.subtitle}
-                onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-                placeholder="Supporting text under the title"
-                rows={3}
-                required
-              />
-            </div>
-
-            {/* CTA Section */}
-            <div className="admin-form__field">
-              <label>CTA Button Text</label>
-              <input
-                type="text"
-                value={formData.ctaText || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, ctaText: e.target.value }))}
-                placeholder="e.g., Learn More"
-              />
-            </div>
-
-            <div className="admin-form__field">
-              <label>CTA Button Link</label>
-              <input
-                type="text"
-                value={formData.ctaLink || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, ctaLink: e.target.value }))}
-                placeholder="e.g., #section=events or /page"
-              />
-            </div>
-          </div>
-
-          <div className="admin-form__actions">
-            <button
-              type="button"
-              onClick={handleReset}
-              className="admin-btn admin-btn--secondary"
-            >
-              Reset to Default
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="admin-btn admin-btn--primary"
-              disabled={saving || !formData.title || !formData.subtitle}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -416,6 +128,7 @@ function EventsAdmin() {
     restrictions: string[];
     isPublished: boolean;
     isFeatured: boolean;
+    visibility: 'public' | 'members';
   }>({
     title: '',
     description: '',
@@ -440,6 +153,7 @@ function EventsAdmin() {
     restrictions: [],
     isPublished: true,
     isFeatured: false,
+    visibility: 'public',
   });
   const [restrictionInput, setRestrictionInput] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
@@ -664,6 +378,7 @@ function EventsAdmin() {
       restrictions: [] as string[],
       isPublished: true,
       isFeatured: false,
+      visibility: 'public' as const,
     };
   };
 
@@ -719,6 +434,7 @@ function EventsAdmin() {
       restrictions: (event.restrictions || []).filter((r): r is string => r !== null),
       isPublished: event.isPublished !== false,
       isFeatured: event.isFeatured === true,
+      visibility: event.visibility === 'members' ? 'members' : 'public',
     });
     setLocationQuery(event.address || [event.city, event.country].filter(Boolean).join(', '));
     // Resolve storage path to URL for preview
@@ -771,6 +487,7 @@ function EventsAdmin() {
         restrictions: formData.restrictions.length > 0 ? formData.restrictions : undefined,
         isPublished: formData.isPublished,
         isFeatured: formData.isFeatured,
+        visibility: formData.visibility,
       };
 
       if (editingEvent) {
@@ -1003,6 +720,26 @@ function EventsAdmin() {
                   />
                 </div>
 
+                <div className="admin-form__field">
+                  <label>Visibility</label>
+                  <div className="admin-toggle">
+                    <button
+                      type="button"
+                      className={`admin-btn admin-btn--secondary admin-toggle__option ${formData.visibility === 'public' ? 'admin-toggle__option--active' : ''}`}
+                      onClick={() => setFormData(prev => ({ ...prev, visibility: 'public' }))}
+                    >
+                      Public
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-btn admin-btn--secondary admin-toggle__option ${formData.visibility === 'members' ? 'admin-toggle__option--active' : ''}`}
+                      onClick={() => setFormData(prev => ({ ...prev, visibility: 'members' }))}
+                    >
+                      Members only
+                    </button>
+                  </div>
+                </div>
+
                 <div className="admin-form__field admin-form__field--full">
                   <label>Requirements (max 3, max 3 words each)</label>
                   <div className="admin-form__restrictions">
@@ -1174,21 +911,26 @@ function RoomsAdmin() {
 // MAGAZINES ADMIN
 // ============================================
 function MagazinesAdmin() {
-  const [magazines, setMagazines] = useState<Magazine[]>([]);
+  const [magazines, setMagazines] = useState<MagazineWithImageUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingMagazine, setEditingMagazine] = useState<Magazine | null>(null);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [coverUrlInput, setCoverUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     coverImage: '',
+    coverImageUrl: '',
     price: '',
-    priceInterval: 'month',
+    priceInterval: 'monthly',
     websiteUrl: '',
+    discountType: '',
+    discountValue: '',
+    discountCriteria: [] as Array<{ key: string; operator: string; value: string }>,
     isActive: true,
     sortOrder: 0,
   });
@@ -1202,26 +944,60 @@ function MagazinesAdmin() {
     try {
       const { data } = await client.models.Magazine.list({ limit: 100 });
       const sorted = (data || []).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-      setMagazines(sorted);
+      const withImageUrls = await Promise.all(
+        sorted.map(async (magazine) => {
+          const imageUrl = magazine.coverImage
+            ? await getImageUrl(magazine.coverImage)
+            : magazine.coverImageUrl || undefined;
+          return { ...magazine, imageUrl: imageUrl ?? undefined };
+        })
+      );
+      setMagazines(withImageUrls);
     } catch (error) {
       console.error('Error loading magazines:', error);
     }
     setLoading(false);
   };
 
+  const formatPriceInterval = (value?: string | null) => {
+    switch (value) {
+      case 'one_time':
+        return 'one-time';
+      case 'month':
+        return 'monthly';
+      case 'monthly':
+        return 'monthly';
+      case 'year':
+        return 'yearly';
+      case 'yearly':
+        return 'yearly';
+      default:
+        return value || '';
+    }
+  };
+
+  const isValidUrl = (value: string) => {
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleImageUpload = async (file: File) => {
     setUploading(true);
     try {
-      const fileName = `magazines/${Date.now()}-${file.name}`;
-      await uploadData({
-        path: fileName,
+      const timestamp = Date.now();
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const result = await uploadData({
+        path: ({ identityId }) => `magazine-photos/${identityId}/${timestamp}-${safeName}`,
         data: file,
         options: { contentType: file.type }
       }).result;
-      const urlResult = await getUrl({ path: fileName });
-      const imageUrl = urlResult.url.toString().split('?')[0];
-      setFormData(prev => ({ ...prev, coverImage: imageUrl }));
-      setImagePreview(URL.createObjectURL(file));
+      setFormData(prev => ({ ...prev, coverImage: result.path }));
+      const url = await getImageUrl(result.path);
+      setImagePreview(url);
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Failed to upload image');
@@ -1241,50 +1017,159 @@ function MagazinesAdmin() {
       name: '',
       description: '',
       coverImage: '',
+      coverImageUrl: '',
       price: '',
-      priceInterval: 'month',
+      priceInterval: 'monthly',
       websiteUrl: '',
+      discountType: '',
+      discountValue: '',
+      discountCriteria: [],
       isActive: true,
-      sortOrder: magazines.length,
+      sortOrder: 0,
     });
     setEditingMagazine(null);
     setShowForm(false);
     setImagePreview(null);
+    setCoverUrlInput('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleEdit = (magazine: Magazine) => {
+  const handleEdit = async (magazine: Magazine) => {
     setEditingMagazine(magazine);
+    let parsedCriteria: Array<{ key: string; operator: string; value: string }> = [];
+    if (magazine.discountCriteria) {
+      try {
+        const parsed = JSON.parse(magazine.discountCriteria);
+        if (Array.isArray(parsed)) {
+          parsedCriteria = parsed.filter(Boolean);
+        }
+      } catch (error) {
+        console.error('Failed to parse discount criteria', error);
+      }
+    }
+    const normalizedInterval = magazine.priceInterval || 'monthly';
     setFormData({
       name: magazine.name || '',
       description: magazine.description || '',
       coverImage: magazine.coverImage || '',
-      price: magazine.price || '',
-      priceInterval: magazine.priceInterval || 'month',
+      coverImageUrl: magazine.coverImageUrl || '',
+      price: magazine.price !== null && magazine.price !== undefined ? String(magazine.price) : '',
+      priceInterval: normalizedInterval,
       websiteUrl: magazine.websiteUrl || '',
+      discountType: magazine.discountType || '',
+      discountValue: magazine.discountValue !== null && magazine.discountValue !== undefined ? String(magazine.discountValue) : '',
+      discountCriteria: parsedCriteria,
       isActive: magazine.isActive !== false,
       sortOrder: magazine.sortOrder || 0,
     });
-    setImagePreview(magazine.coverImage || null);
+    const previewUrl = magazine.coverImage
+      ? await getImageUrl(magazine.coverImage)
+      : magazine.coverImageUrl || null;
+    setImagePreview(previewUrl);
+    setCoverUrlInput(magazine.coverImageUrl || '');
     setShowForm(true);
+  };
+
+  const handleCoverUrlApply = () => {
+    const trimmed = coverUrlInput.trim();
+    if (!trimmed) {
+      alert('Please enter an image URL.');
+      return;
+    }
+    if (!isValidUrl(trimmed)) {
+      alert('Please enter a valid URL.');
+      return;
+    }
+    setFormData(prev => ({ ...prev, coverImageUrl: trimmed }));
+    if (!formData.coverImage) {
+      setImagePreview(trimmed);
+    }
+  };
+
+  const addDiscountCriterion = () => {
+    setFormData(prev => ({
+      ...prev,
+      discountCriteria: [...prev.discountCriteria, { key: '', operator: 'equals', value: '' }],
+    }));
+  };
+
+  const updateDiscountCriterion = (index: number, patch: Partial<{ key: string; operator: string; value: string }>) => {
+    setFormData(prev => ({
+      ...prev,
+      discountCriteria: prev.discountCriteria.map((criterion, idx) =>
+        idx === index ? { ...criterion, ...patch } : criterion
+      ),
+    }));
+  };
+
+  const removeDiscountCriterion = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      discountCriteria: prev.discountCriteria.filter((_, idx) => idx !== index),
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.price) {
-      alert('Please fill in name and price');
+    const trimmedName = formData.name.trim();
+    if (trimmedName.length < 2) {
+      alert('Magazine name must be at least 2 characters.');
       return;
     }
 
+    const priceValue = Number(formData.price);
+    if (Number.isNaN(priceValue) || priceValue < 0) {
+      alert('Please enter a valid price (0 or higher).');
+      return;
+    }
+
+    if (formData.websiteUrl && !isValidUrl(formData.websiteUrl)) {
+      alert('Please enter a valid website URL.');
+      return;
+    }
+
+    if (formData.coverImageUrl && !isValidUrl(formData.coverImageUrl)) {
+      alert('Please enter a valid cover image URL.');
+      return;
+    }
+
+    const discountValueNumber = formData.discountValue === '' ? null : Number(formData.discountValue);
+    if (discountValueNumber !== null && (Number.isNaN(discountValueNumber) || discountValueNumber < 0)) {
+      alert('Discount value must be 0 or higher.');
+      return;
+    }
+    if (formData.discountType === 'percent' && discountValueNumber !== null && discountValueNumber > 100) {
+      alert('Percent discount must be between 0 and 100.');
+      return;
+    }
+
+    const criteriaHasPartial = formData.discountCriteria.some((criterion) => {
+      const hasAny = Boolean(criterion.key || criterion.operator || criterion.value);
+      const hasAll = Boolean(criterion.key && criterion.operator && criterion.value);
+      return hasAny && !hasAll;
+    });
+    if (criteriaHasPartial) {
+      alert('Please complete or remove incomplete discount criteria.');
+      return;
+    }
+
+    const trimmedCriteria = formData.discountCriteria.filter(
+      (criterion) => criterion.key && criterion.operator && criterion.value
+    );
+
     try {
       const magazineData = {
-        name: formData.name,
+        name: trimmedName,
         description: formData.description || undefined,
         coverImage: formData.coverImage || undefined,
-        price: formData.price,
-        priceInterval: formData.priceInterval,
+        coverImageUrl: formData.coverImageUrl.trim() || undefined,
+        price: priceValue,
+        priceInterval: formData.priceInterval as 'one_time' | 'monthly' | 'yearly',
         websiteUrl: formData.websiteUrl || undefined,
+        discountType: (formData.discountType || undefined) as 'fixed' | 'percent' | undefined,
+        discountValue: discountValueNumber === null ? undefined : discountValueNumber,
+        discountCriteria: trimmedCriteria.length > 0 ? JSON.stringify(trimmedCriteria) : undefined,
         isActive: formData.isActive,
         sortOrder: formData.sortOrder,
       };
@@ -1341,7 +1226,7 @@ function MagazinesAdmin() {
       <div className="admin-panel__header">
         <h2>Magazines Management</h2>
         <button
-          onClick={() => { setFormData(prev => ({ ...prev, sortOrder: magazines.length })); setShowForm(true); }}
+          onClick={() => { setFormData(prev => ({ ...prev, sortOrder: 0 })); setShowForm(true); }}
           className="admin-btn admin-btn--primary"
         >
           <Plus size={18} />
@@ -1362,11 +1247,56 @@ function MagazinesAdmin() {
             <form onSubmit={handleSubmit} className="admin-form">
               <div className="admin-form__grid">
                 <div className="admin-form__field admin-form__field--full">
+                  <label>Cover image</label>
+                  <div
+                    className="admin-form__cover-upload"
+                    style={imagePreview ? { backgroundImage: `url(${imagePreview})` } : undefined}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="admin-btn admin-btn--secondary admin-form__cover-button"
+                      disabled={uploading}
+                    >
+                      {uploading ? 'Uploading...' : '+ Add'}
+                    </button>
+                  </div>
+                  <div className="admin-form__row" style={{ marginTop: '0.75rem' }}>
+                    <input
+                      type="url"
+                      placeholder="Paste image URL"
+                      value={coverUrlInput}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setCoverUrlInput(next);
+                        setFormData(prev => ({ ...prev, coverImageUrl: next }));
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCoverUrlApply}
+                      className="admin-btn admin-btn--secondary"
+                      disabled={uploading}
+                    >
+                      Use URL
+                    </button>
+                  </div>
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
                   <label>Magazine Name *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    minLength={2}
                     required
                   />
                 </div>
@@ -1383,10 +1313,12 @@ function MagazinesAdmin() {
                 <div className="admin-form__field">
                   <label>Price *</label>
                   <input
-                    type="text"
+                    type="number"
+                    min="0"
+                    step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder="e.g., 9,99€"
+                    placeholder="e.g., 9.99"
                     required
                   />
                 </div>
@@ -1397,8 +1329,9 @@ function MagazinesAdmin() {
                     value={formData.priceInterval}
                     onChange={(e) => setFormData(prev => ({ ...prev, priceInterval: e.target.value }))}
                   >
-                    <option value="month">Per Month</option>
-                    <option value="year">Per Year</option>
+                    <option value="one_time">One-time</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
                   </select>
                 </div>
 
@@ -1412,37 +1345,92 @@ function MagazinesAdmin() {
                 </div>
 
                 <div className="admin-form__field">
+                  <label>Discount Type</label>
+                  <select
+                    value={formData.discountType}
+                    onChange={(e) => setFormData(prev => ({ ...prev, discountType: e.target.value }))}
+                  >
+                    <option value="">None</option>
+                    <option value="fixed">Fixed</option>
+                    <option value="percent">Percent</option>
+                  </select>
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Discount Value</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.discountValue}
+                    onChange={(e) => setFormData(prev => ({ ...prev, discountValue: e.target.value }))}
+                    placeholder={formData.discountType === 'percent' ? '0 - 100' : 'e.g., 5.00'}
+                  />
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Discount Criteria</label>
+                  {formData.discountCriteria.length === 0 && (
+                    <p className="admin-form__helper">Add criteria to target specific users.</p>
+                  )}
+                  {formData.discountCriteria.map((criterion, index) => (
+                    <div
+                      key={`criterion-${index}`}
+                      className="admin-form__row"
+                      style={{ marginBottom: '0.5rem', gridTemplateColumns: '1fr 1fr 1fr auto' }}
+                    >
+                      <select
+                        value={criterion.key}
+                        onChange={(e) => updateDiscountCriterion(index, { key: e.target.value })}
+                      >
+                        <option value="">Select field</option>
+                        <option value="membershipTier">membershipTier</option>
+                        <option value="isPro">isPro</option>
+                        <option value="country">country</option>
+                        <option value="tag">tag</option>
+                        <option value="role">role</option>
+                      </select>
+                      <select
+                        value={criterion.operator}
+                        onChange={(e) => updateDiscountCriterion(index, { operator: e.target.value })}
+                      >
+                        <option value="equals">equals</option>
+                        <option value="contains">contains</option>
+                        <option value="greater_than">greater_than</option>
+                        <option value="less_than">less_than</option>
+                        <option value="in_list">in_list</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={criterion.value}
+                        onChange={(e) => updateDiscountCriterion(index, { value: e.target.value })}
+                        placeholder="Value"
+                      />
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn--secondary admin-btn--small"
+                        onClick={() => removeDiscountCriterion(index)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--secondary admin-btn--small"
+                    onClick={addDiscountCriterion}
+                  >
+                    Add criterion
+                  </button>
+                </div>
+
+                <div className="admin-form__field">
                   <label>Sort Order</label>
                   <input
                     type="number"
                     value={formData.sortOrder}
                     onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: parseInt(e.target.value) || 0 }))}
                   />
-                </div>
-
-                <div className="admin-form__field admin-form__field--full">
-                  <label>Cover Image</label>
-                  <div className="admin-form__image-upload">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      style={{ display: 'none' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="admin-btn admin-btn--secondary"
-                      disabled={uploading}
-                    >
-                      <Upload size={16} />
-                      {uploading ? 'Uploading...' : 'Upload Image'}
-                    </button>
-                    {imagePreview && (
-                      <img src={imagePreview} alt="Preview" className="admin-form__image-preview admin-form__image-preview--magazine" />
-                    )}
-                  </div>
                 </div>
 
                 <div className="admin-form__field">
@@ -1476,12 +1464,15 @@ function MagazinesAdmin() {
           <div key={magazine.id} className={`admin-magazine-card ${!magazine.isActive ? 'admin-magazine-card--inactive' : ''}`}>
             <div
               className="admin-magazine-card__image"
-              style={{ backgroundImage: magazine.coverImage ? `url(${magazine.coverImage})` : undefined }}
+              style={{ backgroundImage: magazine.imageUrl ? `url(${magazine.imageUrl})` : undefined }}
             />
             <div className="admin-magazine-card__content">
               <h4>{magazine.name}</h4>
               <p className="admin-magazine-card__price">
-                {magazine.price} per {magazine.priceInterval}
+                {magazine.price !== null && magazine.price !== undefined ? magazine.price : '--'}{' '}
+                {formatPriceInterval(magazine.priceInterval)
+                  ? `per ${formatPriceInterval(magazine.priceInterval)}`
+                  : ''}
               </p>
               <div className="admin-magazine-card__actions">
                 <button

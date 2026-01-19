@@ -7,7 +7,7 @@ import type { Schema } from '../../amplify/data/resource';
 import { FALLBACKS } from '../utils/fallbacks';
 
 // Helper to check if a string is a storage path
-const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/') || str.startsWith('hero/');
+const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
 
 const client = generateClient<Schema>();
 

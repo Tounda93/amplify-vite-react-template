@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import type { Schema } from '../../amplify/data/resource';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { loadRooms, RoomRecord } from '../utils/roomsStorage';
@@ -57,28 +57,6 @@ export default function HomePage() {
     return parts.join(', ') || 'Location TBA';
   };
 
-  const actionButtons = useMemo(() => ([
-    { label: 'Heart', emoji: '❤️' },
-    { label: 'Comment', emoji: '💬' },
-    { label: 'Share', emoji: '🔗' },
-  ]), []);
-
-  const renderActionButtons = () => (
-    <div className="home-page__card-actions">
-      {actionButtons.map((action) => (
-        <button
-          key={action.label}
-          type="button"
-          className="home-page__card-action"
-          aria-label={action.label}
-        >
-          <span className="home-page__card-action-icon" aria-hidden="true">{action.emoji}</span>
-          {action.label}
-        </button>
-      ))}
-    </div>
-  );
-
   if (loading) {
     return (
       <div className="home-page" style={{ padding: isMobile ? '1rem' : '2rem 5rem' }}>
@@ -113,7 +91,6 @@ export default function HomePage() {
                       showMenu={false}
                       onClick={() => setSelectedEvent(event)}
                     />
-                    {renderActionButtons()}
                   </div>
                 );
               }
@@ -131,7 +108,6 @@ export default function HomePage() {
                       onClick={() => openExternalUrl(newsItem.link)}
                       variant="wide"
                     />
-                    {renderActionButtons()}
                   </div>
                 );
               }
@@ -155,9 +131,8 @@ export default function HomePage() {
                       onMessage={() => setMessageCar(car)}
                       phoneNumber={sellerPhone || undefined}
                     />
-                  {renderActionButtons()}
-                </div>
-              );
+                  </div>
+                );
               }
 
               return null;
@@ -230,7 +205,6 @@ export default function HomePage() {
                     description={room.description || 'No description yet.'}
                     memberCount={room.memberCount ?? 0}
                   />
-                  {renderActionButtons()}
                 </div>
               ))
             ) : (

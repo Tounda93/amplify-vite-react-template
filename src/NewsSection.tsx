@@ -1,27 +1,53 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../amplify/data/resource';
 import { NewsItem, RSS_FEEDS } from './utils/newsFeed';
 import { useIsMobile } from './hooks/useIsMobile';
 import { openExternalUrl } from './utils/url';
 import { FALLBACKS } from './utils/fallbacks';
 import { useFetchNews } from './hooks/useFetchNews';
+import { getImageUrl } from './utils/storageHelpers';
 import './NewsSection.css';
 
-// Magazine carousel placeholder data (7 items)
-const MAGAZINE_CARDS = [
-  { id: 1, name: 'Magazine 1', price: '9,99€', image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80' },
-  { id: 2, name: 'Magazine 2', price: '9,99€', image: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80' },
-  { id: 3, name: 'Magazine 3', price: '9,99€', image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&q=80' },
-  { id: 4, name: 'Magazine 4', price: '9,99€', image: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=400&q=80' },
-  { id: 5, name: 'Magazine 5', price: '9,99€', image: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=400&q=80' },
-  { id: 6, name: 'Magazine 6', price: '9,99€', image: 'https://images.unsplash.com/photo-1542362567-b07e54358753?w=400&q=80' },
-  { id: 7, name: 'Magazine 7', price: '9,99€', image: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=400&q=80' },
-];
+const client = generateClient<Schema>();
+
+type Magazine = Schema['Magazine']['type'];
+type MagazineWithImage = Magazine & { imageUrl?: string };
 
 export function NewsSection() {
   const { items: news, loading, error, refresh } = useFetchNews();
   const [selectedSource, setSelectedSource] = useState<string>('all');
+  const [magazines, setMagazines] = useState<MagazineWithImage[]>([]);
+  const [magazinesLoading, setMagazinesLoading] = useState(true);
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
+
+  useEffect(() => {
+    const loadMagazines = async () => {
+      setMagazinesLoading(true);
+      try {
+        const { data } = await client.models.Magazine.list({ limit: 100 });
+        const sorted = (data || [])
+          .filter((magazine) => magazine.isActive !== false)
+          .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+        const withImages = await Promise.all(
+          sorted.map(async (magazine) => {
+            const imageUrl = magazine.coverImage
+              ? await getImageUrl(magazine.coverImage)
+              : magazine.coverImageUrl || undefined;
+            return { ...magazine, imageUrl: imageUrl ?? undefined };
+          })
+        );
+        setMagazines(withImages);
+      } catch (err) {
+        console.error('Failed to load magazines', err);
+        setMagazines([]);
+      }
+      setMagazinesLoading(false);
+    };
+
+    loadMagazines();
+  }, []);
 
   // Filter by source only
   const filteredNews = news.filter(item => {
@@ -36,6 +62,23 @@ export function NewsSection() {
       month: 'short',
       year: 'numeric'
     });
+  };
+
+  const formatPriceInterval = (value?: string | null) => {
+    switch (value) {
+      case 'one_time':
+        return 'one-time';
+      case 'monthly':
+        return 'monthly';
+      case 'yearly':
+        return 'yearly';
+      case 'month':
+        return 'monthly';
+      case 'year':
+        return 'yearly';
+      default:
+        return value || '';
+    }
   };
 
   const handleNewsClick = (item: NewsItem) => {
@@ -84,63 +127,78 @@ export function NewsSection() {
         </h2>
 
         {/* Carousel */}
-        <div
-          className="magazine-carousel"
-          style={{
-            display: 'flex',
-            gap: '1rem',
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            scrollSnapType: 'x mandatory',
-            padding: '0.5rem 0',
-          }}
-        >
-          {MAGAZINE_CARDS.map((card) => (
-            <div
-              key={card.id}
-              className="magazine-card-wrapper"
-              style={{
-                flexShrink: 0,
-                width: 'calc((100% - 5rem) / 6)', // 6 cards with 5 gaps of 1rem (35% smaller)
-                scrollSnapAlign: 'start',
-              }}
-            >
-              <div
-                className="magazine-card"
-                style={{
-                  width: '100%',
-                  aspectRatio: '1 / 1.414', // A4 ratio (width:height = 1:√2)
-                  borderRadius: '10px',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  backgroundColor: '#D9D9D9',
-                  backgroundImage: `url(${card.image})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                }}
-              />
-              <div style={{ marginTop: '0.5rem', textAlign: 'left' }}>
-                <p style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: '#000',
-                  margin: 0,
-                }}>
-                  {card.name}
-                </p>
-                <p style={{
-                  fontSize: '14px',
-                  color: '#666',
-                  margin: '0.25rem 0 0 0',
-                }}>
-                  {card.price} per month
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+        {!magazinesLoading && magazines.length === 0 ? (
+          <div className="news-section__empty">
+            <p>No magazines available yet.</p>
+          </div>
+        ) : (
+          <div
+            className="magazine-carousel"
+            style={{
+              display: 'flex',
+              gap: '1rem',
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              scrollSnapType: 'x mandatory',
+              padding: '0.5rem 0',
+            }}
+          >
+            {magazines.map((magazine) => {
+              const priceLabel = magazine.price !== null && magazine.price !== undefined
+                ? `${magazine.price}`
+                : '--';
+              const intervalLabel = formatPriceInterval(magazine.priceInterval);
+              return (
+                <div
+                  key={magazine.id}
+                  className="magazine-card-wrapper"
+                  style={{
+                    flexShrink: 0,
+                    width: 'calc((100% - 5rem) / 6)', // 6 cards with 5 gaps of 1rem (35% smaller)
+                    scrollSnapAlign: 'start',
+                  }}
+                >
+                  <div
+                    className="magazine-card"
+                    style={{
+                      width: '100%',
+                      aspectRatio: '1 / 1.414', // A4 ratio (width:height = 1:√2)
+                      borderRadius: '10px',
+                      overflow: 'hidden',
+                      cursor: magazine.websiteUrl ? 'pointer' : 'default',
+                      backgroundColor: '#D9D9D9',
+                      backgroundImage: magazine.imageUrl ? `url(${magazine.imageUrl})` : undefined,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                    }}
+                    onClick={() => {
+                      if (magazine.websiteUrl) openExternalUrl(magazine.websiteUrl);
+                    }}
+                  />
+                  <div style={{ marginTop: '0.5rem', textAlign: 'left' }}>
+                    <p style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#000',
+                      margin: 0,
+                    }}>
+                      {magazine.name}
+                    </p>
+                    <p style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      margin: '0.25rem 0 0 0',
+                    }}>
+                      {intervalLabel ? `${priceLabel} per ${intervalLabel}` : priceLabel}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Title Section */}

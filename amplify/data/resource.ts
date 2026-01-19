@@ -176,6 +176,7 @@ const schema = a.schema({
       // Status
       isPublished: a.boolean().default(true),
       isFeatured: a.boolean().default(false),
+      visibility: a.enum(['public', 'members']),
 
       // Participants
       participantCount: a.integer().default(0),
@@ -239,9 +240,13 @@ const schema = a.schema({
       name: a.string().required(),
       description: a.string(),
       coverImage: a.string(),
-      price: a.string().required(),        // "9,99€"
-      priceInterval: a.string().default('month'), // "month", "year"
+      coverImageUrl: a.string(),
+      price: a.float().required(),
+      priceInterval: a.enum(['one_time', 'monthly', 'yearly']),
       websiteUrl: a.string(),
+      discountType: a.enum(['fixed', 'percent']),
+      discountValue: a.float(),
+      discountCriteria: a.string(), // JSON encoded criteria array
       isActive: a.boolean().default(true),
       sortOrder: a.integer().default(0),
     })

@@ -31,7 +31,14 @@ export const useHomeFeed = () => {
       const { data: events } = await client.models.Event.list({ limit: 20 });
       const publishedEvents = (events || [])
         .filter((event) => event.isPublished !== false && event.startDate)
-        .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime())
+        .sort((a, b) => {
+          const aVisibility = a.visibility === 'members' ? 1 : 0;
+          const bVisibility = b.visibility === 'members' ? 1 : 0;
+          if (aVisibility !== bVisibility) {
+            return aVisibility - bVisibility;
+          }
+          return new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime();
+        })
         .slice(0, 7);
 
       const eventsWithUrls: EventWithImageUrl[] = await Promise.all(

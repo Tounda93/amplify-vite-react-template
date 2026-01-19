@@ -66,9 +66,14 @@ export function EventsSection({ onSaveEvent }: EventsSectionProps) {
 
   const processEvents = async (events: Event[]) => {
     // Sort by startDate (soonest first)
-    const sorted = [...events].sort((a, b) =>
-      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-    );
+    const sorted = [...events].sort((a, b) => {
+      const aVisibility = a.visibility === 'members' ? 1 : 0;
+      const bVisibility = b.visibility === 'members' ? 1 : 0;
+      if (aVisibility !== bVisibility) {
+        return aVisibility - bVisibility;
+      }
+      return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+    });
 
     const eventsWithUrls = await Promise.all(
       sorted.map(async (event) => {
