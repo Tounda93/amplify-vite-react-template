@@ -1,0 +1,38 @@
+.site-header {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  padding: 0.5rem 0;
+}
+
+.site-header__inner {
+  padding: 1rem 0;
+}
+
+.site-header__grid {
+  align-items: center;
+}
+
+.site-header__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+}
+
+.site-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  justify-self: center;
+  width: 100%;
+}
+
+.site-header__right {
+  width: 100%;
+}

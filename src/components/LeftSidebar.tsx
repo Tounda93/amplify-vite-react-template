@@ -46,7 +46,7 @@ export default function LeftSidebar({
       display: 'flex',
       flexDirection: 'column',
       gap: '4px',
-      padding: '1rem 0 1rem 1rem',
+      padding: '2rem 0',
       background: 'transparent',
       border: 'none',
     }}>
@@ -63,7 +63,7 @@ export default function LeftSidebar({
               flexDirection: 'row',
               alignItems: 'center',
               gap: '8px',
-              padding: '8px 12px',
+              padding: '8px 0',
               borderRadius: '0',
               border: 'none',
               cursor: 'pointer',

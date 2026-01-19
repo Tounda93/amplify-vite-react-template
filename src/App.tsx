@@ -18,7 +18,7 @@ import { AdminSection } from './AdminSection';
 // NEW: Import the Header component
 import Header from './components/Header';
 import LeftSidebar from './components/LeftSidebar';
-import HomePage from './components/HomePage';
+import HomePage, { HomeRoomsSidebar } from './components/HomePage';
 import Footer from './components/Footer';
 import { useIsMobile } from './hooks/useIsMobile';
 import { importAllData } from './importData';
@@ -28,6 +28,7 @@ import { openExternalUrl } from './utils/url';
 import { SearchResultItem, SearchResultGroups } from './types/search';
 import RoomPage from './components/RoomPage';
 import { AppUIProvider } from './context/AppUIContext';
+import './styles/layout.css';
 
 const client = generateClient<Schema>();
 
@@ -527,7 +528,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     onSearchResultSelect: handleSearchResultSelect,
   };
 
-  const mainBackgroundColor = '#FFFFFF';
+  const mainBackgroundColor = '#F2F3F5';
 
   return (
     <AppUIProvider value={appUIContextValue}>
@@ -541,33 +542,16 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       }}>
         <Header />
 
-      {/* Main layout with sidebar and content - 10% / 80% / 10% */}
-      <div style={{
-        display: 'flex',
-        width: '100%',
-        minHeight: 'calc(100vh - 60px)',
-        backgroundColor: '#F2F3F5',
-      }}>
-        {/* Left Column - 10% */}
-        {!isMobile && (
-          <div style={{
-            width: '10%',
-            flexShrink: 0,
-            backgroundColor: '#F2F3F5',
-            position: 'relative',
-          }}>
-            <LeftSidebar
-              userInitials={userInitials}
-            />
+      {/* Main layout with shared 3-column grid */}
+      <div className="layout-container">
+        <div className="layout-3col app-layout" style={{ minHeight: 'calc(100vh - 60px)' }}>
+          {/* Left Column */}
+          <div className="layout-col layout-col--left">
+            <LeftSidebar userInitials={userInitials} />
           </div>
-        )}
 
-        {/* Main Content Area - 80% */}
-        <div style={{
-          width: isMobile ? '100%' : '80%',
-          minWidth: 0,
-          backgroundColor: '#F2F3F5',
-        }}>
+          {/* Main Content Area */}
+          <main className="layout-col layout-col--center">
           {/* NEWS SECTION */}
           {activeSection === 'news' && (
             <NewsSection />
@@ -699,18 +683,15 @@ function CarSearch({ user, signOut }: CarSearchProps) {
               )}
             </div>
           )}
-        </div>
+          </main>
 
-        {/* Right Column - 10% */}
-        {!isMobile && (
-          <div style={{
-            width: '10%',
-            flexShrink: 0,
-            backgroundColor: '#F2F3F5',
-          }}>
-            {/* Empty column for now */}
-          </div>
-        )}
+          {/* Right Column */}
+          <aside className="layout-col layout-col--right">
+            {activeSection === 'home' && !location.pathname.startsWith('/rooms/') && !selectedMake && makes.length === 0 && (
+              <HomeRoomsSidebar />
+            )}
+          </aside>
+        </div>
       </div>
 
       <Footer />

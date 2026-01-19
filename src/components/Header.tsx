@@ -10,6 +10,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { useEffect, useState } from 'react';
 import SearchBar from './SearchBar';
 import { useAppUI } from '../context/AppUIContext';
+import './Header.css';
 
 // Define the type for category items
 interface Category {
@@ -141,42 +142,18 @@ export default function Header() {
   }
 
   return (
-    <header style={{
-      position: "sticky",
-      top: "0",
-      marginTop: "0",
-      marginLeft: "0",
-      marginRight: "0",
-      width: "100%",
-      backgroundColor: "#fff",
-      boxShadow: headerShadow,
-      zIndex: 1000,
-      border: "none",
-      borderRadius: "0",
-      color: textColor,
-    }}>
-      <div style={{
-        width: "100%",
-        padding: "8px clamp(1rem, 4vw, 5rem)",
-        margin: "0 auto",
-        maxWidth: "2000px"
-      }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "20% 60% 20%",
-          gap: "2rem",
-          alignItems: "center"
-        }}>
+    <header
+      className="site-header"
+      style={{
+        backgroundColor: "#fff",
+        boxShadow: headerShadow,
+        color: textColor,
+      }}
+    >
+      <div className="layout-container site-header__inner">
+        <div className="layout-3col site-header__grid">
           {/* Left: Logo + Search */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            minWidth: 0,
-            width: "100%",
-            justifyContent: "flex-start",
-            gridColumn: "1 / 2"
-          }}>
+          <div className="site-header__left">
             <div
               style={{
                 fontSize: "26px",
@@ -201,14 +178,7 @@ export default function Header() {
           </div>
 
           {/* Center: Main Navigation */}
-          <nav style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            justifyContent: "center",
-            width: "100%",
-            gridColumn: "2 / 3"
-          }}>
+          <nav className="site-header__nav">
             {categories.map((category) => {
               const IconComponent = category.icon;
               const isActive = activeSection === category.id;
@@ -252,7 +222,7 @@ export default function Header() {
               );
             })}
           </nav>
-          <div aria-hidden="true" style={{ gridColumn: "3 / 4" }} />
+          <div className="site-header__right" aria-hidden="true" />
         </div>
       </div>
     </header>

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import type { Schema } from '../../amplify/data/resource';
-import { useIsMobile } from '../hooks/useIsMobile';
 import { loadRooms, RoomRecord } from '../utils/roomsStorage';
 import { FALLBACKS } from '../utils/fallbacks';
 import { openExternalUrl } from '../utils/url';
@@ -18,28 +17,11 @@ type CarWithImageUrl = Car & { imageUrl?: string; makeName?: string; modelName?:
 type Event = Schema['Event']['type'];
 
 export default function HomePage() {
-  const isMobile = useIsMobile();
-
   const { feedItems, loading, sellerPhone, reload } = useHomeFeed();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [messageCar, setMessageCar] = useState<CarWithImageUrl | null>(null);
   const [messageDraft, setMessageDraft] = useState('');
-  const [rooms, setRooms] = useState<RoomRecord[]>([]);
   const [selectedCarDetails, setSelectedCarDetails] = useState<CarWithImageUrl | null>(null);
-
-  useEffect(() => {
-    const refreshRooms = () => setRooms(loadRooms());
-    refreshRooms();
-    if (typeof window !== 'undefined') {
-      window.addEventListener('focus', refreshRooms);
-      window.addEventListener('storage', refreshRooms);
-      return () => {
-        window.removeEventListener('focus', refreshRooms);
-        window.removeEventListener('storage', refreshRooms);
-      };
-    }
-    return undefined;
-  }, []);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) {
@@ -59,9 +41,11 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="home-page" style={{ padding: isMobile ? '1rem' : '2rem 5rem' }}>
-        <div className="home-page__loading">
-          <p>Loading feed...</p>
+      <div className="home-page">
+        <div className="layout-container">
+          <div className="home-page__loading">
+            <p>Loading feed...</p>
+          </div>
         </div>
       </div>
     );
@@ -70,8 +54,7 @@ export default function HomePage() {
   return (
     <div className="home-page" style={{ width: '100%', overflowX: 'hidden' }}>
       {/* Social Media Style Feed */}
-      <div className="home-page__layout" style={{ padding: isMobile ? '1rem' : '2rem clamp(1rem, 4vw, 5rem)' }}>
-        <div className="home-page__left-rail" aria-hidden="true" />
+      <div className="home-page__content">
         <div className="home-feed">
           {/* Feed Cards - Stacked vertically */}
           {feedItems.length > 0 ? (
@@ -194,24 +177,6 @@ export default function HomePage() {
             </button>
           </div>
         </div>
-        <aside className="home-page__sidebar">
-          <h3 className="home-page__sidebar-title">Suggested Rooms</h3>
-          <div className="home-page__sidebar-list">
-            {rooms.length > 0 ? (
-              rooms.map((room) => (
-                <div key={room.id} className="home-page__card-stack">
-                  <RoomsCard
-                    title={room.name}
-                    description={room.description || 'No description yet.'}
-                    memberCount={room.memberCount ?? 0}
-                  />
-                </div>
-              ))
-            ) : (
-              <p className="home-page__sidebar-empty">No rooms yet.</p>
-            )}
-          </div>
-        </aside>
       </div>
 
       <EventDetailPopup
@@ -269,5 +234,44 @@ export default function HomePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export function HomeRoomsSidebar() {
+  const [rooms, setRooms] = useState<RoomRecord[]>([]);
+
+  useEffect(() => {
+    const refreshRooms = () => setRooms(loadRooms());
+    refreshRooms();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', refreshRooms);
+      window.addEventListener('storage', refreshRooms);
+      return () => {
+        window.removeEventListener('focus', refreshRooms);
+        window.removeEventListener('storage', refreshRooms);
+      };
+    }
+    return undefined;
+  }, []);
+
+  return (
+    <aside className="home-page__sidebar">
+      <h3 className="home-page__sidebar-title">Suggested Rooms</h3>
+      <div className="home-page__sidebar-list">
+        {rooms.length > 0 ? (
+          rooms.map((room) => (
+            <div key={room.id} className="home-page__card-stack">
+              <RoomsCard
+                title={room.name}
+                description={room.description || 'No description yet.'}
+                memberCount={room.memberCount ?? 0}
+              />
+            </div>
+          ))
+        ) : (
+          <p className="home-page__sidebar-empty">No rooms yet.</p>
+        )}
+      </div>
+    </aside>
   );
 }
