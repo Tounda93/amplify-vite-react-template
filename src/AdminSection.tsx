@@ -122,6 +122,7 @@ function EventsAdmin() {
     endTime: string;
     endTimeZone: string;
     coverImage: string;
+    coverImageUrl: string;
     website: string;
     ticketUrl: string;
     price: string;
@@ -147,6 +148,7 @@ function EventsAdmin() {
     endTime: '',
     endTimeZone: '',
     coverImage: '',
+    coverImageUrl: '',
     website: '',
     ticketUrl: '',
     price: '',
@@ -157,6 +159,7 @@ function EventsAdmin() {
   });
   const [restrictionInput, setRestrictionInput] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
+  const [coverUrlInput, setCoverUrlInput] = useState('');
 
   useEffect(() => {
     loadEvents();
@@ -197,7 +200,9 @@ function EventsAdmin() {
       // Resolve image URLs for display
       const eventsWithUrls = await Promise.all(
         sorted.map(async (event) => {
-          const imageUrl = await getImageUrl(event.coverImage);
+          const imageUrl = event.coverImage
+            ? await getImageUrl(event.coverImage)
+            : event.coverImageUrl || undefined;
           return { ...event, imageUrl: imageUrl || undefined };
         })
       );
@@ -372,6 +377,7 @@ function EventsAdmin() {
       endTime: defaultEnd.time,
       endTimeZone: timeZone,
       coverImage: '',
+      coverImageUrl: '',
       website: '',
       ticketUrl: '',
       price: '',
@@ -389,6 +395,7 @@ function EventsAdmin() {
     setImagePreview(null);
     setRestrictionInput('');
     setLocationQuery('');
+    setCoverUrlInput('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -398,8 +405,27 @@ function EventsAdmin() {
     setImagePreview(null);
     setRestrictionInput('');
     setLocationQuery('');
+    setCoverUrlInput('');
     if (fileInputRef.current) fileInputRef.current.value = '';
     setShowForm(true);
+  };
+
+  const handleCoverUrlApply = () => {
+    const trimmed = coverUrlInput.trim();
+    if (!trimmed) {
+      alert('Please enter an image URL.');
+      return;
+    }
+    try {
+      new URL(trimmed);
+    } catch {
+      alert('Please enter a valid URL.');
+      return;
+    }
+    setFormData(prev => ({ ...prev, coverImageUrl: trimmed }));
+    if (!formData.coverImage) {
+      setImagePreview(trimmed);
+    }
   };
 
   const handleEdit = async (event: Event) => {
@@ -428,6 +454,7 @@ function EventsAdmin() {
       endTime: endDate ? toLocalTimeInput(endDate) : fallbackEnd ? toLocalTimeInput(fallbackEnd) : '',
       endTimeZone: timeZone,
       coverImage: event.coverImage || '',
+      coverImageUrl: event.coverImageUrl || '',
       website: event.website || '',
       ticketUrl: event.ticketUrl || '',
       price: event.price || '',
@@ -437,8 +464,11 @@ function EventsAdmin() {
       visibility: event.visibility === 'members' ? 'members' : 'public',
     });
     setLocationQuery(event.address || [event.city, event.country].filter(Boolean).join(', '));
+    setCoverUrlInput(event.coverImageUrl || '');
     // Resolve storage path to URL for preview
-    const imageUrl = await getImageUrl(event.coverImage);
+    const imageUrl = event.coverImage
+      ? await getImageUrl(event.coverImage)
+      : event.coverImageUrl || null;
     setImagePreview(imageUrl);
     setShowForm(true);
   };
@@ -481,6 +511,7 @@ function EventsAdmin() {
         startDate: startDateTime.toISOString(),
         endDate: endDateTime && !Number.isNaN(endDateTime.getTime()) ? endDateTime.toISOString() : undefined,
         coverImage: formData.coverImage || undefined,
+        coverImageUrl: formData.coverImageUrl.trim() || undefined,
         website: formData.website || undefined,
         ticketUrl: formData.ticketUrl || undefined,
         price: formData.price || undefined,
@@ -592,6 +623,26 @@ function EventsAdmin() {
                       {uploading ? 'Uploading...' : '+ Add'}
                     </button>
                   </div>
+                  <div className="admin-form__row" style={{ marginTop: '0.75rem' }}>
+                    <input
+                      type="url"
+                      placeholder="Paste image URL"
+                      value={coverUrlInput}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setCoverUrlInput(next);
+                        setFormData(prev => ({ ...prev, coverImageUrl: next }));
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCoverUrlApply}
+                      className="admin-btn admin-btn--secondary"
+                      disabled={uploading}
+                    >
+                      Use URL
+                    </button>
+                  </div>
                 </div>
 
                 <div className="admin-form__field admin-form__field--full">
@@ -647,17 +698,17 @@ function EventsAdmin() {
                     <input
                       type="date"
                       value={formData.endDate}
-                      readOnly
+                      onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
                     />
                     <input
                       type="time"
                       value={formData.endTime}
-                      readOnly
+                      onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
                     />
                     <input
                       type="text"
                       value={formData.endTimeZone}
-                      readOnly
+                      onChange={(e) => setFormData(prev => ({ ...prev, endTimeZone: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -1920,9 +1971,21 @@ function AuctionsAdmin() {
                 <div className="admin-form__field admin-form__field--full">
                   <label>End date</label>
                   <div className="admin-form__row">
-                    <input type="date" value={formData.endDate} readOnly />
-                    <input type="time" value={formData.endTime} readOnly />
-                    <input type="text" value={formData.endTimeZone} readOnly />
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                    />
+                    <input
+                      type="time"
+                      value={formData.endTime}
+                      onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                    />
+                    <input
+                      type="text"
+                      value={formData.endTimeZone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, endTimeZone: e.target.value }))}
+                    />
                   </div>
                 </div>
 

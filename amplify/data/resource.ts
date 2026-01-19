@@ -166,6 +166,7 @@ const schema = a.schema({
       
       // Details
       coverImage: a.string(),
+      coverImageUrl: a.string(),
       website: a.string(),
       ticketUrl: a.string(),
       price: a.string(),         // "Free", "$50", "€25-€100"
