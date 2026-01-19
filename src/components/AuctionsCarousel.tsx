@@ -3,12 +3,12 @@ import { ChevronLeft, ChevronRight, Calendar, MapPin, ExternalLink } from 'lucid
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
 import { getImageUrl } from '../utils/storageHelpers';
+import { FALLBACKS } from '../utils/fallbacks';
+import { openExternalUrl } from '../utils/url';
 
 const client = generateClient<Schema>();
 
 type Auction = Schema['Auction']['type'];
-
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80';
 
 export default function AuctionsCarousel() {
   const [auctions, setAuctions] = useState<Auction[]>([]);
@@ -210,7 +210,7 @@ export default function AuctionsCarousel() {
             }}
             onClick={() => {
               if (auction.lotUrl) {
-                window.open(auction.lotUrl, '_blank');
+                openExternalUrl(auction.lotUrl);
               }
             }}
           >
@@ -219,7 +219,7 @@ export default function AuctionsCarousel() {
               width: '100%',
               height: '180px',
               backgroundColor: '#f3f4f6',
-              backgroundImage: `url(${auction.imageUrl || FALLBACK_IMAGE})`,
+              backgroundImage: `url(${auction.imageUrl || FALLBACKS.auctionCarousel})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               position: 'relative',

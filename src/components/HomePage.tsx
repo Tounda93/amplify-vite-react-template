@@ -1,141 +1,45 @@
-import { useState, useEffect } from 'react';
-import { generateClient } from 'aws-amplify/data';
+import { useState, useEffect, useMemo } from 'react';
 import type { Schema } from '../../amplify/data/resource';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { NewsItem, fetchNewsFeedItems } from '../utils/newsFeed';
-import { getImageUrl } from '../utils/storageHelpers';
+import { loadRooms, RoomRecord } from '../utils/roomsStorage';
+import { FALLBACKS } from '../utils/fallbacks';
+import { openExternalUrl } from '../utils/url';
+import { useHomeFeed } from '../hooks/useHomeFeed';
 import { NewsCard } from './Card';
 import ForSaleCard from './Card/ForSaleCard';
 import EventCard from './Card/EventCard';
 import EventDetailPopup from './EventDetailPopup';
+import CarDetailPopup from './CarDetailPopup';
 import RoomsCard from './Card/RoomsCard';
 import './HomePage.css';
 
-const client = generateClient<Schema>();
-
 type Car = Schema['Car']['type'];
-type Make = Schema['Make']['type'];
-type Model = Schema['Model']['type'];
 type CarWithImageUrl = Car & { imageUrl?: string; makeName?: string; modelName?: string };
 type Event = Schema['Event']['type'];
-type EventWithImageUrl = Event & { imageUrl?: string };
-
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
-
-// Feed item types for the unified feed
-type FeedItem =
-  | { type: 'event'; data: EventWithImageUrl }
-  | { type: 'news'; data: NewsItem }
-  | { type: 'car'; data: CarWithImageUrl };
-
-const FEATURED_ROOMS = [
-  {
-    id: 'lotus-owners-meet',
-    name: 'Lotus Owners Meet 2024',
-    excerpt: 'Share itineraries, road books, and favorite routes for Lotus gatherings.',
-    members: 128,
-  },
-  {
-    id: 'lightweight-track-tools',
-    name: 'Lightweight Track Tools & Lotus Elise builds',
-    excerpt: 'Compare suspension setups and lap times for Elise and Exige owners.',
-    members: 86,
-  },
-  {
-    id: 'british-icons',
-    name: 'British Icons Appreciation Thread',
-    excerpt: 'Celebrating Lotus, Aston Martin, and all things brilliantly British.',
-    members: 204,
-  },
-];
 
 export default function HomePage() {
   const isMobile = useIsMobile();
 
-  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { feedItems, loading, sellerPhone, reload } = useHomeFeed();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [messageCar, setMessageCar] = useState<CarWithImageUrl | null>(null);
+  const [messageDraft, setMessageDraft] = useState('');
+  const [rooms, setRooms] = useState<RoomRecord[]>([]);
+  const [selectedCarDetails, setSelectedCarDetails] = useState<CarWithImageUrl | null>(null);
 
-  // Load initial data
   useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  const loadInitialData = async () => {
-    setLoading(true);
-    try {
-      // Fetch news items
-      const news = await fetchNewsFeedItems();
-
-      // Fetch published events (up to 7, sorted by date)
-      const { data: events } = await client.models.Event.list({
-        limit: 20,
-      });
-      const publishedEvents = (events || [])
-        .filter((e) => e.isPublished !== false && e.startDate)
-        .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime())
-        .slice(0, 7);
-
-      const eventsWithUrls: EventWithImageUrl[] = await Promise.all(
-        publishedEvents.map(async (event) => {
-          const imageUrl = await getImageUrl(event.coverImage);
-          return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
-        })
-      );
-
-      const [{ data: cars }, { data: makes }, { data: models }] = await Promise.all([
-        client.models.Car.list({
-          limit: 12,
-          filter: { saleStatus: { eq: 'for_sale' } },
-        }),
-        client.models.Make.list({ limit: 500 }),
-        client.models.Model.list({ limit: 1000 }),
-      ]);
-
-      const makesMap = new Map<string, string>();
-      const modelsMap = new Map<string, string>();
-      (makes || []).forEach((make: Make) => {
-        makesMap.set(make.makeId, make.makeName);
-      });
-      (models || []).forEach((model: Model) => {
-        modelsMap.set(model.modelId, model.modelName);
-      });
-
-      const carsWithUrls: CarWithImageUrl[] = await Promise.all(
-        (cars || []).map(async (car) => {
-          const photo = car.photos?.[0];
-          const imageUrl = await getImageUrl(photo);
-          return {
-            ...car,
-            imageUrl: imageUrl || FALLBACK_IMAGE,
-            makeName: makesMap.get(car.makeId) || car.makeId,
-            modelName: modelsMap.get(car.modelId) || car.modelId,
-          };
-        })
-      );
-
-      // Combine into a unified feed - interleave events and news
-      const combinedFeed: FeedItem[] = [];
-      const maxItems = Math.max(news.length, carsWithUrls.length, eventsWithUrls.length);
-
-      for (let i = 0; i < maxItems; i++) {
-        if (i < eventsWithUrls.length) {
-          combinedFeed.push({ type: 'event', data: eventsWithUrls[i] });
-        }
-        if (i < news.length) {
-          combinedFeed.push({ type: 'news', data: news[i] });
-        }
-        if (i < carsWithUrls.length) {
-          combinedFeed.push({ type: 'car', data: carsWithUrls[i] });
-        }
-      }
-
-      setFeedItems(combinedFeed);
-    } catch (error) {
-      console.error('Error loading feed:', error);
+    const refreshRooms = () => setRooms(loadRooms());
+    refreshRooms();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', refreshRooms);
+      window.addEventListener('storage', refreshRooms);
+      return () => {
+        window.removeEventListener('focus', refreshRooms);
+        window.removeEventListener('storage', refreshRooms);
+      };
     }
-    setLoading(false);
-  };
+    return undefined;
+  }, []);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) {
@@ -152,6 +56,28 @@ export default function HomePage() {
     const parts = [event.venue, event.city, event.region, event.country].filter(Boolean);
     return parts.join(', ') || 'Location TBA';
   };
+
+  const actionButtons = useMemo(() => ([
+    { label: 'Heart', emoji: '❤️' },
+    { label: 'Comment', emoji: '💬' },
+    { label: 'Share', emoji: '🔗' },
+  ]), []);
+
+  const renderActionButtons = () => (
+    <div className="home-page__card-actions">
+      {actionButtons.map((action) => (
+        <button
+          key={action.label}
+          type="button"
+          className="home-page__card-action"
+          aria-label={action.label}
+        >
+          <span className="home-page__card-action-icon" aria-hidden="true">{action.emoji}</span>
+          {action.label}
+        </button>
+      ))}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -175,34 +101,38 @@ export default function HomePage() {
               if (item.type === 'event') {
                 const event = item.data;
                 return (
-                  <EventCard
-                    key={`event-${event.id}-${index}`}
-                    imageUrl={event.imageUrl || FALLBACK_IMAGE}
-                    imageAlt={event.title || 'Event cover'}
-                    imageHeight={400}
-                    dateLabel={formatDate(event.startDate)}
-                    title={event.title || 'Untitled Event'}
-                    locationLabel={formatLocation(event)}
-                    participantCount={event.participantCount ?? 0}
-                    showMenu={false}
-                    onClick={() => setSelectedEvent(event)}
-                  />
+                  <div key={`event-${event.id}-${index}`} className="home-page__card-stack">
+                    <EventCard
+                      imageUrl={event.imageUrl || FALLBACKS.event}
+                      imageAlt={event.title || 'Event cover'}
+                      imageHeight={400}
+                      dateLabel={formatDate(event.startDate)}
+                      title={event.title || 'Untitled Event'}
+                      locationLabel={formatLocation(event)}
+                      participantCount={event.participantCount ?? 0}
+                      showMenu={false}
+                      onClick={() => setSelectedEvent(event)}
+                    />
+                    {renderActionButtons()}
+                  </div>
                 );
               }
 
               if (item.type === 'news') {
                 const newsItem = item.data;
                 return (
-                  <NewsCard
-                    key={`news-${index}`}
-                    imageUrl={newsItem.thumbnail || FALLBACK_IMAGE}
-                    category="NEWS"
-                    hideCategory
-                    authorName={newsItem.source}
-                    description={newsItem.title}
-                    onClick={() => window.open(newsItem.link, '_blank', 'noopener,noreferrer')}
-                    variant="wide"
-                  />
+                  <div key={`news-${index}`} className="home-page__card-stack">
+                    <NewsCard
+                      imageUrl={newsItem.thumbnail || FALLBACKS.news}
+                      category="NEWS"
+                      hideCategory
+                      authorName={newsItem.source}
+                      description={newsItem.title}
+                      onClick={() => openExternalUrl(newsItem.link)}
+                      variant="wide"
+                    />
+                    {renderActionButtons()}
+                  </div>
                 );
               }
 
@@ -215,14 +145,19 @@ export default function HomePage() {
                 ].filter(Boolean) as string[];
                 const priceLabel = car.price ? `€${car.price.toLocaleString('en-US')}` : 'Price on request';
                 return (
-                  <ForSaleCard
-                    key={`car-${car.id}-${index}`}
-                    imageUrl={car.imageUrl || FALLBACK_IMAGE}
-                    title={`${car.year || ''} ${car.makeName || ''} ${car.modelName || ''}`.trim()}
-                    priceLabel={priceLabel}
-                    detailLine={detailParts.join(' • ')}
-                  />
-                );
+                  <div key={`car-${car.id}-${index}`} className="home-page__card-stack">
+                    <ForSaleCard
+                      imageUrl={car.imageUrl || FALLBACKS.car}
+                      title={`${car.year || ''} ${car.makeName || ''} ${car.modelName || ''}`.trim()}
+                      priceLabel={priceLabel}
+                      detailLine={detailParts.join(' • ')}
+                      onClick={() => setSelectedCarDetails(car)}
+                      onMessage={() => setMessageCar(car)}
+                      phoneNumber={sellerPhone || undefined}
+                    />
+                  {renderActionButtons()}
+                </div>
+              );
               }
 
               return null;
@@ -287,14 +222,20 @@ export default function HomePage() {
         <aside className="home-page__sidebar">
           <h3 className="home-page__sidebar-title">Suggested Rooms</h3>
           <div className="home-page__sidebar-list">
-            {FEATURED_ROOMS.map((room) => (
-              <RoomsCard
-                key={room.id}
-                title={room.name}
-                description={room.excerpt}
-                memberCount={room.members}
-              />
-            ))}
+            {rooms.length > 0 ? (
+              rooms.map((room) => (
+                <div key={room.id} className="home-page__card-stack">
+                  <RoomsCard
+                    title={room.name}
+                    description={room.description || 'No description yet.'}
+                    memberCount={room.memberCount ?? 0}
+                  />
+                  {renderActionButtons()}
+                </div>
+              ))
+            ) : (
+              <p className="home-page__sidebar-empty">No rooms yet.</p>
+            )}
           </div>
         </aside>
       </div>
@@ -304,6 +245,55 @@ export default function HomePage() {
         isOpen={selectedEvent !== null}
         onClose={() => setSelectedEvent(null)}
       />
+      <CarDetailPopup
+        car={selectedCarDetails}
+        makeName={selectedCarDetails?.makeName || ''}
+        modelName={selectedCarDetails?.modelName || ''}
+        isOpen={selectedCarDetails !== null}
+        onClose={() => setSelectedCarDetails(null)}
+        onCarUpdated={reload}
+        onCarDeleted={() => {
+          setSelectedCarDetails(null);
+          reload();
+        }}
+      />
+
+      {messageCar && (
+        <div className="home-page__message-overlay" onClick={() => setMessageCar(null)}>
+          <div className="home-page__message-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="home-page__message-header">
+              <h3>Message Seller</h3>
+              <button type="button" onClick={() => setMessageCar(null)} aria-label="Close">
+                ✕
+              </button>
+            </div>
+            <p className="home-page__message-subtitle">
+              {`${messageCar.year || ''} ${messageCar.makeName || ''} ${messageCar.modelName || ''}`.trim()}
+            </p>
+            <textarea
+              rows={4}
+              placeholder="Write your message..."
+              value={messageDraft}
+              onChange={(event) => setMessageDraft(event.target.value)}
+            />
+            <div className="home-page__message-actions">
+              <button type="button" className="home-page__message-btn" onClick={() => setMessageCar(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="home-page__message-btn home-page__message-btn--primary"
+                onClick={() => {
+                  setMessageDraft('');
+                  setMessageCar(null);
+                }}
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

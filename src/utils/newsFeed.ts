@@ -1,3 +1,5 @@
+import { sanitizeText, sanitizeUrl } from './sanitize';
+
 export interface NewsItem {
   title: string;
   link: string;
@@ -24,15 +26,23 @@ export async function fetchNewsFeedItems(): Promise<NewsItem[]> {
       const response = await fetch(`${RSS_API}${encodeURIComponent(feed.url)}`);
       const data = await response.json();
 
-      if (data.status === 'ok' && data.items) {
-        const items = data.items.map((item: { title: string; link: string; pubDate: string; description?: string; thumbnail?: string; enclosure?: { link?: string } }) => ({
-          title: item.title as string,
-          link: item.link as string,
-          pubDate: item.pubDate as string,
-          description: (item.description || '').replace(/<[^>]*>/g, '').substring(0, 200) + '...',
-          thumbnail: item.thumbnail || item.enclosure?.link,
-          source: feed.name,
-        }));
+      if (data.status === 'ok' && Array.isArray(data.items)) {
+        const items = data.items
+          .map((item: { title?: string; link?: string; pubDate?: string; description?: string; thumbnail?: string; enclosure?: { link?: string } }): NewsItem | null => {
+            const safeLink = sanitizeUrl(item.link);
+            if (!safeLink) {
+              return null;
+            }
+            return {
+              title: sanitizeText(item.title || 'Untitled'),
+              link: safeLink,
+              pubDate: item.pubDate || new Date().toISOString(),
+              description: sanitizeText(item.description || '', 200),
+              thumbnail: sanitizeUrl(item.thumbnail || item.enclosure?.link) || undefined,
+              source: feed.name,
+            };
+          })
+          .filter((item: NewsItem | null): item is NewsItem => Boolean(item));
         aggregated.push(...items);
       }
     } catch (error) {

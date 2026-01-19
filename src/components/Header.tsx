@@ -9,30 +9,7 @@ import {
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useEffect, useState } from 'react';
 import SearchBar from './SearchBar';
-import { SearchResultGroups, SearchResultItem } from '../types/search';
-
-/**
- * =====================================================
- * HEADER COMPONENT
- * =====================================================
- *
- * Pill-shaped sticky header with glass effect.
- * On mobile: only shows main navigation (Home, Events, News, Rooms)
- * Chat and Garage are in the footer on mobile.
- *
- * =====================================================
- */
-
-// Define types for the component props
-interface HeaderProps {
-  activeSection: string;
-  onSectionChange: (section: string) => void;
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  searchResults: SearchResultGroups;
-  searchLoading: boolean;
-  onSearchResultSelect: (result: SearchResultItem, options?: { clearInput?: boolean }) => void;
-}
+import { useAppUI } from '../context/AppUIContext';
 
 // Define the type for category items
 interface Category {
@@ -41,15 +18,16 @@ interface Category {
   icon: LucideIcon;
 }
 
-export default function Header({
-  activeSection,
-  onSectionChange,
-  searchTerm,
-  onSearchChange,
-  searchResults,
-  searchLoading,
-  onSearchResultSelect
-}: HeaderProps) {
+export default function Header() {
+  const {
+    activeSection,
+    setActiveSection,
+    searchTerm,
+    setSearchTerm,
+    searchResults,
+    searchLoading,
+    onSearchResultSelect,
+  } = useAppUI();
   const isMobile = useIsMobile();
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth
@@ -68,9 +46,6 @@ export default function Header({
     ? Math.max(17, Math.min(22, viewportWidth ? viewportWidth / 20 : 19))
     : 24;
 
-  // ============================================
-  // CATEGORY DATA
-  // ============================================
   const categories: Category[] = [
     { id: "home", label: "Home", icon: Home },
     { id: "events", label: "Events", icon: Calendar },
@@ -79,7 +54,6 @@ export default function Header({
     { id: "auctions", label: "Auctions", icon: Gavel },
   ];
 
-  // Glass effect styling
   const headerBackground = 'rgba(255, 255, 255, 0.15)';
   const headerBorderColor = '5px solid rgba(255, 255, 255, 0.3)';
   const headerShadow = '0px 0px 0px rgba(0, 0, 0, 0.9)';
@@ -123,7 +97,7 @@ export default function Header({
             return (
               <button
                 key={category.id}
-                onClick={() => onSectionChange(category.id)}
+                onClick={() => setActiveSection(category.id)}
                 style={{
                   flex: "1 1 0",
                   minWidth: 0,
@@ -189,7 +163,7 @@ export default function Header({
       }}>
         <div style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 960px) minmax(0, 320px)",
+          gridTemplateColumns: "20% 60% 20%",
           gap: "2rem",
           alignItems: "center"
         }}>
@@ -201,7 +175,7 @@ export default function Header({
             minWidth: 0,
             width: "100%",
             justifyContent: "flex-start",
-            gridColumn: " / 2"
+            gridColumn: "1 / 2"
           }}>
             <div
               style={{
@@ -216,12 +190,12 @@ export default function Header({
             </div>
             <SearchBar
               searchTerm={searchTerm}
-              onSearchChange={onSearchChange}
+              onSearchChange={setSearchTerm}
               searchResults={searchResults}
               searchLoading={searchLoading}
               onSearchResultSelect={onSearchResultSelect}
               isMobile={false}
-              style={{ width: "280px" }}
+              style={{ width: "100%", maxWidth: "320px" }}
               appearance="light"
             />
           </div>
@@ -242,7 +216,7 @@ export default function Header({
               return (
                 <button
                   key={category.id}
-                  onClick={() => onSectionChange(category.id)}
+                onClick={() => setActiveSection(category.id)}
                   style={{
                     display: "flex",
                     flexDirection: "column",

@@ -1,20 +1,3 @@
-/**
- * =====================================================
- * APP.TSX - Updated with New Header Design
- * =====================================================
- * 
- * CHANGES MADE:
- * 1. Added import for the new Header component (line 12)
- * 2. Added 'activeSection' state to track which category is selected (line 27)
- * 3. Replaced the old dark header with the new Header component (line 306)
- * 4. Header now controls which section is displayed (News, Auctions, Events, or Home)
- * 5. Search bar in header is connected to your existing search functionality
- * 
- * The rest of your code (CarSearch, admin panel, etc.) is unchanged.
- * 
- * =====================================================
- */
-
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import { useState, useEffect } from 'react';
@@ -41,8 +24,10 @@ import { useIsMobile } from './hooks/useIsMobile';
 import { importAllData } from './importData';
 import { isAdminEmail } from './constants/admins';
 import { NewsItem, fetchNewsFeedItems } from './utils/newsFeed';
+import { openExternalUrl } from './utils/url';
 import { SearchResultItem, SearchResultGroups } from './types/search';
 import RoomPage from './components/RoomPage';
+import { AppUIProvider } from './context/AppUIContext';
 
 const client = generateClient<Schema>();
 
@@ -460,7 +445,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     }
   };
 
-  // NEW: Handler for when a category is clicked in the header
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
     // Navigate to the new path
@@ -473,7 +457,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     }
   };
 
-  // NEW: Handler for search input changes from header
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setSelectedMake(null);
@@ -492,19 +475,19 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       setActiveSection('news');
       navigate('/news');
       if (result.url) {
-        window.open(result.url, '_blank');
+        openExternalUrl(result.url);
       }
     } else if (result.category === 'events') {
       setActiveSection('events');
       navigate('/events');
       if (result.url) {
-        window.open(result.url, '_blank');
+        openExternalUrl(result.url);
       }
     } else if (result.category === 'auctions') {
       setActiveSection('auctions');
       navigate('/auctions');
       if (result.url) {
-        window.open(result.url, '_blank');
+        openExternalUrl(result.url);
       }
     } else if (result.category === 'rooms') {
       setActiveSection('rooms');
@@ -534,28 +517,29 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     });
   };
 
+  const appUIContextValue = {
+    activeSection,
+    setActiveSection: handleSectionChange,
+    searchTerm,
+    setSearchTerm: handleSearchChange,
+    searchResults,
+    searchLoading,
+    onSearchResultSelect: handleSearchResultSelect,
+  };
 
-  // Use the same background color for all pages
   const mainBackgroundColor = '#FFFFFF';
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: mainBackgroundColor,
-      overflowX: 'visible',
-      width: '100%',
-      position: 'relative',
-      paddingTop: topPadding
-    }}>
-      <Header
-        activeSection={activeSection}
-        onSectionChange={handleSectionChange}
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
-        searchResults={searchResults}
-        searchLoading={searchLoading}
-        onSearchResultSelect={handleSearchResultSelect}
-      />
+    <AppUIProvider value={appUIContextValue}>
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: mainBackgroundColor,
+        overflowX: 'visible',
+        width: '100%',
+        position: 'relative',
+        paddingTop: topPadding
+      }}>
+        <Header />
 
       {/* Main layout with sidebar and content - 10% / 80% / 10% */}
       <div style={{
@@ -573,8 +557,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
             position: 'relative',
           }}>
             <LeftSidebar
-              activeSection={activeSection}
-              onSectionChange={handleSectionChange}
               userInitials={userInitials}
             />
           </div>
@@ -731,23 +713,12 @@ function CarSearch({ user, signOut }: CarSearchProps) {
         )}
       </div>
 
-      <Footer
-        activeSection={activeSection}
-        onSectionChange={handleSectionChange}
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
-        searchResults={searchResults}
-        searchLoading={searchLoading}
-        onSearchResultSelect={handleSearchResultSelect}
-      />
-    </div>
+      <Footer />
+      </div>
+    </AppUIProvider>
   );
 }
 
-// =====================================================
-// MAIN APP COMPONENT
-// Wrapped with BrowserRouter for proper URL routing
-// =====================================================
 function App() {
   return (
     <BrowserRouter>

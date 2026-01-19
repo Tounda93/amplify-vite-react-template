@@ -1,0 +1,30 @@
+.shop-section {
+  overflow-x: hidden;
+}
+
+.shop-section--mobile {
+  padding: 2rem 1rem;
+}
+
+.shop-section__title-row {
+  margin-bottom: 2rem;
+}
+
+.shop-section__panel {
+  min-height: 300px;
+  background: #f8f9fa;
+}
+
+.shop-section__panel-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.shop-section__panel-text {
+  font-size: 1rem;
+  color: #666;
+  max-width: 400px;
+  margin: 0;
+}

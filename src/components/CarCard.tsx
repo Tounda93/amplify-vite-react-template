@@ -2,6 +2,7 @@ import { Car as CarIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
+import { FALLBACKS } from '../utils/fallbacks';
 
 type Car = Schema['Car']['type'];
 
@@ -12,8 +13,6 @@ interface CarCardProps {
   onClick?: () => void;
   compact?: boolean;
 }
-
-const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80';
 
 // Helper to check if a string is a storage path or a URL
 const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
@@ -134,7 +133,7 @@ export default function CarCard({ car, makeName, modelName, onClick, compact = f
         style={{
           flex: '0 0 70%',
           backgroundColor: '#f3f4f6',
-          backgroundImage: carImageUrl ? `url(${carImageUrl})` : `url(${FALLBACK_CAR_IMAGE})`,
+          backgroundImage: carImageUrl ? `url(${carImageUrl})` : `url(${FALLBACKS.car})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           display: 'flex',

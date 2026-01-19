@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { uploadData } from 'aws-amplify/storage';
 import { Upload, X, Plus, Link } from 'lucide-react';
 import { addRoom, generateRoomId, RoomRecord } from '../utils/roomsStorage';
+import { sanitizeText, sanitizeUrl } from '../utils/sanitize';
 
 interface CreateRoomPopupProps {
   isOpen: boolean;
@@ -82,7 +83,7 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
   };
 
   const addRule = () => {
-    const trimmed = ruleInput.trim();
+    const trimmed = sanitizeText(ruleInput, 120);
     if (trimmed) {
       setNewRoom({ ...newRoom, rules: [...newRoom.rules, trimmed] });
       setRuleInput('');
@@ -94,9 +95,13 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
   };
 
   const addLink = () => {
-    if (linkInput.title.trim() && linkInput.url.trim()) {
-      setNewRoom({ ...newRoom, links: [...newRoom.links, { title: linkInput.title.trim(), url: linkInput.url.trim() }] });
+    const title = sanitizeText(linkInput.title, 80);
+    const safeUrl = sanitizeUrl(linkInput.url);
+    if (title && safeUrl) {
+      setNewRoom({ ...newRoom, links: [...newRoom.links, { title, url: safeUrl }] });
       setLinkInput({ title: '', url: '' });
+    } else {
+      alert('Please enter a valid link title and URL.');
     }
   };
 
@@ -110,14 +115,14 @@ export default function CreateRoomPopup({ isOpen, onClose, onRoomCreated }: Crea
     try {
       const newRoomRecord: RoomRecord = {
         id: generateRoomId(newRoom.title),
-        name: newRoom.title.trim(),
-        description: newRoom.description.trim(),
+        name: sanitizeText(newRoom.title, 120),
+        description: sanitizeText(newRoom.description, 240),
         coverImage: newRoom.coverImage || undefined,
         isPublic: newRoom.isPublic,
         allowMemberEvents: newRoom.allowMemberEvents,
-        rules: newRoom.rules,
+        rules: newRoom.rules.map((rule) => sanitizeText(rule, 120)),
         links: newRoom.links,
-        requirementsToJoin: newRoom.applicationRules.trim(),
+        requirementsToJoin: sanitizeText(newRoom.applicationRules, 240),
         createdAt: new Date().toISOString(),
         memberCount: 1,
         creatorName: 'Owner',

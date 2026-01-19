@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
 import { getImageUrl } from './utils/storageHelpers';
+import { FALLBACKS } from './utils/fallbacks';
 
 const client = generateClient<Schema>();
 
@@ -25,8 +26,6 @@ const AUCTION_HOUSES = [
   { id: 'broad_arrow', name: 'Broad Arrow', logo: '🟠', url: 'https://www.broadarrowauctions.com/' },
   { id: 'bonhams', name: 'Bonhams', logo: '🔴', url: 'https://www.bonhams.com/department/MOT-CAR/' },
 ];
-
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80';
 
 const parseMoneyValue = (value: string | null | undefined): number | undefined => {
   if (!value) return undefined;
@@ -330,7 +329,7 @@ export function AuctionsSection() {
     // Set cover image from lots (use first lot with an image)
     eventMap.forEach(event => {
       const lotWithImage = event.lots.find(lot => lot.imageUrl && lot.imageUrl.length > 0);
-      event.coverImage = lotWithImage?.imageUrl || FALLBACK_IMAGE;
+      event.coverImage = lotWithImage?.imageUrl || FALLBACKS.auction;
     });
 
     const events = Array.from(eventMap.values()).sort((a, b) => {
@@ -632,7 +631,7 @@ export function AuctionsSection() {
             alignItems: 'center',
           }}>
             <img
-              src={selectedEvent.coverImage || FALLBACK_IMAGE}
+              src={selectedEvent.coverImage || FALLBACKS.auction}
               alt={selectedEvent.name}
               style={{
                 width: '150px',
@@ -641,7 +640,7 @@ export function AuctionsSection() {
                 borderRadius: '8px',
               }}
               onError={(e) => {
-                (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
+                (e.target as HTMLImageElement).src = FALLBACKS.auction;
               }}
             />
             <div style={{ flex: 1, minWidth: '200px' }}>
@@ -719,7 +718,7 @@ export function AuctionsSection() {
                     {/* Lot Image */}
                     <div style={{ position: 'relative' }}>
                       <img
-                        src={lot.imageUrl || FALLBACK_IMAGE}
+                        src={lot.imageUrl || FALLBACKS.auction}
                         alt={lot.title || 'Lot'}
                         style={{
                           width: '100%',
@@ -727,7 +726,7 @@ export function AuctionsSection() {
                           objectFit: 'cover',
                         }}
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
+                          (e.target as HTMLImageElement).src = FALLBACKS.auction;
                         }}
                       />
                       <div style={{
@@ -885,7 +884,7 @@ export function AuctionsSection() {
                 {/* Cover Image */}
                 <div style={{ position: 'relative' }}>
                   <img
-                    src={event.coverImage || FALLBACK_IMAGE}
+                    src={event.coverImage || FALLBACKS.auction}
                     alt={event.name}
                     style={{
                       width: '100%',
@@ -893,7 +892,7 @@ export function AuctionsSection() {
                       objectFit: 'cover',
                     }}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
+                      (e.target as HTMLImageElement).src = FALLBACKS.auction;
                     }}
                   />
                   {/* Available Lots Button */}

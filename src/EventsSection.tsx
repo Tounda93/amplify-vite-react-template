@@ -6,14 +6,13 @@ import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
 import EventDetailPopup from './components/EventDetailPopup';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { FALLBACKS } from './utils/fallbacks';
 import './EventsSection.css';
 
 const client = generateClient<Schema>();
 
 type Event = Schema['Event']['type'];
 type EventWithImageUrl = Event & { imageUrl?: string };
-
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
 interface EventsSectionProps {
   onSaveEvent: (event: Event) => void;
@@ -75,9 +74,9 @@ export function EventsSection({ onSaveEvent }: EventsSectionProps) {
       sorted.map(async (event) => {
         if (event.coverImage) {
           const imageUrl = await getImageUrl(event.coverImage);
-          return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
+          return { ...event, imageUrl: imageUrl || FALLBACKS.event };
         }
-        return { ...event, imageUrl: FALLBACK_IMAGE };
+        return { ...event, imageUrl: FALLBACKS.event };
       })
     );
 
@@ -235,7 +234,7 @@ export function EventsSection({ onSaveEvent }: EventsSectionProps) {
               {allEvents.map((event) => (
                 <div key={event.id} className="events-carousel__item">
                   <EventCard
-                    imageUrl={event.imageUrl || FALLBACK_IMAGE}
+                    imageUrl={event.imageUrl || FALLBACKS.event}
                     imageAlt={event.title || 'Event cover'}
                     dateLabel={formatDate(event.startDate)}
                     title={event.title}

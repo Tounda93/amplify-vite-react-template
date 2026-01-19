@@ -1,0 +1,41 @@
+.section-shell {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #F2F3F5;
+  padding: 2rem 5rem;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #000;
+  margin: 0;
+}
+
+.section-title-divider {
+  flex: 1;
+  height: 1px;
+  background-color: #000;
+}
+
+.section-panel {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 2rem;
+}
+
+.section-panel--center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}

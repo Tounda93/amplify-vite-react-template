@@ -2,27 +2,19 @@ import { useEffect, useState } from 'react';
 import { Car, MessageSquare, Search, User } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import SearchBar from './SearchBar';
-import { SearchResultGroups, SearchResultItem } from '../types/search';
+import { useAppUI } from '../context/AppUIContext';
+import type { SearchResultItem } from '../types/search';
 
-interface FooterProps {
-  activeSection?: string;
-  onSectionChange?: (section: string) => void;
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  searchResults: SearchResultGroups;
-  searchLoading: boolean;
-  onSearchResultSelect: (result: SearchResultItem, options?: { clearInput?: boolean }) => void;
-}
-
-export default function Footer({
-  activeSection = 'home',
-  onSectionChange,
-  searchTerm,
-  onSearchChange,
-  searchResults,
-  searchLoading,
-  onSearchResultSelect
-}: FooterProps) {
+export default function Footer() {
+  const {
+    activeSection,
+    setActiveSection,
+    searchTerm,
+    setSearchTerm,
+    searchResults,
+    searchLoading,
+    onSearchResultSelect,
+  } = useAppUI();
   const currentYear = new Date().getFullYear();
   const isMobile = useIsMobile();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -102,7 +94,7 @@ export default function Footer({
           }}>
             <SearchBar
               searchTerm={searchTerm}
-              onSearchChange={onSearchChange}
+              onSearchChange={setSearchTerm}
               searchResults={searchResults}
               searchLoading={searchLoading}
               onSearchResultSelect={handleSearchResultSelect}
@@ -131,7 +123,7 @@ export default function Footer({
                     setIsSearchOpen((prev) => !prev);
                   } else {
                     setIsSearchOpen(false);
-                    onSectionChange?.(id);
+                    setActiveSection(id);
                   }
                 }}
                 style={{

@@ -5,6 +5,7 @@ import { uploadData } from 'aws-amplify/storage';
 import type { Schema } from '../amplify/data/resource';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
+import { normalizePhoneNumber } from './utils/sanitize';
 
 const client = generateClient<Schema>();
 
@@ -28,6 +29,8 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +56,9 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
         const profile = data?.[0];
         if (profile?.id) {
           setProfileId(profile.id);
+        }
+        if (profile?.phoneNumber) {
+          setPhoneNumber(profile.phoneNumber);
         }
         if (profile?.avatarUrl) {
           const resolved = await getImageUrl(profile.avatarUrl);
@@ -81,6 +87,30 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
 
     loadProfile();
   }, []);
+
+  const handleSavePhone = async () => {
+    setSavingPhone(true);
+    try {
+      const normalizedPhone = normalizePhoneNumber(phoneNumber);
+      if (profileId) {
+        await client.models.Profile.update({
+          id: profileId,
+          phoneNumber: normalizedPhone || undefined,
+        });
+      } else {
+        const created = await client.models.Profile.create({
+          phoneNumber: normalizedPhone || undefined,
+        });
+        setProfileId(created.data?.id ?? null);
+      }
+      setPhoneNumber(normalizedPhone);
+    } catch (error) {
+      console.error('Failed to save phone number', error);
+      alert('Failed to save phone number. Please try again.');
+    } finally {
+      setSavingPhone(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -339,6 +369,45 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
               }}>
                 <MapPin size={16} />
                 Not set
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                Phone Number
+              </label>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="Add phone number"
+                  style={{
+                    flex: '1 1 200px',
+                    padding: '0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#fff',
+                    color: '#111',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleSavePhone}
+                  disabled={savingPhone}
+                  style={{
+                    padding: '0.75rem 1.25rem',
+                    borderRadius: '6px',
+                    border: '1px solid #111827',
+                    backgroundColor: '#111827',
+                    color: '#fff',
+                    cursor: savingPhone ? 'not-allowed' : 'pointer',
+                    opacity: savingPhone ? 0.6 : 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  {savingPhone ? 'Saving...' : 'Save'}
+                </button>
               </div>
             </div>
           </div>

@@ -3,12 +3,11 @@ import type { Schema } from '../amplify/data/resource';
 import EventCard from './components/Card/EventCard';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
+import { FALLBACKS } from './utils/fallbacks';
 import './EventsSection.css';
 
 type Event = Schema['Event']['type'];
 type EventWithImageUrl = Event & { imageUrl?: string };
-
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
 interface SavedEventsSectionProps {
   savedEvents: Event[];
@@ -44,13 +43,13 @@ export function SavedEventsSection({ savedEvents, onSaveEvent }: SavedEventsSect
           }
           if (event.coverImage) {
             const imageUrl = await getImageUrl(event.coverImage);
-          return { ...event, imageUrl: imageUrl || FALLBACK_IMAGE };
-        }
-          return { ...event, imageUrl: FALLBACK_IMAGE };
-      })
-    );
-    setEventsWithImages(updated);
-  };
+            return { ...event, imageUrl: imageUrl || FALLBACKS.event };
+          }
+          return { ...event, imageUrl: FALLBACKS.event };
+        })
+      );
+      setEventsWithImages(updated);
+    };
 
     loadImages();
   }, [savedEvents]);
@@ -144,7 +143,7 @@ export function SavedEventsSection({ savedEvents, onSaveEvent }: SavedEventsSect
           {eventsWithImages.map((event) => (
             <div key={event.id} className="events-carousel__item">
               <EventCard
-                imageUrl={event.imageUrl || event.coverImage || FALLBACK_IMAGE}
+                imageUrl={event.imageUrl || event.coverImage || FALLBACKS.event}
                 imageAlt={event.title || 'Event cover'}
                 dateLabel={formatDate(event.startDate)}
                 title={event.title}

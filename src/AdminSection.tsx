@@ -4,6 +4,7 @@ import { uploadData, getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../amplify/data/resource';
 import { getImageUrl } from './utils/storageHelpers';
 import { getRoomShareUrl, loadRooms, RoomRecord } from './utils/roomsStorage';
+import { FALLBACKS } from './utils/fallbacks';
 import {
   Home,
   Calendar,
@@ -1542,7 +1543,6 @@ function AuctionsAdmin() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [coverUrlInput, setCoverUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const FALLBACK_AUCTION_IMAGE = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80';
 
   const padNumber = (value: number) => value.toString().padStart(2, '0');
 
@@ -1678,7 +1678,7 @@ function AuctionsAdmin() {
 
     eventMap.forEach((event) => {
       const lotWithImage = event.lots.find((lot) => lot.imageUrl && lot.imageUrl.length > 0);
-      event.coverImage = lotWithImage?.imageUrl || FALLBACK_AUCTION_IMAGE;
+      event.coverImage = lotWithImage?.imageUrl || FALLBACKS.auction;
     });
 
     const events = Array.from(eventMap.values()).sort((a, b) => {

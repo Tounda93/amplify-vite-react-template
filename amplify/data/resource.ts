@@ -66,6 +66,7 @@ const schema = a.schema({
       bio: a.string(),
       avatarUrl: a.string(),
       location: a.string(),
+      phoneNumber: a.string(),
       accountType: a.enum(['collector', 'professional']),
       displayMode: a.enum(['real', 'nickname']),
       isPublic: a.boolean().default(true),
@@ -74,7 +75,6 @@ const schema = a.schema({
     .authorization((allow) => [
       allow.owner().to(['create', 'read', 'update', 'delete']),
       allow.authenticated().to(['read']),
-      allow.guest().to(['read']),
     ]),
 
   Car: a

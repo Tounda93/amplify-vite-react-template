@@ -3,12 +3,11 @@ import { useState, useEffect, useRef } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { getUrl, uploadData } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
+import { FALLBACKS } from '../utils/fallbacks';
 
 type Car = Schema['Car']['type'];
 type Make = Schema['Make']['type'];
 type Model = Schema['Model']['type'];
-
-const FALLBACK_CAR_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
 // Helper to check if a string is a storage path or a URL
 const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
@@ -39,6 +38,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
   const [isUploading, setIsUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [carData, setCarData] = useState<Car | null>(car);
+  const [sellerPhone, setSellerPhone] = useState<string | null>(null);
   const [makes, setMakes] = useState<Make[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
@@ -130,6 +130,21 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen) return;
+    const loadSellerProfile = async () => {
+      try {
+        const { data } = await client.models.Profile.list({ limit: 1 });
+        setSellerPhone(data?.[0]?.phoneNumber || null);
+      } catch (error) {
+        console.error('Error loading seller profile', error);
+        setSellerPhone(null);
+      }
+    };
+
+    loadSellerProfile();
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!editValues.makeId) {
       setFilteredModels([]);
       return;
@@ -143,7 +158,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
 
   if (!isOpen || !carData) return null;
 
-  const currentImage = photoUrls.length > 0 ? photoUrls[currentPhotoIndex] : FALLBACK_CAR_IMAGE;
+  const currentImage = photoUrls.length > 0 ? photoUrls[currentPhotoIndex] : FALLBACKS.carDetail;
   const displayMakeName = makes.find((make) => make.makeId === carData.makeId)?.makeName || makeName;
   const displayModelName = models.find((model) => model.modelId === carData.modelId)?.modelName || modelName;
 
@@ -525,6 +540,37 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
 
           {!isEditing ? (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
+              {sellerPhone && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem 0.85rem',
+                  borderRadius: '10px',
+                  border: '1px solid #e5e7eb',
+                  background: '#f9fafb',
+                }}>
+                  <div style={{ display: 'grid', gap: '0.2rem' }}>
+                    <span style={{ fontWeight: 600 }}>Seller phone</span>
+                    <span style={{ color: '#374151' }}>{sellerPhone}</span>
+                  </div>
+                  <a
+                    href={`tel:${sellerPhone}`}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      borderRadius: '999px',
+                      border: '1px solid #111827',
+                      color: '#111827',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      background: '#fff',
+                    }}
+                  >
+                    Call
+                  </a>
+                </div>
+              )}
               <div style={{ display: 'grid', gap: '0.35rem', color: '#111' }}>
                 <span style={{ fontWeight: 600 }}>Description</span>
                 <span style={{ color: '#374151' }}>{carData.description || '—'}</span>

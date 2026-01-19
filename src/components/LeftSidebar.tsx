@@ -1,21 +1,8 @@
 import { MessageSquare, Bell, ShoppingBag, Bookmark, LucideIcon } from "lucide-react";
 import { useIsMobile } from '../hooks/useIsMobile';
-
-/**
- * =====================================================
- * LEFT SIDEBAR COMPONENT
- * =====================================================
- *
- * Fixed sidebar on the left side of the screen containing
- * My Garage (with profile picture), Chat, Notifications, Shop.
- * Hidden on mobile (these buttons are in the footer).
- *
- * =====================================================
- */
+import { useAppUI } from '../context/AppUIContext';
 
 interface LeftSidebarProps {
-  activeSection: string;
-  onSectionChange: (section: string) => void;
   userProfilePicture?: string;
   userInitials?: string;
 }
@@ -28,11 +15,10 @@ interface SidebarItem {
 }
 
 export default function LeftSidebar({
-  activeSection,
-  onSectionChange,
   userProfilePicture,
   userInitials
 }: LeftSidebarProps) {
+  const { activeSection, setActiveSection } = useAppUI();
   const isMobile = useIsMobile();
 
   // Don't render on mobile - these buttons are in the footer
@@ -71,7 +57,7 @@ export default function LeftSidebar({
         return (
           <button
             key={item.id}
-            onClick={() => onSectionChange(item.id)}
+            onClick={() => setActiveSection(item.id)}
             style={{
               display: 'flex',
               flexDirection: 'row',

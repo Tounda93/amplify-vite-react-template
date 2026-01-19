@@ -1,64 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { ExternalLink } from 'lucide-react';
-import { fetchNewsFeedItems, type NewsItem } from '../utils/newsFeed';
+import { FALLBACKS } from '../utils/fallbacks';
+import { openExternalUrl } from '../utils/url';
+import { useFetchNews } from '../hooks/useFetchNews';
 import './NewsCarousel.css';
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80';
 const FRAME_TEXT = 'Collectible Collectible Collectible Collectible Collectible Collectible Collectible';
 
-const FALLBACK_NEWS: NewsItem[] = [
-  {
-    title: 'Lotus Elise becomes future classic',
-    link: '#',
-    pubDate: new Date().toISOString(),
-    description: 'Lightweight British roadsters continue to attract collectors with their analog feel.',
-    source: 'Collectible',
-    thumbnail: FALLBACK_IMAGE,
-  },
-  {
-    title: 'Porsche 911 SC market snapshot',
-    link: '#',
-    pubDate: new Date().toISOString(),
-    description: 'Values hold firm as buyers look for well-documented examples from the late seventies.',
-    source: 'Collectible',
-    thumbnail: FALLBACK_IMAGE,
-  },
-  {
-    title: 'Classic rally events returning across Europe',
-    link: '#',
-    pubDate: new Date().toISOString(),
-    description: 'Historic rally championships announce updated schedules for 2025.',
-    source: 'Collectible',
-    thumbnail: FALLBACK_IMAGE,
-  },
-];
-
 export default function NewsCarousel() {
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items: news, loading } = useFetchNews({ limit: 12 });
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
   const [allowHoverEffects, setAllowHoverEffects] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const loadNews = async () => {
-      setLoading(true);
-      try {
-        const items = await fetchNewsFeedItems();
-        if (items.length > 0) {
-          setNews(items.slice(0, 12));
-        } else {
-          setNews(FALLBACK_NEWS);
-        }
-      } catch (error) {
-        console.warn('Unable to fetch news feed for homepage. Using fallback content.', error);
-        setNews(FALLBACK_NEWS);
-      }
-      setLoading(false);
-    };
-    loadNews();
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -207,7 +161,7 @@ export default function NewsCarousel() {
                   setHoveredCardIndex(null);
                 }
               }}
-              onClick={() => window.open(item.link, '_blank')}
+              onClick={() => openExternalUrl(item.link)}
             >
               {shouldShowFrame && (
                 <div className="news-card-frame-text" aria-hidden="true">
@@ -236,7 +190,7 @@ export default function NewsCarousel() {
                   width: '100%',
                   height: '310px',
                   backgroundColor: '#f3f4f6',
-                  backgroundImage: `url(${item.thumbnail || FALLBACK_IMAGE})`,
+                  backgroundImage: `url(${item.thumbnail || FALLBACKS.newsCarousel})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   position: 'relative',

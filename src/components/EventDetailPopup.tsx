@@ -4,6 +4,7 @@ import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
+import { FALLBACKS } from '../utils/fallbacks';
 
 // Helper to check if a string is a storage path
 const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/') || str.startsWith('hero/');
@@ -14,8 +15,6 @@ type Event = Schema['Event']['type'];
 type Car = Schema['Car']['type'];
 type Make = Schema['Make']['type'];
 type Model = Schema['Model']['type'];
-
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
 interface EventDetailPopupProps {
   event: Event | null;
@@ -251,7 +250,7 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
         {/* Header with Image */}
         <div style={{ position: 'relative' }}>
           <img
-            src={coverImageUrl || FALLBACK_IMAGE}
+            src={coverImageUrl || FALLBACKS.event}
             alt={event.title}
             style={{
               width: '100%',

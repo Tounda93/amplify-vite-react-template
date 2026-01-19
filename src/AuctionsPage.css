@@ -1,0 +1,9 @@
+.auctions-page__title-row {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 900px) {
+  .auctions-page {
+    padding: 2rem 1rem;
+  }
+}

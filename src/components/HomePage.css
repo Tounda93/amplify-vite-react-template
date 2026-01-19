@@ -42,6 +42,8 @@
   flex-direction: column;
   gap: 1rem;
   overflow: visible;
+  position: sticky;
+  top: 1.5rem;
 }
 
 .home-page__sidebar-title {
@@ -55,6 +57,128 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.home-page__sidebar-empty {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.home-page__card-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.home-page__card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.home-page__card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  background: transparent;
+  color: #111;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  border-radius: 999px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.home-page__card-action:hover {
+  background: #e5e7eb;
+}
+
+.home-page__card-action-icon {
+  font-size: 0.95rem;
+}
+
+.home-page__message-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1800;
+}
+
+.home-page__message-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  width: min(420px, 100%);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.home-page__message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-page__message-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.home-page__message-header button {
+  border: none;
+  background: transparent;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.home-page__message-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.home-page__message-modal textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.home-page__message-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.home-page__message-btn {
+  border-radius: 999px;
+  border: 1px solid #111827;
+  background: transparent;
+  color: #111827;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.home-page__message-btn--primary {
+  background: #111827;
+  color: #ffffff;
 }
 
 /* ===========================================
@@ -152,6 +276,7 @@
 
   .home-page__sidebar {
     order: 2;
+    position: static;
   }
 }
 

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { NewsItem, RSS_FEEDS, fetchNewsFeedItems } from './utils/newsFeed';
+import { useState } from 'react';
+import { NewsItem, RSS_FEEDS } from './utils/newsFeed';
 import { useIsMobile } from './hooks/useIsMobile';
+import { openExternalUrl } from './utils/url';
+import { FALLBACKS } from './utils/fallbacks';
+import { useFetchNews } from './hooks/useFetchNews';
 import './NewsSection.css';
-
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 
 // Magazine carousel placeholder data (7 items)
 const MAGAZINE_CARDS = [
@@ -17,28 +18,10 @@ const MAGAZINE_CARDS = [
 ];
 
 export function NewsSection() {
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { items: news, loading, error, refresh } = useFetchNews();
   const [selectedSource, setSelectedSource] = useState<string>('all');
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
-
-  useEffect(() => {
-    fetchAllNews();
-  }, []);
-
-  const fetchAllNews = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const items = await fetchNewsFeedItems();
-      setNews(items);
-    } catch (err) {
-      setError('Unable to fetch news right now.');
-    }
-    setLoading(false);
-  };
 
   // Filter by source only
   const filteredNews = news.filter(item => {
@@ -56,7 +39,7 @@ export function NewsSection() {
   };
 
   const handleNewsClick = (item: NewsItem) => {
-    window.open(item.link, '_blank', 'noopener,noreferrer');
+    openExternalUrl(item.link);
   };
 
   if (loading) {
@@ -73,8 +56,8 @@ export function NewsSection() {
     return (
       <div style={{ width: '100%', backgroundColor: '#F2F3F5', padding: `2rem ${horizontalPadding}` }}>
         <div className="news-section__error">
-          <p>{error}</p>
-          <button onClick={fetchAllNews} className="news-section__retry-btn">
+          <p>Unable to fetch news right now.</p>
+          <button onClick={refresh} className="news-section__retry-btn">
             Try Again
           </button>
         </div>
@@ -211,7 +194,7 @@ export function NewsSection() {
             <div
               className="news-article__image"
               style={{
-                backgroundImage: `url(${item.thumbnail || FALLBACK_IMAGE})`,
+                backgroundImage: `url(${item.thumbnail || FALLBACKS.news})`,
               }}
             />
             <div className="news-article__content">

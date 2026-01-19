@@ -3,6 +3,7 @@ import { Calendar, MapPin, ArrowRight, X, Ticket, Car, ChevronDown } from 'lucid
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../../amplify/data/resource';
+import { FALLBACKS } from '../utils/fallbacks';
 import './NewsCarousel.css';
 
 const client = generateClient<Schema>();
@@ -12,7 +13,6 @@ type CarType = Schema['Car']['type'];
 type MakeType = Schema['Make']['type'];
 type ModelType = Schema['Model']['type'];
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80';
 const FRAME_TEXT = 'Collectible Collectible Collectible Collectible Collectible Collectible Collectible';
 
 // Car display info type
@@ -307,7 +307,7 @@ export default function EventsCarousel() {
                 width: '100%',
                 height: '310px',
                 backgroundColor: '#f3f4f6',
-                backgroundImage: `url(${event.coverImage || FALLBACK_IMAGE})`,
+                backgroundImage: `url(${event.coverImage || FALLBACKS.event})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 position: 'relative',
@@ -461,7 +461,7 @@ export default function EventsCarousel() {
               style={{
                 width: '100%',
                 height: '250px',
-                backgroundImage: `url(${selectedEvent.coverImage || FALLBACK_IMAGE})`,
+                backgroundImage: `url(${selectedEvent.coverImage || FALLBACKS.event})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 position: 'relative',
