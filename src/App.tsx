@@ -542,9 +542,13 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       }}>
         <Header />
 
-      {/* Main layout with shared 3-column grid */}
+      {/* Main layout with shared grid */}
       <div className="layout-container">
-        <div className="layout-3col app-layout" style={{ minHeight: 'calc(100vh - 60px)' }}>
+        {/* Use 2-column layout for Events, News, Auctions; 3-column for others */}
+        <div
+          className={`${['events', 'news', 'auctions'].includes(activeSection) ? 'layout-2col-sidebar' : 'layout-3col'} app-layout`}
+          style={{ minHeight: 'calc(100vh - 60px)' }}
+        >
           {/* Left Column */}
           <div className="layout-col layout-col--left">
             <LeftSidebar userInitials={userInitials} />

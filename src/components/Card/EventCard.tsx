@@ -84,9 +84,9 @@ export default function EventCard({
       <div className="event-card__body">
         <div className="event-card__date">{dateLabel}</div>
         <h3 className="event-card__title">{title}</h3>
-        <div className="event-card__row">
+        <div className="event-card__location">
           <span className="event-card__label">Location</span>
-          <span className="event-card__value">{locationLabel}</span>
+          <span className="event-card__location-value">{locationLabel}</span>
         </div>
       </div>
 

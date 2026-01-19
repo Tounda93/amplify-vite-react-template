@@ -75,7 +75,7 @@
 
 .events-carousel__item {
   flex: 0 0 auto;
-  width: 350px;
+  width: 420px;
 }
 
 .events-carousel__arrow {
@@ -207,7 +207,7 @@
   }
 
   .events-carousel__item {
-    width: 300px;
+    width: 360px;
   }
 
   .events-carousel__arrow {
@@ -239,7 +239,7 @@
   }
 
   .events-carousel__item {
-    width: 280px;
+    width: 336px;
   }
 
   .events-carousel {

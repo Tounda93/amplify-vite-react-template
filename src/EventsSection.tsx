@@ -5,7 +5,6 @@ import EventCard from './components/Card/EventCard';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
 import EventDetailPopup from './components/EventDetailPopup';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FALLBACKS } from './utils/fallbacks';
 import './EventsSection.css';
 
@@ -26,8 +25,6 @@ export function EventsSection({ onSaveEvent }: EventsSectionProps) {
   const [allEvents, setAllEvents] = useState<EventWithImageUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -90,38 +87,6 @@ export function EventsSection({ onSaveEvent }: EventsSectionProps) {
 
   const handleCardClick = (event: Event) => {
     setSelectedEvent(event);
-  };
-
-  // Carousel scroll handling
-  const checkScrollButtons = () => {
-    if (carouselRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
-  useEffect(() => {
-    checkScrollButtons();
-    const carousel = carouselRef.current;
-    if (carousel) {
-      carousel.addEventListener('scroll', checkScrollButtons);
-      window.addEventListener('resize', checkScrollButtons);
-      return () => {
-        carousel.removeEventListener('scroll', checkScrollButtons);
-        window.removeEventListener('resize', checkScrollButtons);
-      };
-    }
-  }, [allEvents]);
-
-  const scrollCarousel = (direction: 'left' | 'right') => {
-    if (carouselRef.current) {
-      const scrollAmount = 400;
-      carouselRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }
   };
 
   useEffect(() => {
@@ -220,17 +185,6 @@ export function EventsSection({ onSaveEvent }: EventsSectionProps) {
         {/* Events Carousel */}
         {allEvents.length > 0 ? (
           <div className="events-carousel-container">
-            {/* Left Arrow */}
-            {canScrollLeft && !isMobile && (
-              <button
-                className="events-carousel__arrow events-carousel__arrow--left"
-                onClick={() => scrollCarousel('left')}
-                aria-label="Scroll left"
-              >
-                <ChevronLeft size={24} />
-              </button>
-            )}
-
             {/* Carousel */}
             <div
               ref={carouselRef}
@@ -266,17 +220,6 @@ export function EventsSection({ onSaveEvent }: EventsSectionProps) {
                 </div>
               ))}
             </div>
-
-            {/* Right Arrow */}
-            {canScrollRight && !isMobile && (
-              <button
-                className="events-carousel__arrow events-carousel__arrow--right"
-                onClick={() => scrollCarousel('right')}
-                aria-label="Scroll right"
-              >
-                <ChevronRight size={24} />
-              </button>
-            )}
           </div>
         ) : (
           <div className="events-section__empty">

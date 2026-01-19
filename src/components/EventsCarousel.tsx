@@ -4,11 +4,13 @@ import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../../amplify/data/resource';
 import { FALLBACKS } from '../utils/fallbacks';
+import { getImageUrl } from '../utils/storageHelpers';
 import './NewsCarousel.css';
 
 const client = generateClient<Schema>();
 
 type Event = Schema['Event']['type'];
+type EventWithImageUrl = Event & { imageUrl?: string };
 type CarType = Schema['Car']['type'];
 type MakeType = Schema['Make']['type'];
 type ModelType = Schema['Model']['type'];
@@ -25,14 +27,14 @@ interface CarDisplayInfo {
 }
 
 export default function EventsCarousel() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<EventWithImageUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
   const [allowHoverEffects, setAllowHoverEffects] = useState(false);
 
   // Popup state
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventWithImageUrl | null>(null);
   const [showPopup, setShowPopup] = useState(false);
 
   // RSVP state
@@ -126,7 +128,7 @@ export default function EventsCarousel() {
     setLoadingCars(false);
   };
 
-  const handleEventClick = (event: Event) => {
+  const handleEventClick = (event: EventWithImageUrl) => {
     setSelectedEvent(event);
     setShowPopup(true);
     setRsvpStatus('idle');
@@ -169,7 +171,21 @@ export default function EventsCarousel() {
           return dateA.getTime() - dateB.getTime();
         });
 
-      setEvents(upcoming.slice(0, 12)); // Show max 12 events
+      // Convert storage paths to signed URLs
+      const eventsWithUrls = await Promise.all(
+        upcoming.slice(0, 12).map(async (event) => {
+          // Try coverImage (uploaded file) first, then coverImageUrl (external URL)
+          let imageUrl: string | null = null;
+          if (event.coverImage) {
+            imageUrl = await getImageUrl(event.coverImage);
+          } else if (event.coverImageUrl) {
+            imageUrl = event.coverImageUrl;
+          }
+          return { ...event, imageUrl: imageUrl || FALLBACKS.event };
+        })
+      );
+
+      setEvents(eventsWithUrls);
     } catch (error) {
       console.error('Error loading events:', error);
     }
@@ -307,7 +323,7 @@ export default function EventsCarousel() {
                 width: '100%',
                 height: '310px',
                 backgroundColor: '#f3f4f6',
-                backgroundImage: `url(${event.coverImage || FALLBACKS.event})`,
+                backgroundImage: `url(${event.imageUrl || FALLBACKS.event})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 position: 'relative',
@@ -461,7 +477,7 @@ export default function EventsCarousel() {
               style={{
                 width: '100%',
                 height: '250px',
-                backgroundImage: `url(${selectedEvent.coverImage || FALLBACKS.event})`,
+                backgroundImage: `url(${selectedEvent.imageUrl || FALLBACKS.event})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 position: 'relative',

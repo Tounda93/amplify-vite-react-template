@@ -21,6 +21,19 @@
   width: 100%;
 }
 
+/* 2-column layout for Events, News, Auctions pages (20% sidebar, 80% content) */
+.layout-2col-sidebar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
+  gap: 2rem;
+  align-items: start;
+  width: 100%;
+}
+
+.layout-2col-sidebar .layout-col--right {
+  display: none;
+}
+
 .layout-1col {
   display: flex;
   flex-direction: column;
@@ -41,6 +54,11 @@
   .app-layout .layout-col--left {
     display: none;
   }
+
+  /* 2-col sidebar layout keeps sidebar visible on tablet */
+  .layout-2col-sidebar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
+  }
 }
 
 /* App layout behavior for mobile */
@@ -59,5 +77,14 @@
 
   .app-layout .layout-col--right {
     order: 2;
+  }
+
+  /* 2-col sidebar layout becomes single column on mobile */
+  .layout-2col-sidebar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .layout-2col-sidebar .layout-col--left {
+    display: none;
   }
 }
