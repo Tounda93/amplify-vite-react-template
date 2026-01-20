@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Car, MessageSquare, Search, User } from 'lucide-react';
+import { Car, MessageSquare, Search, User, Users } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import SearchBar from './SearchBar';
 import { useAppUI } from '../context/AppUIContext';
@@ -62,6 +62,7 @@ export default function Footer() {
     const navItems = [
       { id: 'search', label: 'Search', icon: Search, isSearch: true },
       { id: 'chat', label: 'Chat', icon: MessageSquare },
+      { id: 'friends', label: 'Friends', icon: Users },
       { id: 'garage', label: 'My Garage', icon: Car },
       { id: 'profile', label: 'Profile', icon: User },
     ];

@@ -1,4 +1,4 @@
-export type SearchCategory = 'news' | 'events' | 'auctions' | 'rooms';
+export type SearchCategory = 'news' | 'events' | 'auctions' | 'rooms' | 'users';
 
 export interface SearchResultItem {
   id: string;
@@ -7,6 +7,7 @@ export interface SearchResultItem {
   subtitle?: string;
   description?: string;
   url?: string;
+  imageUrl?: string;
   data?: Record<string, unknown>;
 }
 

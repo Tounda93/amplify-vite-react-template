@@ -154,17 +154,24 @@ export default function Header() {
         <div className="layout-3col site-header__grid">
           {/* Left: Logo + Search */}
           <div className="site-header__left">
-            <div
+            <button
+              type="button"
+              onClick={() => setActiveSection('home')}
               style={{
                 fontSize: "26px",
                 fontWeight: 700,
                 letterSpacing: "0.02em",
-                color: "#0b0b0b"
+                color: "#0b0b0b",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                lineHeight: 1,
               }}
-              aria-label="Collectible"
+              aria-label="Go to homepage"
             >
               C
-            </div>
+            </button>
             <SearchBar
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}

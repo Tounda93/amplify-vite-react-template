@@ -3,13 +3,16 @@ import '@aws-amplify/ui-react/styles.css';
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { generateClient } from 'aws-amplify/data';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../amplify/data/resource';
 import { NewsSection } from './NewsSection';
 import { AuctionsPage } from './AuctionsPage';
 import { EventsSection } from './EventsSection';
 import { SavedEventsSection } from './SavedEventsSection';
 import { CommunitySection } from './CommunitySection';
-import { ChatSection } from './ChatSection';
+import { ChatProvider, ChatSection, ChatConversationList } from './ChatSection';
+import FriendsSection from './components/FriendsSection';
+import PublicProfileSection from './components/PublicProfileSection';
 import { MyGarageSection } from './MyGarageSection';
 import { ProfileSection } from './ProfileSection';
 import { ShopSection } from './ShopSection';
@@ -20,11 +23,11 @@ import Header from './components/Header';
 import LeftSidebar from './components/LeftSidebar';
 import HomePage, { HomeRoomsSidebar } from './components/HomePage';
 import Footer from './components/Footer';
-import { useIsMobile } from './hooks/useIsMobile';
 import { importAllData } from './importData';
 import { isAdminEmail } from './constants/admins';
 import { NewsItem, fetchNewsFeedItems } from './utils/newsFeed';
 import { openExternalUrl } from './utils/url';
+import { getImageUrl } from './utils/storageHelpers';
 import { SearchResultItem, SearchResultGroups } from './types/search';
 import RoomPage from './components/RoomPage';
 import { AppUIProvider } from './context/AppUIContext';
@@ -36,6 +39,7 @@ type Make = Schema['Make']['type'];
 type Model = Schema['Model']['type'];
 type EventModel = Schema['Event']['type'];
 type AuctionModel = Schema['Auction']['type'];
+type ProfileModel = Schema['Profile']['type'];
 
 const SAVED_EVENTS_STORAGE_KEY = 'collectible.savedEvents';
 
@@ -67,6 +71,7 @@ const getEmptySearchResults = (): SearchResultGroups => ({
   events: [],
   auctions: [],
   rooms: [],
+  users: [],
 });
 
 // =====================================================
@@ -99,6 +104,7 @@ const sectionToPath: Record<string, string> = {
   saved: '/saved',
   auctions: '/auctions',
   admin: '/admin',
+  friends: '/friends',
 };
 
 // Map URL paths back to section IDs
@@ -115,6 +121,7 @@ const pathToSection: Record<string, string> = {
   '/saved': 'saved',
   '/auctions': 'auctions',
   '/admin': 'admin',
+  '/friends': 'friends',
   '/': 'home',
 };
 
@@ -144,6 +151,10 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [newsCache, setNewsCache] = useState<NewsItem[]>([]);
   const [eventsCache, setEventsCache] = useState<EventModel[]>([]);
   const [auctionsCache, setAuctionsCache] = useState<AuctionModel[]>([]);
+  const [profilesCache, setProfilesCache] = useState<Array<ProfileModel & { resolvedAvatar?: string }>>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<ProfileModel | null>(null);
+  const [friendsRefreshKey, setFriendsRefreshKey] = useState(0);
   const [searchResults, setSearchResults] = useState<SearchResultGroups>(getEmptySearchResults());
   const [searchLoading, setSearchLoading] = useState(false);
   const [savedEvents, setSavedEvents] = useState<EventModel[]>(() => {
@@ -160,9 +171,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     }
     return [];
   });
-  const isMobile = useIsMobile();
-  // Mobile horizontal padding reduced by 80%: 2rem -> 0.4rem
-  const horizontalPadding = isMobile ? '0.4rem' : '5rem';
   // No top padding needed
   const topPadding = '0';
   const [hasEnsuredSeedData, setHasEnsuredSeedData] = useState(false);
@@ -226,6 +234,19 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   useEffect(() => {
     loadAllMakes();
     loadAllModels();
+  }, []);
+
+  useEffect(() => {
+    const loadUserId = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const userId = session.tokens?.idToken?.payload?.sub as string | undefined;
+        setCurrentUserId(userId ?? null);
+      } catch (error) {
+        console.error('Failed to load user session', error);
+      }
+    };
+    loadUserId();
   }, []);
 
   // Sync activeSection with URL path changes (browser back/forward)
@@ -381,6 +402,47 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       }));
   };
 
+  const ensureProfiles = async () => {
+    if (profilesCache.length > 0) {
+      return profilesCache;
+    }
+    try {
+      const { data } = await client.models.Profile.list({ limit: 500 });
+      const resolved = await Promise.all(
+        (data || []).map(async (profile) => {
+          const resolvedAvatar = profile.avatarUrl ? (await getImageUrl(profile.avatarUrl)) ?? undefined : undefined;
+          return { ...profile, resolvedAvatar };
+        })
+      );
+      setProfilesCache(resolved);
+      return resolved;
+    } catch (error) {
+      console.error('Error loading profiles for search:', error);
+      return [];
+    }
+  };
+
+  const getUserResults = async (term: string): Promise<SearchResultItem[]> => {
+    const profiles = await ensureProfiles();
+    const query = term.toLowerCase();
+    return profiles
+      .filter((profile) => {
+        const displayName = profile.displayName || profile.nickname || '';
+        const matches = displayName.toLowerCase().includes(query);
+        const isSelf = currentUserId && profile.ownerId === currentUserId;
+        return matches && !isSelf;
+      })
+      .slice(0, 5)
+      .map((profile) => ({
+        id: `user-${profile.id}`,
+        category: 'users',
+        title: profile.displayName || profile.nickname || 'Unnamed user',
+        subtitle: profile.nickname && profile.displayName ? profile.nickname : profile.location || undefined,
+        imageUrl: profile.resolvedAvatar || undefined,
+        data: profile,
+      }));
+  };
+
   useEffect(() => {
     let cancelled = false;
     const term = searchTerm.trim();
@@ -394,11 +456,12 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     const runSearch = async () => {
       setSearchLoading(true);
       try {
-        const [news, events, auctions, rooms] = await Promise.all([
+        const [news, events, auctions, rooms, users] = await Promise.all([
           getNewsResults(term),
           getEventResults(term),
           getAuctionResults(term),
           Promise.resolve(getRoomsResults(term)),
+          getUserResults(term),
         ]);
 
         if (!cancelled) {
@@ -407,6 +470,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
             events,
             auctions,
             rooms,
+            users,
           });
         }
       } catch (error) {
@@ -427,7 +491,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, allMakes, allModels]);
+  }, [searchTerm, allMakes, allModels, currentUserId]);
 
   const handleSelectMake = async (make: Make) => {
     setSelectedMake(make);
@@ -455,6 +519,9 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     if (section !== 'home') {
       setSelectedMake(null);
       setModels([]);
+    }
+    if (section !== 'friends') {
+      setSelectedUserProfile(null);
     }
   };
 
@@ -493,10 +560,21 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     } else if (result.category === 'rooms') {
       setActiveSection('rooms');
       navigate('/rooms');
+    } else if (result.category === 'users') {
+      const profile = result.data as ProfileModel | undefined;
+      if (profile) {
+        setSelectedUserProfile(profile);
+        setActiveSection('friends');
+        navigate('/friends');
+      }
     }
 
     setSearchTerm('');
     setSearchResults(getEmptySearchResults());
+  };
+
+  const handleFriendUpdated = () => {
+    setFriendsRefreshKey((prev) => prev + 1);
   };
 
   const persistSavedEvents = (updater: (prev: EventModel[]) => EventModel[]) => {
@@ -544,18 +622,34 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
       {/* Main layout with shared grid */}
       <div className="layout-container">
-        {/* Use 2-column layout for Events, News, Auctions; 3-column for others */}
+        {/* Use 2-column layout for Events, News, Auctions, Garage; 3-column for others */}
         <div
-          className={`${['events', 'news', 'auctions'].includes(activeSection) ? 'layout-2col-sidebar' : 'layout-3col'} app-layout`}
+          className={`${['events', 'news', 'auctions', 'garage'].includes(activeSection) ? 'layout-2col-sidebar' : 'layout-3col'} app-layout`}
           style={{ minHeight: 'calc(100vh - 60px)' }}
         >
-          {/* Left Column */}
-          <div className="layout-col layout-col--left">
-            <LeftSidebar userInitials={userInitials} />
-          </div>
+          {activeSection === 'chat' ? (
+            <ChatProvider refreshKey={friendsRefreshKey}>
+              <div className="layout-col layout-col--left">
+                <LeftSidebar userInitials={userInitials} />
+              </div>
 
-          {/* Main Content Area */}
-          <main className="layout-col layout-col--center">
+              <main className="layout-col layout-col--center">
+                <ChatSection />
+              </main>
+
+              <aside className="layout-col layout-col--right">
+                <ChatConversationList />
+              </aside>
+            </ChatProvider>
+          ) : (
+            <>
+              {/* Left Column */}
+              <div className="layout-col layout-col--left">
+                <LeftSidebar userInitials={userInitials} />
+              </div>
+
+              {/* Main Content Area */}
+              <main className="layout-col layout-col--center">
           {/* NEWS SECTION */}
           {activeSection === 'news' && (
             <NewsSection />
@@ -586,14 +680,22 @@ function CarSearch({ user, signOut }: CarSearchProps) {
             <SavedEventsSection savedEvents={savedEvents} onSaveEvent={handleSaveEvent} />
           )}
 
-          {/* CHAT SECTION */}
-          {activeSection === 'chat' && (
-            <div style={{
-              width: '100%',
-              padding: `2rem ${horizontalPadding}`
-            }}>
-              <ChatSection />
-            </div>
+          {/* FRIENDS SECTION */}
+          {activeSection === 'friends' && (
+            selectedUserProfile ? (
+              <PublicProfileSection
+                profile={selectedUserProfile}
+                currentUserId={currentUserId}
+                onBack={() => setSelectedUserProfile(null)}
+                onFriendUpdated={handleFriendUpdated}
+              />
+            ) : (
+              <FriendsSection
+                currentUserId={currentUserId}
+                refreshKey={friendsRefreshKey}
+                onSelectProfile={(profile) => setSelectedUserProfile(profile)}
+              />
+            )
           )}
 
           {/* MY GARAGE SECTION */}
@@ -687,14 +789,18 @@ function CarSearch({ user, signOut }: CarSearchProps) {
               )}
             </div>
           )}
-          </main>
+              </main>
 
-          {/* Right Column */}
-          <aside className="layout-col layout-col--right">
-            {activeSection === 'home' && !location.pathname.startsWith('/rooms/') && !selectedMake && makes.length === 0 && (
-              <HomeRoomsSidebar />
-            )}
-          </aside>
+              {/* Right Column */}
+              {activeSection !== 'garage' && (
+                <aside className="layout-col layout-col--right">
+                  {activeSection === 'home' && !location.pathname.startsWith('/rooms/') && !selectedMake && makes.length === 0 && (
+                    <HomeRoomsSidebar />
+                  )}
+                </aside>
+              )}
+            </>
+          )}
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { MessageSquare, Bell, ShoppingBag, Bookmark, LucideIcon } from "lucide-react";
+import { MessageSquare, Bell, ShoppingBag, Bookmark, Users, LucideIcon } from "lucide-react";
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useAppUI } from '../context/AppUIContext';
 
@@ -29,6 +29,7 @@ export default function LeftSidebar({
   const sidebarItems: SidebarItem[] = [
     { id: "garage", label: "My Garage", useProfilePicture: true },
     { id: "chat", label: "Chat", icon: MessageSquare },
+    { id: "friends", label: "Friends", icon: Users },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "shop", label: "Shop", icon: ShoppingBag },
     { id: "saved", label: "Save", icon: Bookmark },

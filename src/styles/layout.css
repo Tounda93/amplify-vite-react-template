@@ -21,6 +21,10 @@
   width: 100%;
 }
 
+.app-layout--garage {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
+}
+
 /* 2-column layout for Events, News, Auctions pages (20% sidebar, 80% content) */
 .layout-2col-sidebar {
   display: grid;

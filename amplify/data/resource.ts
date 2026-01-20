@@ -61,6 +61,7 @@ const schema = a.schema({
 
   Profile: a
     .model({
+      ownerId: a.string(),
       displayName: a.string(),
       nickname: a.string(),
       bio: a.string(),
@@ -117,6 +118,25 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.owner().to(['create', 'read', 'update', 'delete']),
+    ]),
+
+  FriendRequest: a
+    .model({
+      senderId: a.string().required(),
+      receiverId: a.string().required(),
+      status: a.enum(['pending', 'accepted', 'rejected']),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(['read', 'create', 'update', 'delete']),
+    ]),
+
+  Friend: a
+    .model({
+      userId: a.string().required(),
+      friendId: a.string().required(),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(['read', 'create', 'delete']),
     ]),
 
   Auction: a

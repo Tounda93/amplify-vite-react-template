@@ -20,6 +20,7 @@ const searchSections: Array<{ key: keyof SearchResultGroups; label: string; acce
   { key: 'events', label: 'Events', accent: '#059669' },
   { key: 'auctions', label: 'Auctions', accent: '#b45309' },
   { key: 'rooms', label: 'Rooms', accent: '#7c3aed' },
+  { key: 'users', label: 'Users', accent: '#2563eb' },
 ];
 
 export default function SearchBar({
@@ -197,8 +198,23 @@ export default function SearchBar({
                     }}
                     onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: isLight ? '#111827' : (isMobile ? '#ffffff' : '#111827') }}>
-                      {result.title}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {result.imageUrl && (
+                        <img
+                          src={result.imageUrl}
+                          alt={result.title}
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: isLight ? '#111827' : (isMobile ? '#ffffff' : '#111827') }}>
+                        {result.title}
+                      </div>
                     </div>
                     {result.subtitle && (
                       <div style={{ fontSize: '12px', color: isLight ? '#6b7280' : (isMobile ? '#cbd5f5' : '#6b7280'), marginTop: '2px' }}>

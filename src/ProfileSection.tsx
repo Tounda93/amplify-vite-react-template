@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { User, Mail, Calendar, MapPin, Edit, Shield, LogOut } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { uploadData } from 'aws-amplify/storage';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../amplify/data/resource';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
@@ -29,6 +30,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -50,9 +52,25 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   }, []);
 
   useEffect(() => {
+    const loadUserId = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const userId = session.tokens?.idToken?.payload?.sub as string | undefined;
+        setCurrentUserId(userId ?? null);
+      } catch (error) {
+        console.error('Failed to load user session', error);
+      }
+    };
+    loadUserId();
+  }, []);
+
+  useEffect(() => {
     const loadProfile = async () => {
       try {
-        const { data } = await client.models.Profile.list({ limit: 1 });
+        const { data } = await client.models.Profile.list({
+          limit: 1,
+          filter: currentUserId ? { ownerId: { eq: currentUserId } } : undefined,
+        });
         const profile = data?.[0];
         if (profile?.id) {
           setProfileId(profile.id);
@@ -86,7 +104,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
     };
 
     loadProfile();
-  }, []);
+  }, [currentUserId]);
 
   const handleSavePhone = async () => {
     setSavingPhone(true);
@@ -99,6 +117,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
         });
       } else {
         const created = await client.models.Profile.create({
+          ownerId: currentUserId || undefined,
           phoneNumber: normalizedPhone || undefined,
         });
         setProfileId(created.data?.id ?? null);
@@ -166,6 +185,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
         });
       } else {
         const created = await client.models.Profile.create({
+          ownerId: currentUserId || undefined,
           avatarUrl: result.path,
         });
         setProfileId(created.data?.id ?? null);

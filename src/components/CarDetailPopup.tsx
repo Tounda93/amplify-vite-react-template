@@ -355,12 +355,12 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
         style={{
           background: '#fff',
           borderRadius: '12px',
-          width: '100%',
-          maxWidth: '700px',
+          width: 'min(92vw, 960px)',
+          aspectRatio: '16 / 10',
           maxHeight: '90vh',
           overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
+          display: 'grid',
+          gridTemplateRows: 'clamp(220px, 60%, 420px) 1fr',
         }}
       >
         {/* Header with Image */}
@@ -370,7 +370,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
             alt={`${displayMakeName} ${displayModelName}`}
             style={{
               width: '100%',
-              height: '300px',
+              height: '100%',
               objectFit: 'cover',
             }}
           />
@@ -399,7 +399,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                   minWidth: '36px',
                   minHeight: '36px',
                   borderRadius: '50%',
-                  border: '1px solid rgba(0,0,0,0.4)',
+                  border: 'none',
                   background: 'rgba(255, 255, 255, 0.9)',
                   cursor: 'pointer',
                   display: 'flex',
@@ -411,7 +411,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                 }}
                 aria-label="More actions"
               >
-                <MoreVertical size={20} />
+                <MoreVertical size={20} style={{ transform: 'rotate(90deg)' }} />
               </button>
 
               {menuOpen && (
@@ -472,7 +472,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                 minWidth: '36px',
                 minHeight: '36px',
                 borderRadius: '50%',
-                border: '1px solid rgba(0,0,0,0.4)',
+                border: 'none',
                 background: 'rgba(255, 255, 255, 0.9)',
                 cursor: 'pointer',
                 display: 'flex',
@@ -532,8 +532,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
           onChange={handlePhotoInputChange}
         />
 
-        {/* Scrollable Content */}
-        <div style={{ overflowY: 'auto', padding: '1.5rem' }}>
+        {/* Content */}
+        <div style={{ padding: 'clamp(0.75rem, 2vw, 1.5rem)', overflowY: 'auto' }}>
           <h2 style={{ margin: '0 0 1.5rem 0', fontSize: '1.5rem', fontWeight: 600, color: '#000' }}>
             {carData.year ? `${carData.year} ` : ''}{displayMakeName} {displayModelName}
           </h2>
@@ -579,21 +579,27 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                 <span>Date</span>
                 <span>{carData.year || '—'}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
-                <span>Engine</span>
-                <span>{carData.engineVariantId || '—'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
-                <span>Transmission</span>
-                <span>{formatTransmission(carData.transmission) || '—'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
-                <span>Exterior colour</span>
-                <span>{carData.color || '—'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#111' }}>
-                <span>Interior colour</span>
-                <span>{carData.interiorColor || '—'}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                <div style={{ display: 'grid', gap: '0.6rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                    <span style={{ color: '#6b7280' }}>Engine</span>
+                    <span style={{ fontWeight: 600, color: '#111' }}>{carData.engineVariantId || '—'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                    <span style={{ color: '#6b7280' }}>Transmission</span>
+                    <span style={{ fontWeight: 600, color: '#111' }}>{formatTransmission(carData.transmission) || '—'}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gap: '0.6rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                    <span style={{ color: '#6b7280' }}>Exterior colour</span>
+                    <span style={{ fontWeight: 600, color: '#111' }}>{carData.color || '—'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                    <span style={{ color: '#6b7280' }}>Interior colour</span>
+                    <span style={{ fontWeight: 600, color: '#111' }}>{carData.interiorColor || '—'}</span>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
