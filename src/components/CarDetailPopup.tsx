@@ -50,6 +50,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
     transmission: '' as '' | 'manual' | 'automatic' | 'semi_automatic',
     color: '',
     interiorColor: '',
+    forSale: false,
+    price: '',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -66,6 +68,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
         transmission: (car.transmission || '') as '' | 'manual' | 'automatic' | 'semi_automatic',
         color: car.color || '',
         interiorColor: car.interiorColor || '',
+        forSale: car.saleStatus === 'for_sale',
+        price: car.price ? String(car.price) : '',
       });
     } else {
       setEditValues({
@@ -76,6 +80,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
         transmission: '',
         color: '',
         interiorColor: '',
+        forSale: false,
+        price: '',
       });
     }
   }, [car]);
@@ -268,9 +274,67 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
       transmission: (carData.transmission || '') as '' | 'manual' | 'automatic' | 'semi_automatic',
       color: carData.color || '',
       interiorColor: carData.interiorColor || '',
+      forSale: carData.saleStatus === 'for_sale',
+      price: carData.price ? String(carData.price) : '',
     });
     setIsEditing(true);
     setMenuOpen(false);
+  };
+
+  const handlePrevPhoto = () => {
+    if (photoUrls.length <= 1) return;
+    setCurrentPhotoIndex((prev) => (prev - 1 + photoUrls.length) % photoUrls.length);
+  };
+
+  const handleNextPhoto = () => {
+    if (photoUrls.length <= 1) return;
+    setCurrentPhotoIndex((prev) => (prev + 1) % photoUrls.length);
+  };
+
+  const handleToggleListing = async () => {
+    if (!carData) return;
+    if (carData.saleStatus === 'for_sale') {
+      try {
+        await client.models.Car.update({
+          id: carData.id,
+          saleStatus: 'off_market',
+          price: undefined,
+        });
+        setCarData((prev) => prev ? ({ ...prev, saleStatus: 'off_market', price: undefined }) : prev);
+        onCarUpdated?.();
+      } catch (error) {
+        console.error('Error removing car listing:', error);
+        alert('Failed to remove listing. Please try again.');
+      } finally {
+        setMenuOpen(false);
+      }
+      return;
+    }
+    const currentPrice = carData.price ? String(carData.price) : '';
+    const input = window.prompt('Enter sale price', currentPrice);
+    if (input === null) {
+      setMenuOpen(false);
+      return;
+    }
+    const priceValue = Number(input);
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      alert('Please enter a valid sale price.');
+      return;
+    }
+    try {
+      await client.models.Car.update({
+        id: carData.id,
+        saleStatus: 'for_sale',
+        price: priceValue,
+      });
+      setCarData((prev) => prev ? ({ ...prev, saleStatus: 'for_sale', price: priceValue }) : prev);
+      onCarUpdated?.();
+    } catch (error) {
+      console.error('Error listing car for sale:', error);
+      alert('Failed to list car for sale. Please try again.');
+    } finally {
+      setMenuOpen(false);
+    }
   };
 
   const handleSave = async () => {
@@ -286,6 +350,14 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
       return;
     }
 
+    const salePrice = editValues.price ? Number(editValues.price) : undefined;
+    if (editValues.forSale) {
+      if (salePrice === undefined || !Number.isFinite(salePrice) || salePrice <= 0) {
+        alert('Please enter a valid sale price.');
+        return;
+      }
+    }
+
     try {
       await client.models.Car.update({
         id: carData.id,
@@ -296,6 +368,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
         transmission: editValues.transmission || undefined,
         color: editValues.color || undefined,
         interiorColor: editValues.interiorColor || undefined,
+        saleStatus: editValues.forSale ? 'for_sale' : 'off_market',
+        price: editValues.forSale ? salePrice : undefined,
       });
 
       setCarData(prev => prev ? ({
@@ -307,6 +381,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
         transmission: editValues.transmission || undefined,
         color: editValues.color || undefined,
         interiorColor: editValues.interiorColor || undefined,
+        saleStatus: editValues.forSale ? 'for_sale' : 'off_market',
+        price: editValues.forSale ? salePrice : undefined,
       }) : prev);
       setIsEditing(false);
       onCarUpdated?.();
@@ -328,6 +404,8 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
         transmission: (carData.transmission || '') as '' | 'manual' | 'automatic' | 'semi_automatic',
         color: carData.color || '',
         interiorColor: carData.interiorColor || '',
+        forSale: carData.saleStatus === 'for_sale',
+        price: carData.price ? String(carData.price) : '',
       });
     }
   };
@@ -356,7 +434,7 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
           background: '#fff',
           borderRadius: '12px',
           width: 'min(92vw, 960px)',
-          aspectRatio: '16 / 10',
+          aspectRatio: '5 / 4',
           maxHeight: '90vh',
           overflow: 'hidden',
           display: 'grid',
@@ -446,6 +524,24 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                     Edit
                   </button>
                   <button
+                    onClick={handleToggleListing}
+                    disabled={isUploading}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      border: 'none',
+                      background: 'transparent',
+                      textAlign: 'left',
+                      cursor: isUploading ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem',
+                      color: '#111',
+                    }}
+                  >
+                    {carData.saleStatus === 'for_sale'
+                      ? 'Remove car from listing'
+                      : 'List car for sale'}
+                  </button>
+                  <button
                     onClick={handleDelete}
                     style={{
                       width: '100%',
@@ -491,6 +587,56 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
           {/* Photo Navigation */}
           {photoUrls.length > 1 && (
             <>
+              <button
+                type="button"
+                onClick={handlePrevPhoto}
+                aria-label="Previous photo"
+                style={{
+                  position: 'absolute',
+                  left: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  color: '#111',
+                  padding: 0,
+                }}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={handleNextPhoto}
+                aria-label="Next photo"
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  color: '#111',
+                  padding: 0,
+                }}
+              >
+                ›
+              </button>
               {/* Photo Indicators */}
               <div
                 style={{
@@ -711,6 +857,31 @@ export default function CarDetailPopup({ car, makeName, modelName, isOpen, onClo
                   }}
                 />
               </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#111' }}>
+                <input
+                  type="checkbox"
+                  checked={editValues.forSale}
+                  onChange={(e) => setEditValues((prev) => ({ ...prev, forSale: e.target.checked }))}
+                />
+                <span>For sale</span>
+              </label>
+              {editValues.forSale && (
+                <label style={{ display: 'grid', gap: '0.5rem', color: '#111' }}>
+                  <span>Sale price</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editValues.price}
+                    onChange={(e) => setEditValues((prev) => ({ ...prev, price: e.target.value }))}
+                    style={{
+                      padding: '0.6rem 0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #d1d5db',
+                    }}
+                  />
+                </label>
+              )}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <button
