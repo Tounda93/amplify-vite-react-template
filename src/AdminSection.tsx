@@ -110,6 +110,7 @@ function EventsAdmin() {
     eventType: 'car_show' | 'race' | 'auction' | 'meet' | 'rally' | 'festival' | 'exhibition' | 'track_day' | 'other';
     venue: string;
     address: string;
+    googleMapsAddress: string;
     city: string;
     region: string;
     country: string;
@@ -136,6 +137,7 @@ function EventsAdmin() {
     eventType: 'other',
     venue: '',
     address: '',
+    googleMapsAddress: '',
     city: '',
     region: '',
     country: '',
@@ -265,6 +267,7 @@ function EventsAdmin() {
       setFormData(prev => ({
         ...prev,
         address: formattedAddress,
+        googleMapsAddress: formattedAddress,
         city,
         region,
         country,
@@ -365,6 +368,7 @@ function EventsAdmin() {
       eventType: 'other' as const,
       venue: '',
       address: '',
+      googleMapsAddress: '',
       city: '',
       region: '',
       country: '',
@@ -442,6 +446,7 @@ function EventsAdmin() {
       eventType: event.eventType || 'other',
       venue: event.venue || '',
       address: event.address || '',
+      googleMapsAddress: event.googleMapsAddress || '',
       city: event.city || '',
       region: event.region || '',
       country: event.country || '',
@@ -485,6 +490,10 @@ function EventsAdmin() {
       alert('Please select a location from the suggestions.');
       return;
     }
+    if (!formData.googleMapsAddress) {
+      alert('Please enter a Google Maps address.');
+      return;
+    }
 
     const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
     if (Number.isNaN(startDateTime.getTime())) {
@@ -503,6 +512,7 @@ function EventsAdmin() {
         eventType: formData.eventType,
         venue: formData.venue || undefined,
         address: formData.address || undefined,
+        googleMapsAddress: formData.googleMapsAddress || undefined,
         city: formData.city,
         region: formData.region || undefined,
         country: formData.country,
@@ -731,6 +741,17 @@ function EventsAdmin() {
                       Add `VITE_GOOGLE_MAPS_API_KEY` to enable address search.
                     </span>
                   )}
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Google Maps Address *</label>
+                  <input
+                    type="text"
+                    value={formData.googleMapsAddress}
+                    onChange={(e) => setFormData(prev => ({ ...prev, googleMapsAddress: e.target.value }))}
+                    placeholder="Paste the address used for Google Maps"
+                    required
+                  />
                 </div>
 
                 <div className="admin-form__field admin-form__field--full">

@@ -1,0 +1,72 @@
+.add-to-calendar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.add-to-calendar__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.add-to-calendar__trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.add-to-calendar__menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  padding: 0.5rem;
+  z-index: 2000;
+}
+
+.add-to-calendar__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280;
+  padding: 0.35rem 0.5rem 0.5rem;
+}
+
+.add-to-calendar__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #111827;
+}
+
+.add-to-calendar__item:hover {
+  background: #f3f4f6;
+}
+
+@media (max-width: 600px) {
+  .add-to-calendar__menu {
+    left: 0;
+    right: auto;
+  }
+}

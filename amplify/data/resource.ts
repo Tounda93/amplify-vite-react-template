@@ -154,6 +154,7 @@ const schema = a.schema({
       // Location
       venue: a.string(),
       address: a.string(),
+      googleMapsAddress: a.string(),
       city: a.string().required(),
       region: a.string(),        // State/Province
       country: a.string().required(),

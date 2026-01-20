@@ -5,6 +5,8 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
 import { FALLBACKS } from '../utils/fallbacks';
+import type { CalendarEventInput } from '../utils/calendar';
+import AddToCalendarButton from './AddToCalendarButton';
 
 // Helper to check if a string is a storage path
 const isStoragePath = (str: string) => str.startsWith('car-photos/') || str.startsWith('event-photos/');
@@ -191,29 +193,47 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
 
   if (!isOpen || !event) return null;
 
-  const formatDate = (dateString: string) => {
+  const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
+    if (Number.isNaN(date.getTime())) {
+      return 'Date TBD';
+    }
+    const datePart = date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
+      year: 'numeric',
     });
+    const timePart = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${datePart} – ${timePart}`;
   };
 
-  const getDateRange = () => {
-    if (!event.startDate) return 'Date TBD';
-    const start = formatDate(event.startDate);
-    if (event.endDate && event.endDate !== event.startDate) {
-      const end = formatDate(event.endDate);
-      return `${start} - ${end}`;
-    }
-    return start;
+  const buildCalendarEvent = (): CalendarEventInput => {
+    const locationParts = [event.venue, event.address, event.city, event.region, event.country].filter(Boolean);
+    return {
+      title: event.title || 'Event',
+      startDate: event.startDate || '',
+      endDate: event.endDate || null,
+      location: event.googleMapsAddress || locationParts.join(', ') || undefined,
+      description: event.description || null,
+      url: event.ticketUrl || event.website || null,
+      id: event.id,
+    };
   };
 
   const getLocation = () => {
     const parts = [event.venue, event.city, event.country].filter(Boolean);
     return parts.join(', ') || 'Location TBD';
+  };
+
+  const getMapsUrl = () => {
+    const query = event.googleMapsAddress?.trim() || getLocation();
+    if (!query || query === 'Location TBD') {
+      return '';
+    }
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
   };
 
   return (
@@ -238,13 +258,13 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
       <div
         style={{
           background: '#fff',
-          borderRadius: '12px',
-          width: '100%',
-          maxWidth: '700px',
+          borderRadius: '5px',
+          width: 'min(92vw, 960px)',
+          aspectRatio: '8.5 / 6.5',
           maxHeight: '90vh',
           overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
+          display: 'grid',
+          gridTemplateRows: 'clamp(220px, 60%, 420px) 1fr',
         }}
       >
         {/* Header with Image */}
@@ -254,7 +274,7 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
             alt={event.title}
             style={{
               width: '100%',
-              height: '250px',
+              height: '100%',
               objectFit: 'cover',
             }}
           />
@@ -279,26 +299,6 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
             <X size={20} />
           </button>
 
-          {/* Event Type Badge */}
-          {event.eventType && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '1rem',
-                left: '1rem',
-                padding: '0.375rem 0.75rem',
-                background: 'rgba(0, 0, 0, 0.7)',
-                color: '#fff',
-                borderRadius: '999px',
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                textTransform: 'uppercase',
-              }}
-            >
-              {event.eventType.replace('_', ' ')}
-            </div>
-          )}
-
           {/* Participant Count Badge */}
           <div
             style={{
@@ -321,28 +321,49 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
           </div>
         </div>
 
-        {/* Scrollable Content */}
-        <div style={{ overflowY: 'auto', padding: '1.5rem' }}>
+        {/* Content */}
+        <div style={{ padding: 'clamp(0.75rem, 2vw, 1.5rem)', overflow: 'hidden' }}>
           {/* Title */}
-          <h2 style={{ margin: '0 0 1rem 0', fontSize: '1.5rem', fontWeight: 600, color: '#000' }}>
+          <h2 style={{ margin: '0 0 clamp(0.5rem, 1.5vw, 1rem) 0', fontSize: '1.5rem', fontWeight: 600, color: '#000' }}>
             {event.title}
           </h2>
 
           {/* Info Grid */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(0.5rem, 1.2vw, 0.875rem)', marginBottom: 'clamp(0.75rem, 2vw, 1.5rem)' }}>
             {/* Date */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
               <Calendar size={20} style={{ color: '#666', flexShrink: 0, marginTop: '2px' }} />
-              <div>
-                <div style={{ fontWeight: 500, color: '#333' }}>{getDateRange()}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', width: '100%', flexWrap: 'wrap' }}>
+                  <div style={{ fontWeight: 500, color: '#333' }}>
+                    Start: {event.startDate ? formatDateTime(event.startDate) : 'Date TBD'}
+                  </div>
+                  <AddToCalendarButton event={buildCalendarEvent()} />
+                </div>
+                {event.endDate && (
+                  <div style={{ fontWeight: 500, color: '#333' }}>
+                    End: {formatDateTime(event.endDate)}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Location */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
               <MapPin size={20} style={{ color: '#666', flexShrink: 0, marginTop: '2px' }} />
-              <div>
-                <div style={{ fontWeight: 500, color: '#333' }}>{getLocation()}</div>
+              <div style={{ fontWeight: 500, color: '#333' }}>
+                {getMapsUrl() ? (
+                  <a
+                    href={getMapsUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'underline' }}
+                  >
+                    {getLocation()}
+                  </a>
+                ) : (
+                  getLocation()
+                )}
               </div>
             </div>
 
@@ -359,11 +380,22 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
 
           {/* Description */}
           {event.description && (
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ marginBottom: 'clamp(0.75rem, 2vw, 1.5rem)' }}>
               <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 600, color: '#333' }}>
                 About this event
               </h3>
-              <p style={{ margin: 0, color: '#555', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#555',
+                  lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 5,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
                 {event.description}
               </p>
             </div>
@@ -371,11 +403,11 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
 
           {/* Restrictions */}
           {event.restrictions && event.restrictions.length > 0 && (
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ marginBottom: 'clamp(0.75rem, 2vw, 1.5rem)' }}>
               <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 600, color: '#333' }}>
                 Restrictions
               </h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', maxHeight: '3.5rem', overflow: 'hidden' }}>
                 {event.restrictions.filter(Boolean).map((restriction, index) => (
                   <span
                     key={index}
@@ -495,6 +527,53 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {event.ticketUrl && (
+              <a
+                href={event.ticketUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.25rem',
+                  background: '#fff',
+                  color: '#000',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  border: '1px solid #000',
+                }}
+              >
+                <Ticket size={16} />
+                Get Tickets
+              </a>
+            )}
+            {event.website && (
+              <a
+                href={event.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.25rem',
+                  background: '#fff',
+                  color: '#000',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  border: '1px solid #000',
+                }}
+              >
+                <Globe size={16} />
+                Visit Website
+              </a>
+            )}
+
             {/* Join Now Button */}
             {!alreadyJoined ? (
               <button
@@ -534,53 +613,6 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
                 <Users size={16} />
                 You're attending!
               </div>
-            )}
-
-            {event.website && (
-              <a
-                href={event.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.25rem',
-                  background: '#fff',
-                  color: '#000',
-                  borderRadius: '8px',
-                  textDecoration: 'none',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  border: '1px solid #000',
-                }}
-              >
-                <Globe size={16} />
-                Visit Website
-              </a>
-            )}
-            {event.ticketUrl && (
-              <a
-                href={event.ticketUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.25rem',
-                  background: '#fff',
-                  color: '#000',
-                  borderRadius: '8px',
-                  textDecoration: 'none',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  border: '1px solid #000',
-                }}
-              >
-                <Ticket size={16} />
-                Get Tickets
-              </a>
             )}
           </div>
         </div>

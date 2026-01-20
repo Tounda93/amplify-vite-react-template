@@ -137,14 +137,8 @@
   max-width: 65%;
 }
 
-.event-card__location {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
-}
-
 .event-card__location-value {
+  font-size: 12px;
   font-weight: 600;
   color: #111827;
   overflow: hidden;

@@ -5,6 +5,8 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../../amplify/data/resource';
 import { FALLBACKS } from '../utils/fallbacks';
 import { getImageUrl } from '../utils/storageHelpers';
+import type { CalendarEventInput } from '../utils/calendar';
+import AddToCalendarButton from './AddToCalendarButton';
 import './NewsCarousel.css';
 
 const client = generateClient<Schema>();
@@ -199,6 +201,19 @@ export default function EventsCarousel() {
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const buildCalendarEvent = (event: Event): CalendarEventInput => {
+    const locationParts = [event.venue, event.address, event.city, event.region, event.country].filter(Boolean);
+    return {
+      title: event.title || 'Event',
+      startDate: event.startDate || '',
+      endDate: event.endDate || null,
+      location: event.googleMapsAddress || locationParts.join(', ') || undefined,
+      description: event.description || null,
+      url: event.ticketUrl || event.website || null,
+      id: event.id,
+    };
   };
 
   const getEventTypeEmoji = (type?: Event['eventType']) => {
@@ -540,18 +555,23 @@ export default function EventsCarousel() {
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'space-between',
                 gap: '8px',
                 marginBottom: '12px',
                 color: '#4b5563',
                 fontSize: '14px',
+                flexWrap: 'wrap',
               }}>
-                <Calendar size={18} color="#6b7280" />
-                <span style={{ fontWeight: '500' }}>
-                  {formatDate(selectedEvent.startDate!)}
-                  {selectedEvent.endDate && selectedEvent.endDate !== selectedEvent.startDate && (
-                    <> - {formatDate(selectedEvent.endDate)}</>
-                  )}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Calendar size={18} color="#6b7280" />
+                  <span style={{ fontWeight: '500' }}>
+                    {formatDate(selectedEvent.startDate!)}
+                    {selectedEvent.endDate && selectedEvent.endDate !== selectedEvent.startDate && (
+                      <> - {formatDate(selectedEvent.endDate)}</>
+                    )}
+                  </span>
+                </div>
+                <AddToCalendarButton event={buildCalendarEvent(selectedEvent)} />
               </div>
 
               {/* Location */}
