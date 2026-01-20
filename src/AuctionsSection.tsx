@@ -7,8 +7,6 @@ import { FALLBACKS } from './utils/fallbacks';
 const client = generateClient<Schema>();
 
 type Auction = Schema['Auction']['type'];
-type AuctionStatus = NonNullable<Auction['status']>;
-type AuctionReserveStatus = NonNullable<Auction['reserveStatus']>;
 
 interface AuctionEvent {
   id: string;
@@ -21,239 +19,10 @@ interface AuctionEvent {
   lots: Auction[];
 }
 
-const AUCTION_HOUSES = [
-  { id: 'rm_sothebys', name: "RM Sotheby's", logo: '🔵', url: 'https://rmsothebys.com/' },
-  { id: 'broad_arrow', name: 'Broad Arrow', logo: '🟠', url: 'https://www.broadarrowauctions.com/' },
-  { id: 'bonhams', name: 'Bonhams', logo: '🔴', url: 'https://www.bonhams.com/department/MOT-CAR/' },
-];
-
-const parseMoneyValue = (value: string | null | undefined): number | undefined => {
-  if (!value) return undefined;
-  const cleaned = value.replace(/[^0-9.]/g, '');
-  if (!cleaned) return undefined;
-  const parsed = parseFloat(cleaned);
-  return Number.isNaN(parsed) ? undefined : parsed;
-};
-
-const parseEstimateRange = (estimate: string | null | undefined): { low?: number; high?: number } => {
-  if (!estimate) return {};
-  const matches = estimate.match(/[\d,.]+/g);
-  if (!matches || matches.length === 0) return {};
-  const low = parseMoneyValue(matches[0]);
-  const high = matches[1] ? parseMoneyValue(matches[1]) : undefined;
-  return { low, high };
-};
-
-const detectAuctionHouseFromUrl = (url?: string): string => {
-  if (!url) return 'Unknown';
-  const value = url.toLowerCase();
-  if (value.includes('broadarrow')) return 'Broad Arrow';
-  if (value.includes('bonhams')) return 'Bonhams';
-  if (value.includes('rmsothebys') || value.includes('rmauction')) return "RM Sotheby's";
-  return 'Unknown';
-};
-
-const normalizeStatus = (status?: string | null): AuctionStatus => {
-  const value = (status || '').toLowerCase();
-  if (value.includes('sold')) return 'sold';
-  if (value.includes('live')) return 'live';
-  if (value.includes('pass') || value.includes('unsold')) return 'not_sold';
-  return 'upcoming';
-};
-
-type UnknownRecord = Record<string, unknown>;
-
-interface NormalizedLot {
-  auctionHouse: string;
-  lotNumber: string;
-  title: string;
-  description: string;
-  imageUrl?: string;
-  estimateLow?: number;
-  estimateHigh?: number;
-  currency: string;
-  currentBid?: number;
-  soldPrice?: number;
-  reserveStatus: AuctionReserveStatus;
-  status: AuctionStatus;
-  auctionDate?: string | null;
-  auctionLocation: string;
-  auctionName: string;
-  lotUrl?: string;
-  lastUpdated: string;
-}
-
-const isRecord = (value: unknown): value is UnknownRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const getString = (obj: UnknownRecord | undefined, key: string): string | undefined => {
-  if (!obj) return undefined;
-  const value = obj[key];
-  return typeof value === 'string' ? value : undefined;
-};
-
-const getNestedString = (obj: UnknownRecord | undefined, path: string[]): string | undefined => {
-  let current: unknown = obj;
-  for (const key of path) {
-    if (!isRecord(current)) return undefined;
-    current = current[key];
-  }
-  return typeof current === 'string' ? current : undefined;
-};
-
-const normalizeReserveStatus = (status?: string | null): AuctionReserveStatus => {
-  const value = (status || '').toLowerCase().trim();
-  if (!value) return 'unknown';
-  if (value === 'no_reserve') return 'no_reserve';
-  if (value === 'reserve') return 'reserve';
-  if (value.includes('no') && value.includes('reserve')) return 'no_reserve';
-  if (value.includes('reserve')) return 'reserve';
-  return 'unknown';
-};
-
-const normalizeLotNumber = (rawLotNumber: string | undefined, lotUrl: string | undefined, index: number): string => {
-  const raw = (rawLotNumber || '').trim();
-  const lowered = raw.toLowerCase();
-  const invalid = new Set(['sold', 'not sold', 'notsold', 'closed', 'withdrawn', 'live', 'upcoming']);
-
-  if (raw && !invalid.has(lowered)) {
-    if (/^\d+$/.test(raw)) return raw;
-    const digits = raw.match(/\d+/)?.[0];
-    if (digits) return digits.replace(/^0+/, '') || digits;
-  }
-
-  const url = lotUrl || '';
-  const slug = url.split('/').filter(Boolean).pop() || '';
-  const slugMatch = slug.match(/^[a-z]0*([0-9]{1,})-/i);
-  if (slugMatch) return slugMatch[1];
-
-  return String(index + 1);
-};
-
-const normalizeRawLot = (rawLot: UnknownRecord, index: number, meta?: UnknownRecord, auctionIdFallback?: string): NormalizedLot => {
-  const estimateText = getString(rawLot, 'estimate');
-  const { low, high } = parseEstimateRange(estimateText);
-
-  const lotUrl = getString(rawLot, 'lotUrl');
-  const auctionUrl = getString(meta, 'auctionUrl') || getString(meta, 'auctionURL') || getString(meta, 'url');
-
-  const statusLabel = getString(rawLot, 'statusLabel') || getString(rawLot, 'status');
-  const currency = getString(rawLot, 'currency') || 'USD';
-
-  const title =
-    getString(rawLot, 'lotTitle') ||
-    getString(rawLot, 'title') ||
-    'Unknown Vehicle';
-
-  const description =
-    getString(rawLot, 'description') ||
-    getString(rawLot, 'shortDescription') ||
-    '';
-
-  const imageUrl = getString(rawLot, 'lotCoverImageUrl') || getString(rawLot, 'imageUrl');
-
-  const currentBidText = getString(rawLot, 'currentBid');
-  const currentBid = parseMoneyValue(currentBidText);
-  const soldPrice = (statusLabel || '').toLowerCase() === 'sold' ? currentBid : undefined;
-
-  return {
-    auctionHouse: getString(rawLot, 'auctionHouse') || detectAuctionHouseFromUrl(auctionUrl || lotUrl),
-    lotNumber: normalizeLotNumber(getString(rawLot, 'lotNumber'), lotUrl, index),
-    title,
-    description,
-    imageUrl,
-    estimateLow: low,
-    estimateHigh: high,
-    currency,
-    currentBid,
-    soldPrice,
-    reserveStatus: normalizeReserveStatus(getString(rawLot, 'reserveStatus')),
-    status: normalizeStatus(statusLabel),
-    auctionDate: getNestedString(meta, ['biddingStartDateTime', 'iso']) || getString(meta, 'auctionDate') || null,
-    auctionLocation: getString(meta, 'location') || getString(meta, 'auctionLocation') || '',
-    auctionName: getString(meta, 'title') || getString(meta, 'auctionName') || auctionIdFallback || 'Upcoming Auction',
-    lotUrl,
-    lastUpdated: new Date().toISOString(),
-  };
-};
-
-const flattenExtensionPayload = (payload: unknown): NormalizedLot[] => {
-  console.log('[flattenExtensionPayload] Input type:', typeof payload, Array.isArray(payload) ? 'array' : '');
-
-  if (!payload) {
-    console.log('[flattenExtensionPayload] payload is falsy');
-    return [];
-  }
-
-  // Format A: already an array of lots
-  if (Array.isArray(payload)) {
-    console.log('[flattenExtensionPayload] payload is array with', payload.length, 'items');
-    return payload
-      .filter(isRecord)
-      .map((lot, index) => normalizeRawLot(lot, index, undefined, undefined));
-  }
-
-  if (!isRecord(payload)) return [];
-
-  console.log('[flattenExtensionPayload] payload keys:', Object.keys(payload));
-
-  // Format B: wrapper object with a `lots: []` array (common when copying from DevTools)
-  if (Array.isArray(payload.lots)) {
-    console.log('[flattenExtensionPayload] payload has lots[] with', payload.lots.length, 'items');
-    const meta = payload;
-    return payload.lots
-      .filter(isRecord)
-      .map((lot, index) => normalizeRawLot(lot, index, meta, getString(meta, 'auctionName')));
-  }
-
-  // Format C: { auctions: [], lotsByAuctionId: { [auctionId]: [] } }
-  const auctionsById = new Map<string, UnknownRecord>();
-  if (Array.isArray(payload.auctions)) {
-    const auctions = payload.auctions.filter(isRecord);
-    console.log('[flattenExtensionPayload] Found', auctions.length, 'auctions');
-    auctions.forEach((auction) => {
-      const auctionId = getString(auction, 'auctionId');
-      if (auctionId) auctionsById.set(auctionId, auction);
-    });
-  }
-
-  const lotsById = isRecord(payload.lotsByAuctionId) ? payload.lotsByAuctionId : {};
-  console.log('[flattenExtensionPayload] lotsByAuctionId keys:', Object.keys(lotsById));
-
-  const lots: NormalizedLot[] = [];
-  Object.entries(lotsById).forEach(([auctionId, lotArray]) => {
-    console.log(
-      '[flattenExtensionPayload] Processing auctionId:',
-      auctionId,
-      'isArray:',
-      Array.isArray(lotArray),
-      'length:',
-      Array.isArray(lotArray) ? lotArray.length : 'N/A'
-    );
-
-    if (!Array.isArray(lotArray)) {
-      console.log('[flattenExtensionPayload] Skipping', auctionId, '- not an array');
-      return;
-    }
-
-    const meta = auctionsById.get(auctionId);
-    lotArray
-      .filter(isRecord)
-      .forEach((rawLot, index) => {
-        lots.push(normalizeRawLot(rawLot, index, meta, auctionId));
-      });
-  });
-
-  console.log('[flattenExtensionPayload] Total lots processed:', lots.length);
-  return lots;
-};
-
 export function AuctionsSection() {
   const [auctionEvents, setAuctionEvents] = useState<AuctionEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<AuctionEvent | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showImport, setShowImport] = useState(false);
-  const [importJson, setImportJson] = useState('');
 
   useEffect(() => {
     loadAuctions();
@@ -341,79 +110,6 @@ export function AuctionsSection() {
     setAuctionEvents(events);
   };
 
-  const handleImportFromExtension = async () => {
-    try {
-      const data = JSON.parse(importJson);
-      console.log('Parsed JSON data:', data);
-      console.log('lotsByAuctionId keys:', data.lotsByAuctionId ? Object.keys(data.lotsByAuctionId) : 'none');
-
-      const normalizedLots = flattenExtensionPayload(data);
-      console.log('Normalized lots count:', normalizedLots?.length || 0);
-
-      if (!normalizedLots || normalizedLots.length === 0) {
-        // Provide more helpful error message
-        let errorMsg = 'Invalid data format.\n\n';
-        if (!data) {
-          errorMsg += 'No data found in JSON.';
-        } else if (Array.isArray(data) && data.length === 0) {
-          errorMsg += 'Empty array provided.';
-        } else if ((data as { lotsByAuctionId?: unknown })?.lotsByAuctionId) {
-          const auctionIds = Object.keys(data.lotsByAuctionId);
-          if (auctionIds.length === 0) {
-            errorMsg += 'No auctions found in lotsByAuctionId.';
-          } else {
-            const totalLots = auctionIds.reduce((sum, id) => {
-              const lots = data.lotsByAuctionId[id];
-              return sum + (Array.isArray(lots) ? lots.length : 0);
-            }, 0);
-            errorMsg += `Found ${auctionIds.length} auction(s) but ${totalLots} lots could not be processed.`;
-          }
-        } else if ((data as { lots?: unknown })?.lots && Array.isArray((data as { lots?: unknown }).lots)) {
-          errorMsg += `Found ${(data as { lots: unknown[] }).lots.length} lot(s) under "lots", but they could not be processed.`;
-        } else {
-          errorMsg += 'Expected an array of lots, or { lots: [...] }, or { auctions: [], lotsByAuctionId: { ... } }.';
-        }
-        alert(errorMsg);
-        return;
-      }
-      
-      let imported = 0;
-      for (const lot of normalizedLots) {
-        try {
-          await client.models.Auction.create({
-            auctionHouse: lot.auctionHouse,
-            lotNumber: lot.lotNumber,
-            title: lot.title,
-            description: lot.description,
-            imageUrl: lot.imageUrl,
-            estimateLow: lot.estimateLow,
-            estimateHigh: lot.estimateHigh,
-            currency: lot.currency,
-            currentBid: lot.currentBid,
-            soldPrice: lot.soldPrice,
-            reserveStatus: lot.reserveStatus,
-            status: lot.status,
-            auctionDate: lot.auctionDate,
-            auctionLocation: lot.auctionLocation,
-            auctionName: lot.auctionName,
-            lotUrl: lot.lotUrl,
-            lastUpdated: new Date().toISOString(),
-          });
-          imported++;
-        } catch (err) {
-          console.error('Error importing lot:', err);
-        }
-      }
-      
-      alert(`Successfully imported ${imported} auction lots!`);
-      setImportJson('');
-      setShowImport(false);
-      loadAuctions();
-    } catch (error) {
-      alert('Invalid JSON. Please paste the data copied from the Chrome extension.');
-    }
-  };
-
   const deleteAuction = async (auction: Auction) => {
     if (!confirm(`Delete "${auction.title}"?`)) return;
     try {
@@ -482,48 +178,6 @@ export function AuctionsSection() {
 
   return (
     <div>
-      {/* Auction House Links - Always visible */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '1rem', 
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap',
-        justifyContent: 'center'
-      }}>
-        {AUCTION_HOUSES.map(house => (
-          <a
-            key={house.id}
-            href={house.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.5rem',
-              background: 'white',
-              border: '2px solid #ddd',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              color: '#333',
-              fontWeight: 'bold',
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = '#e74c3c';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#ddd';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            <span style={{ fontSize: '1.5rem' }}>{house.logo}</span>
-            {house.name}
-          </a>
-        ))}
-      </div>
-
       {/* Action Buttons - Always visible */}
       <div style={{
         display: 'flex',
@@ -548,72 +202,7 @@ export function AuctionsSection() {
             ← Back to Auctions
           </button>
         )}
-        <button
-          onClick={() => { setShowImport(!showImport); }}
-          style={{
-            padding: '0.75rem 1.5rem',
-            background: showImport ? '#c0392b' : '#9b59b6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-          }}
-        >
-          {showImport ? '✕ Cancel' : '📥 Import from Extension'}
-        </button>
       </div>
-
-      {/* Import from Extension */}
-      {showImport && (
-        <div style={{
-          background: '#f8f9fa',
-          padding: '1.5rem',
-          borderRadius: '12px',
-          marginBottom: '1.5rem',
-          border: '2px solid #9b59b6',
-        }}>
-          <h3 style={{ marginTop: 0 }}>📥 Import from Chrome Extension</h3>
-          <p style={{ color: '#666', fontSize: '0.9rem' }}>
-            1. Go to an auction page on RM Sotheby's, Bonhams, or Broad Arrow<br/>
-            2. Click the "Collectible Tracker" extension icon<br/>
-            3. Click "Scrape This Page"<br/>
-            4. Click "Copy Data to Clipboard"<br/>
-            5. Paste below and click Import
-          </p>
-          <textarea
-            value={importJson}
-            onChange={(e) => setImportJson(e.target.value)}
-            placeholder='Paste JSON data here...'
-            style={{
-              width: '100%',
-              minHeight: '120px',
-              padding: '0.75rem',
-              borderRadius: '8px',
-              border: '1px solid #ddd',
-              fontFamily: 'monospace',
-              fontSize: '0.85rem',
-              marginBottom: '1rem',
-              boxSizing: 'border-box',
-            }}
-          />
-          <button
-            onClick={handleImportFromExtension}
-            disabled={!importJson.trim()}
-            style={{
-              padding: '0.75rem 2rem',
-              background: importJson.trim() ? '#27ae60' : '#95a5a6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: importJson.trim() ? 'pointer' : 'not-allowed',
-              fontWeight: 'bold',
-            }}
-          >
-            Import Auction Data
-          </button>
-        </div>
-      )}
 
       {/* ===== LOTS VIEW (inside an auction event) ===== */}
       {selectedEvent ? (
@@ -1004,22 +593,8 @@ export function AuctionsSection() {
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔨</div>
             <h3 style={{ margin: '0 0 0.5rem 0' }}>No Auctions Yet</h3>
             <p style={{ color: '#666', marginBottom: '1.5rem' }}>
-              Use the Chrome extension to scrape auction data from RM Sotheby's, Bonhams, or Broad Arrow.
+              Auctions will appear here as they are added.
             </p>
-            <button
-              onClick={() => setShowImport(true)}
-              style={{
-                padding: '0.75rem 2rem',
-                background: '#9b59b6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-              }}
-            >
-              📥 Import Auction Data
-            </button>
           </div>
         )
       )}

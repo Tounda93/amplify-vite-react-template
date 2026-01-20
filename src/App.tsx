@@ -11,10 +11,7 @@ import { EventsSection } from './EventsSection';
 import { SavedEventsSection } from './SavedEventsSection';
 import { CommunitySection } from './CommunitySection';
 import { ChatProvider, ChatSection, ChatConversationList } from './ChatSection';
-import FriendsSection from './components/FriendsSection';
-import PublicProfileSection from './components/PublicProfileSection';
 import { MyGarageSection } from './MyGarageSection';
-import { ProfileSection } from './ProfileSection';
 import { ShopSection } from './ShopSection';
 import { AdminSection } from './AdminSection';
 
@@ -22,7 +19,6 @@ import { AdminSection } from './AdminSection';
 import Header from './components/Header';
 import LeftSidebar from './components/LeftSidebar';
 import HomePage, { HomeRoomsSidebar } from './components/HomePage';
-import Footer from './components/Footer';
 import { importAllData } from './importData';
 import { isAdminEmail } from './constants/admins';
 import { NewsItem, fetchNewsFeedItems } from './utils/newsFeed';
@@ -87,7 +83,6 @@ interface AmplifyUser {
 
 interface CarSearchProps {
   user: AmplifyUser | undefined;
-  signOut: () => void;
 }
 
 // Map section IDs to URL paths
@@ -104,7 +99,6 @@ const sectionToPath: Record<string, string> = {
   saved: '/saved',
   auctions: '/auctions',
   admin: '/admin',
-  friends: '/friends',
 };
 
 // Map URL paths back to section IDs
@@ -121,11 +115,10 @@ const pathToSection: Record<string, string> = {
   '/saved': 'saved',
   '/auctions': 'auctions',
   '/admin': 'admin',
-  '/friends': 'friends',
   '/': 'home',
 };
 
-function CarSearch({ user, signOut }: CarSearchProps) {
+function CarSearch({ user }: CarSearchProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -154,7 +147,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
   const [profilesCache, setProfilesCache] = useState<Array<ProfileModel & { resolvedAvatar?: string }>>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedUserProfile, setSelectedUserProfile] = useState<ProfileModel | null>(null);
-  const [friendsRefreshKey, setFriendsRefreshKey] = useState(0);
+  const [pendingChatUserId, setPendingChatUserId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResultGroups>(getEmptySearchResults());
   const [searchLoading, setSearchLoading] = useState(false);
   const [savedEvents, setSavedEvents] = useState<EventModel[]>(() => {
@@ -427,8 +420,24 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     const query = term.toLowerCase();
     return profiles
       .filter((profile) => {
-        const displayName = profile.displayName || profile.nickname || '';
-        const matches = displayName.toLowerCase().includes(query);
+        const ownerEmail = profile.ownerId?.includes('@') ? profile.ownerId : undefined;
+        const emailCandidate =
+          profile.email ||
+          ownerEmail ||
+          (profile.displayName?.includes('@') ? profile.displayName : undefined) ||
+          (profile.nickname?.includes('@') ? profile.nickname : undefined);
+        const searchable = [
+          profile.displayName,
+          profile.nickname,
+          profile.username,
+          profile.email,
+          ownerEmail,
+          emailCandidate,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        const matches = searchable.includes(query);
         const isSelf = currentUserId && profile.ownerId === currentUserId;
         return matches && !isSelf;
       })
@@ -436,8 +445,17 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       .map((profile) => ({
         id: `user-${profile.id}`,
         category: 'users',
-        title: profile.displayName || profile.nickname || 'Unnamed user',
-        subtitle: profile.nickname && profile.displayName ? profile.nickname : profile.location || undefined,
+        title: (() => {
+          const email = profile.email ||
+            (profile.ownerId?.includes('@') ? profile.ownerId : undefined) ||
+            (profile.displayName?.includes('@') ? profile.displayName : undefined) ||
+            (profile.nickname?.includes('@') ? profile.nickname : undefined);
+          const usernameFromEmail = email ? email.split('@')[0] : undefined;
+          return profile.username || usernameFromEmail || profile.displayName || profile.nickname || 'Unnamed user';
+        })(),
+        subtitle: profile.displayName && profile.username && profile.displayName !== profile.username
+          ? profile.displayName
+          : profile.location || undefined,
         imageUrl: profile.resolvedAvatar || undefined,
         data: profile,
       }));
@@ -520,7 +538,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       setSelectedMake(null);
       setModels([]);
     }
-    if (section !== 'friends') {
+    if (!['profile', 'garage'].includes(section)) {
       setSelectedUserProfile(null);
     }
   };
@@ -564,8 +582,8 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       const profile = result.data as ProfileModel | undefined;
       if (profile) {
         setSelectedUserProfile(profile);
-        setActiveSection('friends');
-        navigate('/friends');
+        setActiveSection('profile');
+        navigate('/profile');
       }
     }
 
@@ -573,9 +591,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
     setSearchResults(getEmptySearchResults());
   };
 
-  const handleFriendUpdated = () => {
-    setFriendsRefreshKey((prev) => prev + 1);
-  };
 
   const persistSavedEvents = (updater: (prev: EventModel[]) => EventModel[]) => {
     setSavedEvents((prev) => {
@@ -608,6 +623,11 @@ function CarSearch({ user, signOut }: CarSearchProps) {
 
   const mainBackgroundColor = '#F2F3F5';
 
+  const handleMessageUser = (userId: string) => {
+    setPendingChatUserId(userId);
+    handleSectionChange('chat');
+  };
+
   return (
     <AppUIProvider value={appUIContextValue}>
       <div style={{
@@ -624,11 +644,14 @@ function CarSearch({ user, signOut }: CarSearchProps) {
       <div className="layout-container">
         {/* Use 2-column layout for Events, News, Auctions, Garage; 3-column for others */}
         <div
-          className={`${['events', 'news', 'auctions', 'garage'].includes(activeSection) ? 'layout-2col-sidebar' : 'layout-3col'} app-layout`}
+          className={`${['events', 'news', 'auctions', 'garage', 'profile'].includes(activeSection) ? 'layout-2col-sidebar' : 'layout-3col'} app-layout`}
           style={{ minHeight: 'calc(100vh - 60px)' }}
         >
           {activeSection === 'chat' ? (
-            <ChatProvider refreshKey={friendsRefreshKey}>
+            <ChatProvider
+              openConversationForUserId={pendingChatUserId}
+              onConversationOpened={() => setPendingChatUserId(null)}
+            >
               <div className="layout-col layout-col--left">
                 <LeftSidebar userInitials={userInitials} />
               </div>
@@ -680,36 +703,22 @@ function CarSearch({ user, signOut }: CarSearchProps) {
             <SavedEventsSection savedEvents={savedEvents} onSaveEvent={handleSaveEvent} />
           )}
 
-          {/* FRIENDS SECTION */}
-          {activeSection === 'friends' && (
+          {/* PROFILE SECTION */}
+          {(activeSection === 'garage' || activeSection === 'profile') && (
             selectedUserProfile ? (
-              <PublicProfileSection
-                profile={selectedUserProfile}
-                currentUserId={currentUserId}
-                onBack={() => setSelectedUserProfile(null)}
-                onFriendUpdated={handleFriendUpdated}
+              <MyGarageSection
+                user={user}
+                onSectionChange={handleSectionChange}
+                profileOverride={selectedUserProfile}
+                onMessageUser={handleMessageUser}
               />
             ) : (
-              <FriendsSection
-                currentUserId={currentUserId}
-                refreshKey={friendsRefreshKey}
-                onSelectProfile={(profile) => setSelectedUserProfile(profile)}
+              <MyGarageSection
+                user={user}
+                onSectionChange={handleSectionChange}
+                onMessageUser={handleMessageUser}
               />
             )
-          )}
-
-          {/* MY GARAGE SECTION */}
-          {activeSection === 'garage' && (
-            <MyGarageSection
-              user={user}
-              signOut={signOut}
-              onSectionChange={handleSectionChange}
-            />
-          )}
-
-          {/* PROFILE SECTION */}
-          {activeSection === 'profile' && (
-            <ProfileSection user={user} signOut={signOut} />
           )}
 
           {/* ADMIN SECTION */}
@@ -792,7 +801,7 @@ function CarSearch({ user, signOut }: CarSearchProps) {
               </main>
 
               {/* Right Column */}
-              {activeSection !== 'garage' && (
+              {activeSection !== 'garage' && activeSection !== 'profile' && (
                 <aside className="layout-col layout-col--right">
                   {activeSection === 'home' && !location.pathname.startsWith('/rooms/') && !selectedMake && makes.length === 0 && (
                     <HomeRoomsSidebar />
@@ -804,7 +813,6 @@ function CarSearch({ user, signOut }: CarSearchProps) {
         </div>
       </div>
 
-      <Footer />
       </div>
     </AppUIProvider>
   );
@@ -814,9 +822,9 @@ function App() {
   return (
     <BrowserRouter>
       <Authenticator>
-        {({ signOut, user }) => (
+        {({ user }) => (
           <Routes>
-            <Route path="*" element={<CarSearch user={user} signOut={signOut || (() => {})} />} />
+            <Route path="*" element={<CarSearch user={user} />} />
           </Routes>
         )}
       </Authenticator>

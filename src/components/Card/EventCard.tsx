@@ -8,7 +8,9 @@ interface EventCardProps {
   dateLabel: string;
   title: string;
   locationLabel: string;
-  participantCount: number;
+  participantCount?: number;
+  footerLabel?: string;
+  footerValue?: string | number;
   showMenu?: boolean;
   isMenuOpen?: boolean;
   onMenuToggle?: () => void;
@@ -26,6 +28,8 @@ export default function EventCard({
   title,
   locationLabel,
   participantCount,
+  footerLabel,
+  footerValue,
   showMenu = true,
   isMenuOpen = false,
   onMenuToggle = () => {},
@@ -97,12 +101,16 @@ export default function EventCard({
         aria-label={imageAlt}
       />
 
-      <div className="event-card__footer">
-        <div className="event-card__row">
-          <span className="event-card__label">Participants</span>
-          <span className="event-card__value">{participantCount}</span>
+      {(footerLabel || footerValue !== undefined || participantCount !== undefined) && (
+        <div className="event-card__footer">
+          <div className="event-card__row">
+            <span className="event-card__label">{footerLabel || 'Participants'}</span>
+            <span className="event-card__value">
+              {footerValue !== undefined ? footerValue : participantCount}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

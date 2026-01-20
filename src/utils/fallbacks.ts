@@ -8,6 +8,7 @@ export const FALLBACKS = {
   newsCarousel: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80',
   car: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80',
   carDetail: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80',
+  profileCover: 'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?w=1200&q=80',
 };
 
 export const FALLBACK_NEWS_ITEMS: NewsItem[] = [

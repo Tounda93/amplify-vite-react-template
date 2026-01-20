@@ -62,10 +62,15 @@ const schema = a.schema({
   Profile: a
     .model({
       ownerId: a.string(),
+      username: a.string(),
+      email: a.string(),
+      firstName: a.string(),
+      lastName: a.string(),
       displayName: a.string(),
       nickname: a.string(),
       bio: a.string(),
       avatarUrl: a.string(),
+      coverImageUrl: a.string(),
       location: a.string(),
       phoneNumber: a.string(),
       accountType: a.enum(['collector', 'professional']),
@@ -122,21 +127,42 @@ const schema = a.schema({
 
   FriendRequest: a
     .model({
-      senderId: a.string().required(),
-      receiverId: a.string().required(),
+      senderUserId: a.string().required(),
+      receiverUserId: a.string().required(),
       status: a.enum(['pending', 'accepted', 'rejected']),
     })
     .authorization((allow) => [
       allow.authenticated().to(['read', 'create', 'update', 'delete']),
     ]),
 
-  Friend: a
+  Friendship: a
     .model({
       userId: a.string().required(),
-      friendId: a.string().required(),
+      friendUserId: a.string().required(),
     })
     .authorization((allow) => [
       allow.authenticated().to(['read', 'create', 'delete']),
+    ]),
+
+  Conversation: a
+    .model({
+      participantUserIds: a.string().array().required(),
+      lastMessage: a.string(),
+      updatedAt: a.datetime(),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(['read', 'create', 'update', 'delete']),
+    ]),
+
+  Message: a
+    .model({
+      conversationId: a.string().required(),
+      senderUserId: a.string().required(),
+      body: a.string().required(),
+      conversation: a.belongsTo('Conversation', 'conversationId'),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(['read', 'create', 'update', 'delete']),
     ]),
 
   Auction: a

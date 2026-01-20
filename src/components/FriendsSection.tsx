@@ -6,7 +6,7 @@ import { getImageUrl } from '../utils/storageHelpers';
 const client = generateClient<Schema>();
 
 type Profile = Schema['Profile']['type'];
-type Friend = Schema['Friend']['type'];
+type Friendship = Schema['Friendship']['type'];
 
 interface FriendsSectionProps {
   currentUserId: string | null;
@@ -31,18 +31,18 @@ export default function FriendsSection({
       }
       setLoading(true);
       try {
-        const { data } = await client.models.Friend.list({
+        const { data } = await client.models.Friendship.list({
           filter: { userId: { eq: currentUserId } }
         });
-        const friendRecords = (data || []) as Friend[];
+        const friendRecords = (data || []) as Friendship[];
         const profiles = await Promise.all(
           friendRecords.map(async (friend) => {
             const { data: byOwner } = await client.models.Profile.list({
-              filter: { ownerId: { eq: friend.friendId } }
+              filter: { ownerId: { eq: friend.friendUserId } }
             });
             const profile = byOwner?.[0];
             if (!profile) {
-              const { data: byId } = await client.models.Profile.get({ id: friend.friendId });
+              const { data: byId } = await client.models.Profile.get({ id: friend.friendUserId });
               return byId ?? null;
             }
             return profile;

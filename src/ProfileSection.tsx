@@ -26,6 +26,8 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
   const horizontalPadding = isMobile ? '1rem' : '5rem';
+  const userLoginId = user?.signInDetails?.loginId || user?.username || '';
+  const derivedUsername = userLoginId.includes('@') ? userLoginId.split('@')[0] : userLoginId;
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -74,6 +76,16 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
         const profile = data?.[0];
         if (profile?.id) {
           setProfileId(profile.id);
+          const updates: Partial<Schema['Profile']['type']> = {};
+          if (!profile.username && derivedUsername) updates.username = derivedUsername;
+          if (!profile.email && userLoginId) updates.email = userLoginId;
+          if (!profile.displayName && derivedUsername) updates.displayName = derivedUsername;
+          if (Object.keys(updates).length > 0) {
+            await client.models.Profile.update({
+              id: profile.id,
+              ...updates,
+            });
+          }
         }
         if (profile?.phoneNumber) {
           setPhoneNumber(profile.phoneNumber);
@@ -114,11 +126,17 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
         await client.models.Profile.update({
           id: profileId,
           phoneNumber: normalizedPhone || undefined,
+          username: derivedUsername || undefined,
+          email: userLoginId || undefined,
+          displayName: derivedUsername || undefined,
         });
       } else {
         const created = await client.models.Profile.create({
           ownerId: currentUserId || undefined,
           phoneNumber: normalizedPhone || undefined,
+          username: derivedUsername || undefined,
+          email: userLoginId || undefined,
+          displayName: derivedUsername || undefined,
         });
         setProfileId(created.data?.id ?? null);
       }
@@ -182,11 +200,17 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
         await client.models.Profile.update({
           id: profileId,
           avatarUrl: result.path,
+          username: derivedUsername || undefined,
+          email: userLoginId || undefined,
+          displayName: derivedUsername || undefined,
         });
       } else {
         const created = await client.models.Profile.create({
           ownerId: currentUserId || undefined,
           avatarUrl: result.path,
+          username: derivedUsername || undefined,
+          email: userLoginId || undefined,
+          displayName: derivedUsername || undefined,
         });
         setProfileId(created.data?.id ?? null);
       }

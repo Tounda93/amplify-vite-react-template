@@ -41,6 +41,7 @@
   position: sticky;
   top: 1.5rem;
   padding: 2rem 0;
+  align-self: start;
 }
 
 .home-page__sidebar-title {

@@ -199,18 +199,38 @@ export default function SearchBar({
                     onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {result.imageUrl && (
-                        <img
-                          src={result.imageUrl}
-                          alt={result.title}
-                          style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            flexShrink: 0,
-                          }}
-                        />
+                      {result.category === 'users' && (
+                        result.imageUrl ? (
+                          <img
+                            src={result.imageUrl}
+                            alt={result.title}
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              backgroundColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.2)',
+                              color: isLight ? '#111827' : '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {result.title?.slice(0, 1).toUpperCase() || 'U'}
+                          </div>
+                        )
                       )}
                       <div style={{ fontSize: '14px', fontWeight: 600, color: isLight ? '#111827' : (isMobile ? '#ffffff' : '#111827') }}>
                         {result.title}

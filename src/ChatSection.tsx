@@ -15,9 +15,10 @@ type ChatMessage = {
 
 type Conversation = {
   id: string;
+  otherUserId: string;
   name: string;
   avatarUrl?: string;
-  lastMessage: string;
+  lastMessage?: string;
   timestamp?: string;
   unreadCount: number;
   isTyping?: boolean;
@@ -45,10 +46,12 @@ const useChatContext = () => {
 
 export function ChatProvider({
   children,
-  refreshKey = 0,
+  openConversationForUserId,
+  onConversationOpened,
 }: {
   children: React.ReactNode;
-  refreshKey?: number;
+  openConversationForUserId?: string | null;
+  onConversationOpened?: () => void;
 }) {
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -56,8 +59,14 @@ export function ChatProvider({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    setSelectedId(isMobile ? null : conversations[0]?.id || null);
-  }, [isMobile, conversations]);
+    if (isMobile) {
+      setSelectedId(null);
+      return;
+    }
+    if (!selectedId && conversations.length > 0) {
+      setSelectedId(conversations[0].id);
+    }
+  }, [isMobile, conversations, selectedId]);
 
   useEffect(() => {
     const loadUserId = async () => {
@@ -72,52 +81,126 @@ export function ChatProvider({
     loadUserId();
   }, [isMobile]);
 
+  const fetchFriendUserIds = async (userId: string) => {
+    const { data } = await client.models.Friendship.list({
+      filter: { userId: { eq: userId } },
+    });
+    return (data || []).map((friendship) => friendship.friendUserId).filter(Boolean) as string[];
+  };
+
+  const buildConversationList = async (userId: string, friendIds: string[]) => {
+    const { data } = await client.models.Conversation.list({
+      filter: { participantUserIds: { contains: userId } },
+      limit: 200,
+    });
+    const conversationsForUser = (data || []).map((conversation) => {
+      const otherUserId = (conversation.participantUserIds || []).find((id) => id !== userId) || '';
+      return { conversation, otherUserId };
+    }).filter((entry) => entry.otherUserId && friendIds.includes(entry.otherUserId));
+
+    const profiles = await Promise.all(
+      conversationsForUser.map(async (entry) => {
+        const { data: byOwner } = await client.models.Profile.list({
+          filter: { ownerId: { eq: entry.otherUserId } },
+        });
+        const profile = byOwner?.[0];
+        if (!profile) {
+          const { data: byId } = await client.models.Profile.get({ id: entry.otherUserId });
+          return { ...entry, profile: byId ?? null };
+        }
+        return { ...entry, profile };
+      })
+    );
+
+    const resolved = await Promise.all(
+      profiles.map(async (entry) => ({
+        ...entry,
+        avatar: entry.profile?.avatarUrl ? (await getImageUrl(entry.profile.avatarUrl)) ?? undefined : undefined,
+      }))
+    );
+
+    return resolved.map((entry) => ({
+      id: entry.conversation.id,
+      otherUserId: entry.otherUserId,
+      name: entry.profile?.displayName || entry.profile?.username || entry.profile?.nickname || 'Unknown user',
+      avatarUrl: entry.avatar,
+      lastMessage: entry.conversation.lastMessage || '',
+      timestamp: entry.conversation.updatedAt || undefined,
+      unreadCount: 0,
+      messages: [],
+    }));
+  };
+
   useEffect(() => {
-    const loadFriends = async () => {
+    let cancelled = false;
+    const loadConversations = async () => {
       if (!currentUserId) {
         setConversations([]);
         return;
       }
       try {
-        const { data } = await client.models.Friend.list({
-          filter: { userId: { eq: currentUserId } },
-        });
-        const friendRecords = data || [];
-        const profiles = await Promise.all(
-          friendRecords.map(async (friend) => {
-            const { data: byOwner } = await client.models.Profile.list({
-              filter: { ownerId: { eq: friend.friendId } },
-            });
-            const profile = byOwner?.[0];
-            if (!profile) {
-              const { data: byId } = await client.models.Profile.get({ id: friend.friendId });
-              return byId ?? null;
-            }
-            return profile;
-          })
-        );
-        const resolved = await Promise.all(
-          profiles.filter((p): p is NonNullable<typeof p> => p !== null).map(async (profile) => ({
-            profile,
-            avatar: profile.avatarUrl ? (await getImageUrl(profile.avatarUrl)) ?? undefined : undefined,
-          }))
-        );
-        const nextConversations = resolved.map(({ profile, avatar }) => ({
-          id: `friend-${profile.id}`,
-          name: profile.displayName || profile.nickname || 'Unknown user',
-          avatarUrl: avatar,
-          lastMessage: '',
-          unreadCount: 0,
-          messages: [],
-        }));
-        setConversations(nextConversations);
+        const friends = await fetchFriendUserIds(currentUserId);
+        if (cancelled) return;
+        const list = await buildConversationList(currentUserId, friends);
+        if (!cancelled) {
+          setConversations(list);
+        }
       } catch (error) {
-        console.error('Failed to load friends for chat', error);
-        setConversations([]);
+        console.error('Failed to load conversations', error);
+        if (!cancelled) {
+          setConversations([]);
+        }
       }
     };
-    loadFriends();
-  }, [currentUserId, refreshKey]);
+    loadConversations();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId || !openConversationForUserId) {
+      return;
+    }
+
+    const openConversation = async () => {
+      try {
+        const friends = await fetchFriendUserIds(currentUserId);
+        if (!friends.includes(openConversationForUserId)) {
+          onConversationOpened?.();
+          return;
+        }
+
+        const { data } = await client.models.Conversation.list({
+          filter: { participantUserIds: { contains: currentUserId } },
+          limit: 200,
+        });
+        let existing = (data || []).find((conversation) =>
+          (conversation.participantUserIds || []).includes(openConversationForUserId)
+        );
+
+        if (!existing) {
+          const created = await client.models.Conversation.create({
+            participantUserIds: [currentUserId, openConversationForUserId],
+            updatedAt: new Date().toISOString(),
+          });
+          existing = created.data ?? undefined;
+        }
+
+        if (existing) {
+          setSelectedId(existing.id);
+          const list = await buildConversationList(currentUserId, friends);
+          setConversations(list);
+        }
+      } catch (error) {
+        console.error('Failed to open conversation', error);
+      } finally {
+        onConversationOpened?.();
+      }
+    };
+
+    openConversation();
+  }, [currentUserId, openConversationForUserId, onConversationOpened]);
 
   const selectConversation = (id: string) => {
     if (!id) {
@@ -152,6 +235,13 @@ const getInitials = (name: string) =>
     .join('')
     .slice(0, 2)
     .toUpperCase();
+
+const formatTimestamp = (value?: string) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
 
 export function ChatConversationList() {
   const { conversations, selectedId, selectConversation, isMobile } = useChatContext();
@@ -234,7 +324,7 @@ export function ChatConversationList() {
                       {conversation.name}
                     </span>
                     {conversation.timestamp && (
-                      <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{conversation.timestamp}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{formatTimestamp(conversation.timestamp)}</span>
                     )}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', alignItems: 'center' }}>
@@ -369,28 +459,34 @@ export function ChatSection() {
         flexDirection: 'column',
         gap: '0.75rem',
       }}>
-        {selectedConversation.messages.map((message) => {
-          const isMine = message.sender === 'me';
-          return (
-            <div
-              key={message.id}
-              style={{
-                alignSelf: isMine ? 'flex-end' : 'flex-start',
-                maxWidth: '70%',
-                backgroundColor: isMine ? '#111827' : '#fff',
-                color: isMine ? '#fff' : '#111827',
-                padding: '0.6rem 0.85rem',
-                borderRadius: '12px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-              }}
-            >
-              <div style={{ fontSize: '0.9rem' }}>{message.text}</div>
-              <div style={{ fontSize: '0.7rem', opacity: 0.7, marginTop: '0.25rem', textAlign: 'right' }}>
-                {message.time}
+        {selectedConversation.messages.length === 0 ? (
+          <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+            No messages yet. Start the conversation from the message input.
+          </div>
+        ) : (
+          selectedConversation.messages.map((message) => {
+            const isMine = message.sender === 'me';
+            return (
+              <div
+                key={message.id}
+                style={{
+                  alignSelf: isMine ? 'flex-end' : 'flex-start',
+                  maxWidth: '70%',
+                  backgroundColor: isMine ? '#111827' : '#fff',
+                  color: isMine ? '#fff' : '#111827',
+                  padding: '0.6rem 0.85rem',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                }}
+              >
+                <div style={{ fontSize: '0.9rem' }}>{message.text}</div>
+                <div style={{ fontSize: '0.7rem', opacity: 0.7, marginTop: '0.25rem', textAlign: 'right' }}>
+                  {message.time}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {selectedConversation.isTyping && (
