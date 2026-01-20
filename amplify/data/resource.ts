@@ -149,6 +149,7 @@ const schema = a.schema({
       participantUserIds: a.string().array().required(),
       lastMessage: a.string(),
       updatedAt: a.datetime(),
+      messages: a.hasMany('Message', 'conversationId'),
     })
     .authorization((allow) => [
       allow.authenticated().to(['read', 'create', 'update', 'delete']),
