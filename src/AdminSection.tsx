@@ -111,6 +111,7 @@ function EventsAdmin() {
     venue: string;
     address: string;
     googleMapsAddress: string;
+    locationLabel: string;
     city: string;
     region: string;
     country: string;
@@ -138,6 +139,7 @@ function EventsAdmin() {
     venue: '',
     address: '',
     googleMapsAddress: '',
+    locationLabel: '',
     city: '',
     region: '',
     country: '',
@@ -369,6 +371,7 @@ function EventsAdmin() {
       venue: '',
       address: '',
       googleMapsAddress: '',
+      locationLabel: '',
       city: '',
       region: '',
       country: '',
@@ -447,6 +450,7 @@ function EventsAdmin() {
       venue: event.venue || '',
       address: event.address || '',
       googleMapsAddress: event.googleMapsAddress || '',
+      locationLabel: event.locationLabel || '',
       city: event.city || '',
       region: event.region || '',
       country: event.country || '',
@@ -513,6 +517,7 @@ function EventsAdmin() {
         venue: formData.venue || undefined,
         address: formData.address || undefined,
         googleMapsAddress: formData.googleMapsAddress || undefined,
+        locationLabel: formData.locationLabel || undefined,
         city: formData.city,
         region: formData.region || undefined,
         country: formData.country,
@@ -752,6 +757,48 @@ function EventsAdmin() {
                     placeholder="Paste the address used for Google Maps"
                     required
                   />
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Location label (optional)</label>
+                  <input
+                    type="text"
+                    value={formData.locationLabel}
+                    onChange={(e) => setFormData(prev => ({ ...prev, locationLabel: e.target.value }))}
+                    placeholder="e.g., Paris, France"
+                  />
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Coordinates (required for map)</label>
+                  <div className="admin-form__row">
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={formData.latitude ?? ''}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          latitude: next === '' ? null : Number(next),
+                        }));
+                      }}
+                      placeholder="Latitude"
+                    />
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={formData.longitude ?? ''}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          longitude: next === '' ? null : Number(next),
+                        }));
+                      }}
+                      placeholder="Longitude"
+                    />
+                  </div>
                 </div>
 
                 <div className="admin-form__field admin-form__field--full">

@@ -1,10 +1,22 @@
-.layout-container {
-  width: 100%;
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 0 2rem;
+:root {
+  --layout-max: 1600px;             /* adjust if needed */
+  --layout-padding: clamp(1rem, 4vw, 5rem);
+  --header-height: 60px;            /* keep in sync with Header height */
+  --sticky-gap: 16px;               /* breathing room */
+  --sticky-top: calc(var(--header-height) + var(--sticky-gap));
 }
 
+/* Max width + padding wrapper (used by header + pages) */
+.layout-container {
+  max-width: var(--layout-max);
+  margin: 0 auto;
+  padding-left: var(--layout-padding);
+  padding-right: var(--layout-padding);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 3-column grid */
 .layout-3col {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
@@ -13,82 +25,151 @@
   width: 100%;
 }
 
+/* 2-column grid (left + center) */
 .layout-2col {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-  gap: 2rem;
-  align-items: start;
-  width: 100%;
-}
-
-.app-layout--garage {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
-}
-
-/* 2-column layout for Events, News, Auctions pages (20% sidebar, 80% content) */
-.layout-2col-sidebar {
-  display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
   gap: 2rem;
   align-items: start;
   width: 100%;
 }
 
-.layout-2col-sidebar .layout-col--right {
+/* Columns */
+.layout-col {
+  min-width: 0; /* critical to prevent overflow */
+}
+
+/* Sticky wrapper used inside left/right columns */
+.layout-sticky {
+  position: sticky;
+  top: var(--sticky-top);
+  align-self: start;
+}
+
+/* -------------------------------------------------------
+   CENTER-ONLY SCROLL MODE (Homepage + Rooms page)
+   -------------------------------------------------------
+   Key idea:
+   - The shell is fixed-height and hides overflow.
+   - Only the center column becomes a scroll container.
+   - Sticky columns remain sticky relative to the viewport.
+*/
+.layout-scroll-shell {
+  height: calc(100vh - var(--header-height));
+  overflow: hidden;           /* IMPORTANT: only shell hides overflow */
+}
+
+/* In center-scroll mode, the grid must fill the shell */
+.layout-scroll-shell .layout-3col {
+  height: 100%;
+}
+
+/* Make ONLY the center column scroll */
+.layout-scroll-center {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 2rem;
+}
+
+/* Optional: reduce scrollbar visual impact (keep functional) */
+.layout-scroll-center::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* -------------------------------------------------------
+   PAGE VARIANTS / HELPERS
+   ------------------------------------------------------- */
+
+/* Hide right column on pages that don't need it */
+.layout-hide-right .layout-col--right {
   display: none;
 }
 
-.layout-1col {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  width: 100%;
+/* When right is hidden, keep center wide */
+.layout-hide-right .layout-3col {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
 }
 
-.layout-col {
+/* -------------------------------------------------------
+   STICKY BUG AVOIDANCE RULES
+   -------------------------------------------------------
+   Sticky will fail if:
+   - any ancestor has overflow: hidden/auto/scroll (except the intended scroll column)
+   - any ancestor has transform/filter/perspective
+   - height constraints prevent sticky from having room
+*/
+.layout-col--left,
+.layout-col--right {
+  overflow: visible;  /* ensure sticky isn’t clipped */
+}
+
+.layout-2col .layout-col--left {
+  position: sticky;
+  top: var(--sticky-top);
+  align-self: start;
+  overflow: visible;
+}
+
+.layout-2col .layout-col--center {
   min-width: 0;
 }
 
-/* App layout behavior for tablet */
-@media (max-width: 1199px) and (min-width: 900px) {
-  .app-layout {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-  }
-
-  .app-layout .layout-col--left {
-    display: none;
-  }
-
-  /* 2-col sidebar layout keeps sidebar visible on tablet */
-  .layout-2col-sidebar {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
-  }
+.layout-2col .layout-col--left .layout-sticky {
+  position: static;
+  top: auto;
 }
 
-/* App layout behavior for mobile */
-@media (max-width: 899px) {
-  .app-layout {
-    grid-template-columns: minmax(0, 1fr);
+.layout-2col .layout-col--left .layout-sticky aside {
+  position: static !important;
+  top: auto !important;
+}
+
+/* Avoid this on ancestors of sticky columns:
+   transform: translateZ(0);
+   filter: blur(...);
+   overflow: hidden;
+   position: relative + overflow combinations
+*/
+
+/* -------------------------------------------------------
+   MOBILE FALLBACK (DISABLE STICKY)
+   ------------------------------------------------------- */
+@media (max-width: 900px) {
+  .layout-3col {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
-  .app-layout .layout-col--left {
-    display: none;
+  .layout-2col {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
-  .app-layout .layout-col--center {
-    order: 1;
+  .layout-2col .layout-col--left {
+    position: static;
+    top: auto;
   }
 
-  .app-layout .layout-col--right {
-    order: 2;
+  /* Disable sticky on mobile */
+  .layout-sticky {
+    position: static;
+    top: auto;
   }
 
-  /* 2-col sidebar layout becomes single column on mobile */
-  .layout-2col-sidebar {
-    grid-template-columns: minmax(0, 1fr);
+  /* Center-only scroll mode should revert to normal scrolling on mobile */
+  .layout-scroll-shell {
+    height: auto;
+    overflow: visible;
   }
 
-  .layout-2col-sidebar .layout-col--left {
-    display: none;
+  .layout-scroll-center {
+    height: auto;
+    overflow: visible;
+  }
+
+  /* If right column exists, place it under center */
+  .layout-col--right {
+    order: 3;
   }
 }

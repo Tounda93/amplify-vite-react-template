@@ -622,6 +622,9 @@ function CarSearch({ user }: CarSearchProps) {
   };
 
   const mainBackgroundColor = '#F2F3F5';
+  const isRoomsRoute = location.pathname.startsWith('/rooms/');
+  const isCenterScroll = activeSection === 'home' || activeSection === 'rooms' || isRoomsRoute;
+  const isTwoColLayout = ['events', 'news', 'auctions', 'garage', 'profile'].includes(activeSection);
 
   const handleMessageUser = (userId: string) => {
     setPendingChatUserId(userId);
@@ -641,10 +644,10 @@ function CarSearch({ user }: CarSearchProps) {
         <Header />
 
       {/* Main layout with shared grid */}
-      <div className="layout-container">
+      <div className={`layout-container${isCenterScroll ? ' layout-scroll-shell' : ''}${activeSection === 'events' ? ' events-map-layout' : ''}`}>
         {/* Use 2-column layout for Events, News, Auctions, Garage; 3-column for others */}
         <div
-          className={`${['events', 'news', 'auctions', 'garage', 'profile'].includes(activeSection) ? 'layout-2col-sidebar' : 'layout-3col'} app-layout`}
+          className={`${isTwoColLayout ? 'layout-2col' : 'layout-3col'} app-layout`}
           style={{ minHeight: 'calc(100vh - 60px)' }}
         >
           {activeSection === 'chat' ? (
@@ -653,26 +656,34 @@ function CarSearch({ user }: CarSearchProps) {
               onConversationOpened={() => setPendingChatUserId(null)}
             >
               <div className="layout-col layout-col--left">
-                <LeftSidebar userInitials={userInitials} />
+                <div className="layout-sticky">
+                  <LeftSidebar userInitials={userInitials} />
+                </div>
               </div>
 
-              <main className="layout-col layout-col--center">
+              <main className={`layout-col layout-col--center${isCenterScroll ? ' layout-scroll-center' : ''}`}>
                 <ChatSection />
               </main>
 
-              <aside className="layout-col layout-col--right">
-                <ChatConversationList />
-              </aside>
+              {!isTwoColLayout && (
+                <aside className="layout-col layout-col--right">
+                  <div className="layout-sticky">
+                    <ChatConversationList />
+                  </div>
+                </aside>
+              )}
             </ChatProvider>
           ) : (
             <>
               {/* Left Column */}
               <div className="layout-col layout-col--left">
-                <LeftSidebar userInitials={userInitials} />
+                <div className="layout-sticky">
+                  <LeftSidebar userInitials={userInitials} />
+                </div>
               </div>
 
               {/* Main Content Area */}
-              <main className="layout-col layout-col--center">
+              <main className={`layout-col layout-col--center${isCenterScroll ? ' layout-scroll-center' : ''}`}>
           {/* NEWS SECTION */}
           {activeSection === 'news' && (
             <NewsSection />
@@ -801,11 +812,13 @@ function CarSearch({ user }: CarSearchProps) {
               </main>
 
               {/* Right Column */}
-              {activeSection !== 'garage' && activeSection !== 'profile' && (
+              {!isTwoColLayout && (
                 <aside className="layout-col layout-col--right">
-                  {activeSection === 'home' && !location.pathname.startsWith('/rooms/') && !selectedMake && makes.length === 0 && (
-                    <HomeRoomsSidebar />
-                  )}
+                  <div className="layout-sticky">
+                    {(activeSection === 'home' || activeSection === 'rooms' || isRoomsRoute) && !selectedMake && makes.length === 0 && (
+                      <HomeRoomsSidebar />
+                    )}
+                  </div>
                 </aside>
               )}
             </>
