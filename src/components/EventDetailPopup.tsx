@@ -82,6 +82,17 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
   const loadUserData = async () => {
     try {
       setLoading(true);
@@ -259,16 +270,15 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
         style={{
           background: '#fff',
           borderRadius: '5px',
-          width: 'min(92vw, 960px)',
-          aspectRatio: '8.5 / 6.5',
+          width: 'min(55vw, 576px)',
           maxHeight: '90vh',
-          overflow: 'hidden',
-          display: 'grid',
-          gridTemplateRows: 'clamp(220px, 60%, 420px) 1fr',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         {/* Header with Image */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', height: 'clamp(180px, 35vh, 320px)', flexShrink: 0 }}>
           <img
             src={coverImageUrl || FALLBACKS.event}
             alt={event.title}
@@ -322,7 +332,7 @@ export default function EventDetailPopup({ event, isOpen, onClose }: EventDetail
         </div>
 
         {/* Content */}
-        <div style={{ padding: 'clamp(0.75rem, 2vw, 1.5rem)', overflow: 'hidden' }}>
+        <div style={{ padding: 'clamp(0.75rem, 2vw, 1.5rem)' }}>
           {/* Title */}
           <h2 style={{ margin: '0 0 clamp(0.5rem, 1.5vw, 1rem) 0', fontSize: '1.5rem', fontWeight: 600, color: '#000' }}>
             {event.title}

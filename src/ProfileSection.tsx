@@ -33,6 +33,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [profileDisplayName, setProfileDisplayName] = useState<string>('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
@@ -77,6 +78,8 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
         const profile = data?.[0];
         if (profile?.id) {
           setProfileId(profile.id);
+          const nameParts = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
+          setProfileDisplayName(nameParts || profile.displayName || derivedUsername || '');
           const updates: Partial<Schema['Profile']['type']> = {};
           if (!profile.username && derivedUsername) updates.username = derivedUsername;
           if (!profile.email && userLoginId) updates.email = userLoginId;
@@ -159,7 +162,9 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   }
 
   const userEmail = user?.signInDetails?.loginId || 'user@example.com';
-  const userInitial = userEmail.charAt(0).toUpperCase();
+  const fallbackName = userEmail.split('@')[0];
+  const displayName = profileDisplayName || fallbackName;
+  const userInitial = displayName.charAt(0).toUpperCase();
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -268,7 +273,7 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
 
         <div className="profile-info-card">
           <div className="profile-info-main">
-            <h1 className="profile-name">{userEmail.split('@')[0]}</h1>
+            <h1 className="profile-name">{displayName}</h1>
             <div className="profile-location">
               <MapPin size={16} />
               <span>Location not set</span>

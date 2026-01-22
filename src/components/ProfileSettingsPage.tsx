@@ -7,6 +7,7 @@ import './ProfileSettingsPage.css';
 const client = generateClient<Schema>();
 
 type ProfileSettings = Schema['ProfileSettings']['type'];
+type Profile = Schema['Profile']['type'];
 
 interface ProfileSettingsPageProps {
   user: {
@@ -233,6 +234,32 @@ export default function ProfileSettingsPage({ user }: ProfileSettingsPageProps) 
       } else {
         const created = await client.models.ProfileSettings.create(payload);
         setSettingsId(created.data?.id ?? null);
+      }
+
+      const displayName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
+      const { data: existingProfiles } = await client.models.Profile.list({
+        limit: 1,
+        filter: { ownerId: { eq: currentUserId } },
+      });
+      const existingProfile = existingProfiles?.[0] as Profile | undefined;
+      if (existingProfile?.id) {
+        await client.models.Profile.update({
+          id: existingProfile.id,
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          displayName,
+          email: formData.email.trim(),
+          phoneNumber: formData.phoneNumber.trim() || undefined,
+        });
+      } else {
+        await client.models.Profile.create({
+          ownerId: currentUserId,
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          displayName,
+          email: formData.email.trim(),
+          phoneNumber: formData.phoneNumber.trim() || undefined,
+        });
       }
       alert('Profile settings saved.');
     } catch (error) {
