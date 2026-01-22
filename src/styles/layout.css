@@ -1,12 +1,15 @@
 :root {
   --layout-max: 1600px;             /* adjust if needed */
   --layout-padding: clamp(1rem, 4vw, 5rem);
+  --page-gutter: clamp(12px, 3vw, 24px);
+  --feed-max: 960px;
   --header-height: 60px;            /* keep in sync with Header height */
   --sticky-gap: 16px;               /* breathing room */
   --sticky-top: calc(var(--header-height) + var(--sticky-gap));
 }
 
-/* Max width + padding wrapper (used by header + pages) */
+/* Max width + padding wrapper (used by header + pages)
+   Layout padding = global page framing (desktop). */
 .layout-container {
   max-width: var(--layout-max);
   margin: 0 auto;
@@ -92,6 +95,20 @@
 }
 
 /* -------------------------------------------------------
+   FEED LAYOUT (Home + Rooms)
+   -------------------------------------------------------
+   Content padding = feature spacing (feed on mobile).
+   Do not stack layout padding + feed padding on mobile.
+*/
+.feed {
+  width: 100%;
+  max-width: var(--feed-max);
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* -------------------------------------------------------
    STICKY BUG AVOIDANCE RULES
    -------------------------------------------------------
    Sticky will fail if:
@@ -136,6 +153,11 @@
    MOBILE FALLBACK (DISABLE STICKY)
    ------------------------------------------------------- */
 @media (max-width: 900px) {
+  :root {
+    --layout-padding: 1rem;
+    --page-gutter: 0px;
+  }
+
   .layout-3col {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -163,6 +185,14 @@
     overflow: visible;
   }
 
+  /* Feed shells: remove outer padding so cards can go edge-to-edge. */
+  .layout-scroll-shell--feed.layout-container,
+  .layout-scroll-shell--feed {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100% !important;
+  }
+
   .layout-scroll-center {
     height: auto;
     overflow: visible;
@@ -171,5 +201,19 @@
   /* If right column exists, place it under center */
   .layout-col--right {
     order: 3;
+  }
+
+  .feed {
+    max-width: 100%;
+    padding-left: var(--page-gutter);
+    padding-right: var(--page-gutter);
+  }
+
+  .feed .card,
+  .feed .event-card,
+  .feed .for-sale-card,
+  .feed .rooms-card {
+    width: 100%;
+    max-width: none;
   }
 }

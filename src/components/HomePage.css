@@ -28,9 +28,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  margin: 0 auto;      /* centers the feed block in column 2 */
   width: 100%;
-  max-width: 960px;
 }
 
 .home-page__sidebar {
@@ -227,11 +225,26 @@
 
 @media (max-width: 900px) {
   .home-page__content {
-    padding: 1rem 0;
+    padding: 0;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .home-feed {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
   }
 
   .home-page__sidebar {
     position: static;
+    display: none;
+  }
+
+  .home-page__card-stack {
+    align-items: stretch;
   }
 }
 

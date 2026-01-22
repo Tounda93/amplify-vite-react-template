@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Mail, Calendar, MapPin, Edit, Shield, LogOut } from 'lucide-react';
+import { User, Calendar, MapPin, Edit, Shield, LogOut } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { uploadData } from 'aws-amplify/storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
@@ -7,6 +7,7 @@ import type { Schema } from '../amplify/data/resource';
 import { useIsMobile } from './hooks/useIsMobile';
 import { getImageUrl } from './utils/storageHelpers';
 import { normalizePhoneNumber } from './utils/sanitize';
+import './ProfileSection.css';
 
 const client = generateClient<Schema>();
 
@@ -235,44 +236,24 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
   return (
     <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', backgroundColor: '#F2F3F5', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
       {/* Profile Header */}
-      <div style={{
-        backgroundColor: '#f8f9fa',
-        borderRadius: '12px',
-        padding: '3rem',
-        marginBottom: '2rem',
-        textAlign: 'center',
-        position: 'relative'
-      }}>
-        {/* Profile Picture */}
-        <div style={{ position: 'relative', display: 'inline-block', marginBottom: '1.5rem' }}>
-          <div style={{
-            width: '120px',
-            height: '120px',
-            borderRadius: '50%',
-            background: (pendingAvatar || avatarPreview) ? `url(${pendingAvatar || avatarPreview})` : '#ffffff',
-            backgroundSize: (pendingAvatar || avatarPreview) ? 'contain' : 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'black',
-            fontSize: '3rem',
-            fontWeight: 'bold',
-            border: '4px solid white',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            cursor: 'pointer'
-          }}
-          onClick={() => setIsAvatarModalOpen(true)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setIsAvatarModalOpen(true);
-            }
-          }}
-          aria-label="Open profile photo"
+      <div className="profile-header">
+        <div className="profile-avatar-wrap">
+          <div
+            className="profile-avatar"
+            style={{
+              backgroundImage: (pendingAvatar || avatarPreview) ? `url(${pendingAvatar || avatarPreview})` : undefined,
+              backgroundSize: (pendingAvatar || avatarPreview) ? 'contain' : 'cover',
+            }}
+            onClick={() => setIsAvatarModalOpen(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsAvatarModalOpen(true);
+              }
+            }}
+            aria-label="Open profile photo"
           >
             {!pendingAvatar && !avatarPreview && userInitial}
           </div>
@@ -285,64 +266,43 @@ export function ProfileSection({ user, signOut }: ProfileSectionProps) {
           />
         </div>
 
-        <h1 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>
-          {userEmail.split('@')[0]}
-        </h1>
-        <p style={{ color: '#666', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-          <Mail size={16} />
-          {userEmail}
-        </p>
+        <div className="profile-info-card">
+          <div className="profile-info-main">
+            <h1 className="profile-name">{userEmail.split('@')[0]}</h1>
+            <div className="profile-location">
+              <MapPin size={16} />
+              <span>Location not set</span>
+            </div>
+          </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button style={{
-            padding: '0.75rem 1.5rem',
-            backgroundColor: '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontWeight: '600',
-            transition: 'transform 0.2s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-          onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            <Edit size={18} />
-            Edit Profile
-          </button>
-
-          {signOut && (
+          <div className="profile-actions">
             <button
-              onClick={signOut}
-              style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#fef2f2',
-                color: '#dc2626',
-                border: '1px solid #fecaca',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontWeight: '600',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = '#fee2e2';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = '#fef2f2';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
+              className="profile-action profile-action--primary"
+              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
             >
-              <LogOut size={18} />
-              Sign Out
+              <Edit size={18} />
+              Edit Profile
             </button>
-          )}
+
+            {signOut && (
+              <button
+                onClick={signOut}
+                className="profile-action profile-action--danger"
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fee2e2';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <LogOut size={18} />
+                Sign Out
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

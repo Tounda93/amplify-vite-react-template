@@ -55,7 +55,7 @@ export default function HomePage() {
     <div className="home-page" style={{ width: '100%', overflowX: 'hidden' }}>
       {/* Social Media Style Feed */}
       <div className="home-page__content">
-        <div className="home-feed">
+        <div className="home-feed feed">
           {/* Feed Cards - Stacked vertically */}
           {feedItems.length > 0 ? (
             feedItems.map((item, index) => {
@@ -126,56 +126,6 @@ export default function HomePage() {
             </p>
           )}
 
-          {/* Rooms Section - Create your room CTA */}
-          <div style={{
-            width: '100%',
-            marginTop: '1rem',
-            padding: '2rem',
-            borderRadius: '5px',
-            backgroundColor: 'rgba(0, 0, 0, 0.03)',
-            border: '1px dashed rgba(0, 0, 0, 0.15)',
-            textAlign: 'center',
-          }}>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: 600,
-              color: '#000',
-              margin: '0 0 0.5rem 0',
-            }}>
-              Create Your Room
-            </h3>
-            <p style={{
-              fontSize: '14px',
-              color: '#666',
-              margin: '0 0 1rem 0',
-            }}>
-              Start a community discussion about your favorite cars
-            </p>
-            <button
-              onClick={() => console.log('Create room clicked')}
-              style={{
-                padding: '0.75rem 1.5rem',
-                borderRadius: '999px',
-                border: '1px solid #000',
-                backgroundColor: 'transparent',
-                color: '#000',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = '#000';
-                e.currentTarget.style.color = '#fff';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = '#000';
-              }}
-            >
-              Create your room
-            </button>
-          </div>
         </div>
       </div>
 

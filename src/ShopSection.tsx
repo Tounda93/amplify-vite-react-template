@@ -9,7 +9,6 @@ export function ShopSection() {
       {/* Title Section */}
       <div className="section-title-row shop-section__title-row">
         <h2 className="section-title">Shop</h2>
-        <div className="section-title-divider" />
       </div>
 
       {/* Coming Soon Message */}

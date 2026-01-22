@@ -11,6 +11,7 @@ import {
   Gavel,
   Users,
   Car,
+  ShoppingBag,
   Settings,
   Plus,
   Pencil,
@@ -31,7 +32,7 @@ type Auction = Schema['Auction']['type'];
 
 type MagazineWithImageUrl = Magazine & { imageUrl?: string };
 
-type AdminTab = 'events' | 'rooms' | 'magazines' | 'auctions' | 'wikicars' | 'settings';
+type AdminTab = 'events' | 'rooms' | 'magazines' | 'auctions' | 'wikicars' | 'shop' | 'settings';
 
 declare global {
   interface Window {
@@ -48,6 +49,7 @@ export function AdminSection() {
     { id: 'magazines', label: 'Magazines', icon: BookOpen },
     { id: 'auctions', label: 'Auctions', icon: Gavel },
     { id: 'wikicars', label: 'WikiCars', icon: Car },
+    { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -82,6 +84,7 @@ export function AdminSection() {
         {activeTab === 'magazines' && <MagazinesAdmin />}
         {activeTab === 'auctions' && <AuctionsAdmin />}
         {activeTab === 'wikicars' && <WikiCarsAdmin />}
+        {activeTab === 'shop' && <ShopAdmin />}
         {activeTab === 'settings' && <SettingsAdmin />}
       </div>
     </div>
@@ -955,6 +958,479 @@ function EventsAdmin() {
         </table>
         {events.length === 0 && (
           <div className="admin-empty">No events found. Create your first event!</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// SHOP ADMIN
+// ============================================
+type ShopProduct = {
+  id: string;
+  title: string;
+  description: string;
+  status: 'active' | 'draft';
+  price: string;
+  compareAtPrice: string;
+  costPerItem: string;
+  sku: string;
+  barcode: string;
+  quantity: string;
+  vendor: string;
+  productType: string;
+  tags: string[];
+  weight: string;
+  weightUnit: 'kg' | 'lb';
+  width: string;
+  height: string;
+  depth: string;
+  requiresShipping: boolean;
+  taxable: boolean;
+  imageUrl: string;
+  imageStoragePath: string;
+};
+
+function ShopAdmin() {
+  const [products, setProducts] = useState<ShopProduct[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<ShopProduct | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const buildEmptyForm = () => ({
+    title: '',
+    description: '',
+    status: 'active' as 'active' | 'draft',
+    price: '',
+    compareAtPrice: '',
+    costPerItem: '',
+    sku: '',
+    barcode: '',
+    quantity: '',
+    vendor: '',
+    productType: '',
+    tags: [] as string[],
+    weight: '',
+    weightUnit: 'kg' as 'kg' | 'lb',
+    width: '',
+    height: '',
+    depth: '',
+    requiresShipping: true,
+    taxable: true,
+    imageUrl: '',
+    imageStoragePath: '',
+  });
+
+  const [formData, setFormData] = useState(buildEmptyForm());
+
+  const resetForm = () => {
+    setFormData(buildEmptyForm());
+    setEditingProduct(null);
+    setImagePreview(null);
+    setImageUrlInput('');
+    setShowForm(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+    setUploading(true);
+    try {
+      const timestamp = Date.now();
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const result = await uploadData({
+        path: ({ identityId }) => `shop-products/${identityId}/${timestamp}-${safeName}`,
+        data: file,
+        options: { contentType: file.type },
+      }).result;
+      const resolved = await getImageUrl(result.path);
+      if (resolved) {
+        setImagePreview(resolved);
+      }
+      setFormData((prev) => ({
+        ...prev,
+        imageStoragePath: result.path,
+        imageUrl: resolved || prev.imageUrl,
+      }));
+    } catch (error) {
+      console.error('Failed to upload product image', error);
+      alert('Failed to upload product image.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleImageUrlApply = () => {
+    const trimmed = imageUrlInput.trim();
+    if (!trimmed) {
+      alert('Please enter an image URL.');
+      return;
+    }
+    try {
+      new URL(trimmed);
+    } catch {
+      alert('Please enter a valid URL.');
+      return;
+    }
+    setFormData((prev) => ({ ...prev, imageUrl: trimmed, imageStoragePath: '' }));
+    setImagePreview(trimmed);
+  };
+
+  const handleEdit = (product: ShopProduct) => {
+    setEditingProduct(product);
+    setFormData({
+      ...product,
+      tags: product.tags || [],
+    });
+    setImagePreview(product.imageUrl || null);
+    setImageUrlInput(product.imageUrl || '');
+    setShowForm(true);
+  };
+
+  const handleDelete = (productId: string) => {
+    if (!confirm('Delete this product?')) return;
+    setProducts((prev) => prev.filter((item) => item.id !== productId));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim()) {
+      alert('Please enter a product title.');
+      return;
+    }
+    const payload: ShopProduct = {
+      id: editingProduct?.id || `product-${Date.now()}`,
+      ...formData,
+      title: formData.title.trim(),
+      tags: formData.tags.map((tag) => tag.trim()).filter(Boolean),
+    };
+    setProducts((prev) => {
+      if (editingProduct) {
+        return prev.map((item) => (item.id === editingProduct.id ? payload : item));
+      }
+      return [payload, ...prev];
+    });
+    resetForm();
+    setShowForm(false);
+  };
+
+  return (
+    <div className="admin-panel">
+      <div className="admin-panel__header">
+        <h2>Shop Products</h2>
+        <button onClick={() => setShowForm(true)} className="admin-btn admin-btn--primary">
+          <Plus size={16} />
+          Add Product
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="admin-modal-overlay" onClick={resetForm}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal__header">
+              <h3>{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
+              <button onClick={resetForm} className="admin-modal__close">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="admin-form">
+              <div className="admin-form__grid">
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Product image</label>
+                  <div
+                    className="admin-form__cover-upload"
+                    style={imagePreview ? { backgroundImage: `url(${imagePreview})` } : undefined}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="admin-btn admin-btn--secondary admin-form__cover-button"
+                      disabled={uploading}
+                    >
+                      {uploading ? 'Uploading...' : '+ Add'}
+                    </button>
+                  </div>
+                  <div className="admin-form__row" style={{ marginTop: '0.75rem' }}>
+                    <input
+                      type="url"
+                      placeholder="Paste image URL"
+                      value={imageUrlInput}
+                      onChange={(e) => setImageUrlInput(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleImageUrlApply}
+                      className="admin-btn admin-btn--secondary"
+                      disabled={uploading}
+                    >
+                      Use URL
+                    </button>
+                  </div>
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Title *</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                    placeholder="Describe the product..."
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Status</label>
+                  <div className="admin-toggle">
+                    <button
+                      type="button"
+                      className={`admin-btn admin-btn--secondary admin-toggle__option ${formData.status === 'active' ? 'admin-toggle__option--active' : ''}`}
+                      onClick={() => setFormData((prev) => ({ ...prev, status: 'active' }))}
+                    >
+                      Active
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-btn admin-btn--secondary admin-toggle__option ${formData.status === 'draft' ? 'admin-toggle__option--active' : ''}`}
+                      onClick={() => setFormData((prev) => ({ ...prev, status: 'draft' }))}
+                    >
+                      Draft
+                    </button>
+                  </div>
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Price</label>
+                  <input
+                    type="text"
+                    value={formData.price}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
+                    placeholder="e.g. 199.00"
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Compare at price</label>
+                  <input
+                    type="text"
+                    value={formData.compareAtPrice}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, compareAtPrice: e.target.value }))}
+                    placeholder="e.g. 249.00"
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Cost per item</label>
+                  <input
+                    type="text"
+                    value={formData.costPerItem}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, costPerItem: e.target.value }))}
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>SKU</label>
+                  <input
+                    type="text"
+                    value={formData.sku}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Barcode</label>
+                  <input
+                    type="text"
+                    value={formData.barcode}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, barcode: e.target.value }))}
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Quantity</label>
+                  <input
+                    type="text"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, quantity: e.target.value }))}
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Vendor</label>
+                  <input
+                    type="text"
+                    value={formData.vendor}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, vendor: e.target.value }))}
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Product type</label>
+                  <input
+                    type="text"
+                    value={formData.productType}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, productType: e.target.value }))}
+                  />
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Tags (comma separated)</label>
+                  <input
+                    type="text"
+                    value={formData.tags.join(', ')}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        tags: e.target.value.split(','),
+                      }))
+                    }
+                    placeholder="e.g. limited, apparel"
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Requires shipping</label>
+                  <input
+                    type="checkbox"
+                    checked={formData.requiresShipping}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, requiresShipping: e.target.checked }))}
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Taxable</label>
+                  <input
+                    type="checkbox"
+                    checked={formData.taxable}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, taxable: e.target.checked }))}
+                  />
+                </div>
+
+                <div className="admin-form__field">
+                  <label>Weight</label>
+                  <div className="admin-form__row">
+                    <input
+                      type="text"
+                      value={formData.weight}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, weight: e.target.value }))}
+                      placeholder="e.g. 0.5"
+                    />
+                    <select
+                      value={formData.weightUnit}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, weightUnit: e.target.value as 'kg' | 'lb' }))}
+                    >
+                      <option value="kg">kg</option>
+                      <option value="lb">lb</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="admin-form__field admin-form__field--full">
+                  <label>Dimensions (L × W × H)</label>
+                  <div className="admin-form__row">
+                    <input
+                      type="text"
+                      value={formData.width}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, width: e.target.value }))}
+                      placeholder="Length"
+                    />
+                    <input
+                      type="text"
+                      value={formData.depth}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, depth: e.target.value }))}
+                      placeholder="Width"
+                    />
+                    <input
+                      type="text"
+                      value={formData.height}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, height: e.target.value }))}
+                      placeholder="Height"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-form__actions">
+                <button type="button" onClick={resetForm} className="admin-btn admin-btn--secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="admin-btn admin-btn--primary" disabled={uploading}>
+                  {editingProduct ? 'Update product' : 'Create product'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="admin-table-container">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Status</th>
+              <th>Price</th>
+              <th>Inventory</th>
+              <th>Type</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((product) => (
+              <tr key={product.id}>
+                <td>
+                  <div className="admin-table__title-cell">
+                    {product.imageUrl && (
+                      <img src={product.imageUrl} alt="" className="admin-table__thumbnail" />
+                    )}
+                    <span>{product.title}</span>
+                  </div>
+                </td>
+                <td>{product.status === 'active' ? 'Active' : 'Draft'}</td>
+                <td>{product.price || '—'}</td>
+                <td>{product.quantity || '—'}</td>
+                <td>{product.productType || '—'}</td>
+                <td>
+                  <div className="admin-table__actions">
+                    <button onClick={() => handleEdit(product)} className="admin-action-btn" title="Edit">
+                      <Pencil size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(product.id)} className="admin-action-btn admin-action-btn--danger" title="Delete">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {products.length === 0 && (
+          <div className="admin-empty">No products yet. Add your first product.</div>
         )}
       </div>
     </div>

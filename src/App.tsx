@@ -19,6 +19,8 @@ import { AdminSection } from './AdminSection';
 import Header from './components/Header';
 import LeftSidebar from './components/LeftSidebar';
 import HomePage, { HomeRoomsSidebar } from './components/HomePage';
+import Footer from './components/Footer';
+import ProfileSettingsPage from './components/ProfileSettingsPage';
 import { importAllData } from './importData';
 import { isAdminEmail } from './constants/admins';
 import { NewsItem, fetchNewsFeedItems } from './utils/newsFeed';
@@ -99,6 +101,7 @@ const sectionToPath: Record<string, string> = {
   saved: '/saved',
   auctions: '/auctions',
   admin: '/admin',
+  'profile-settings': '/profile-settings',
 };
 
 // Map URL paths back to section IDs
@@ -115,6 +118,7 @@ const pathToSection: Record<string, string> = {
   '/saved': 'saved',
   '/auctions': 'auctions',
   '/admin': 'admin',
+  '/profile-settings': 'profile-settings',
   '/': 'home',
 };
 
@@ -624,7 +628,8 @@ function CarSearch({ user }: CarSearchProps) {
   const mainBackgroundColor = '#F2F3F5';
   const isRoomsRoute = location.pathname.startsWith('/rooms/');
   const isCenterScroll = activeSection === 'home' || activeSection === 'rooms' || isRoomsRoute;
-  const isTwoColLayout = ['events', 'news', 'auctions', 'garage', 'profile'].includes(activeSection);
+  const isFeedShell = activeSection === 'home' || activeSection === 'rooms' || isRoomsRoute;
+  const isTwoColLayout = ['events', 'news', 'auctions', 'garage', 'profile', 'shop', 'saved', 'admin', 'profile-settings'].includes(activeSection);
 
   const handleMessageUser = (userId: string) => {
     setPendingChatUserId(userId);
@@ -644,7 +649,7 @@ function CarSearch({ user }: CarSearchProps) {
         <Header />
 
       {/* Main layout with shared grid */}
-      <div className={`layout-container${isCenterScroll ? ' layout-scroll-shell' : ''}${activeSection === 'events' ? ' events-map-layout' : ''}`}>
+      <div className={`layout-container${isCenterScroll ? ' layout-scroll-shell' : ''}${isFeedShell ? ' layout-scroll-shell--feed' : ''}${activeSection === 'events' ? ' events-map-layout' : ''}`}>
         {/* Use 2-column layout for Events, News, Auctions, Garage; 3-column for others */}
         <div
           className={`${isTwoColLayout ? 'layout-2col' : 'layout-3col'} app-layout`}
@@ -730,6 +735,10 @@ function CarSearch({ user }: CarSearchProps) {
                 onMessageUser={handleMessageUser}
               />
             )
+          )}
+
+          {activeSection === 'profile-settings' && (
+            <ProfileSettingsPage user={user} />
           )}
 
           {/* ADMIN SECTION */}
@@ -825,6 +834,8 @@ function CarSearch({ user }: CarSearchProps) {
           )}
         </div>
       </div>
+
+      <Footer />
 
       </div>
     </AppUIProvider>

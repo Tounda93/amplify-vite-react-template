@@ -1,0 +1,18 @@
+.room-page {
+  width: 100%;
+  background-color: #F2F3F5;
+  min-height: 100vh;
+  padding: 2rem 0;
+}
+
+.room-page__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .room-page {
+    padding: 1.5rem 0;
+  }
+}

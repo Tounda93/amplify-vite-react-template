@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useIsMobile } from './hooks/useIsMobile';
 import CreateRoomPopup from './components/CreateRoomPopup';
 import RoomsCard from './components/Card/RoomsCard';
 import { RoomRecord, getRoomShareUrl, loadRooms } from './utils/roomsStorage';
+import './CommunitySection.css';
 
 export function CommunitySection() {
-  const isMobile = useIsMobile();
-  const horizontalPadding = isMobile ? '1rem' : '5rem';
   const [showCreatePopup, setShowCreatePopup] = useState(false);
   const [rooms, setRooms] = useState<RoomRecord[]>([]);
   const navigate = useNavigate();
@@ -17,7 +15,7 @@ export function CommunitySection() {
   }, []);
 
   return (
-    <div style={{ width: '100%', backgroundColor: '#F2F3F5', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
+    <div className="community-section">
       {/* Rooms Title Section */}
       <div style={{
         display: 'flex',
@@ -85,12 +83,7 @@ export function CommunitySection() {
             No rooms yet. Create your first room to get started.
           </div>
         ) : (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.25rem',
-            maxWidth: '720px',
-          }}>
+          <div className="feed community-section__list">
             {rooms.map((room) => (
               <div key={room.id} onClick={() => navigate(`/rooms/${room.id}`)} style={{ cursor: 'pointer' }}>
                 <RoomsCard

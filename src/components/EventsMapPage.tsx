@@ -51,11 +51,6 @@ export default function EventsMapPage({ events, onOpenDetails, onSaveEvent }: Ev
     return mappableEvents.filter((event) => event.visibility === filter);
   }, [mappableEvents, filter]);
 
-  const missingLocationEvents = useMemo(
-    () => events.filter((event) => event.latitude == null || event.longitude == null),
-    [events]
-  );
-
   const initialView = useMemo(() => {
     if (mappableEvents.length === 0) {
       return DEFAULT_VIEW;
@@ -127,7 +122,11 @@ export default function EventsMapPage({ events, onOpenDetails, onSaveEvent }: Ev
                   type="button"
                   className={`events-map-page__marker${selectedEvent?.id === event.id ? ' events-map-page__marker--active' : ''}`}
                   aria-label={event.title || 'Event marker'}
-                />
+                >
+                  <svg viewBox="0 0 12 12" aria-hidden="true">
+                    <circle cx="6" cy="6" r="4" />
+                  </svg>
+                </button>
               </Marker>
             ))}
           </Map>
@@ -142,27 +141,19 @@ export default function EventsMapPage({ events, onOpenDetails, onSaveEvent }: Ev
         <div className="events-map-page__panel">
           <div className="events-map-page__panel-header">
             <h2>All Events</h2>
-            <button type="button" onClick={() => setViewState(initialView)}>
-              Reset view
-            </button>
-          </div>
-          <div className="events-map-page__filters">
-            {(['all', 'public', 'members'] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={`events-map-page__filter${filter === value ? ' events-map-page__filter--active' : ''}`}
-                onClick={() => setFilter(value)}
-              >
-                {value === 'all' ? 'All' : value === 'public' ? 'Public' : 'Members'}
-              </button>
-            ))}
-          </div>
-          {missingLocationEvents.length > 0 && (
-            <div className="events-map-page__missing">
-              {missingLocationEvents.length} event{missingLocationEvents.length === 1 ? '' : 's'} missing map coordinates.
+            <div className="events-map-page__filters">
+              {(['all', 'public', 'members'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`events-map-page__filter${filter === value ? ' events-map-page__filter--active' : ''}`}
+                  onClick={() => setFilter(value)}
+                >
+                  {value === 'all' ? 'All' : value === 'public' ? 'Public' : 'Members'}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
         </div>
 
         {selectedEvent && (

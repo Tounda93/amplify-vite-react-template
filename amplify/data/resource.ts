@@ -83,6 +83,48 @@ const schema = a.schema({
       allow.authenticated().to(['read']),
     ]),
 
+  ProfileSettings: a
+    .model({
+      ownerId: a.string().required(),
+      firstName: a.string(),
+      lastName: a.string(),
+      email: a.string(),
+      phoneCountryCode: a.string(),
+      phoneNumber: a.string(),
+      shippingStreet: a.string(),
+      shippingHouseNumber: a.string(),
+      shippingCity: a.string(),
+      shippingPostalCode: a.string(),
+      shippingCountry: a.string(),
+      birthday: a.date(),
+      gender: a.enum(['male', 'female', 'prefer_not_to_say']),
+      language: a.string(),
+      instagramUrl: a.string(),
+      facebookUrl: a.string(),
+      tiktokUrl: a.string(),
+      youtubeUrl: a.string(),
+      xUrl: a.string(),
+      redditUrl: a.string(),
+      billingName: a.string(),
+      billingPhoneCountryCode: a.string(),
+      billingPhoneNumber: a.string(),
+      billingStreet: a.string(),
+      billingHouseNumber: a.string(),
+      billingCity: a.string(),
+      billingPostalCode: a.string(),
+      billingCountry: a.string(),
+      paymentProvider: a.string(),
+      paymentCardBrand: a.string(),
+      paymentCardLast4: a.string(),
+      paymentCardExpMonth: a.integer(),
+      paymentCardExpYear: a.integer(),
+      paymentToken: a.string(),
+      isDefaultBilling: a.boolean().default(true),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read', 'update', 'delete']),
+    ]),
+
   Car: a
     .model({
       ownerId: a.string().required(),

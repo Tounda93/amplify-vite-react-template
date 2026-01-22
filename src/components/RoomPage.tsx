@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useIsMobile } from '../hooks/useIsMobile';
 import { uploadData } from 'aws-amplify/storage';
 import { getImageUrl } from '../utils/storageHelpers';
 import { getRoomById, getRoomShareUrl, RoomRecord, updateRoom } from '../utils/roomsStorage';
 import { addRoomPost, generatePostId, loadRoomPosts, RoomPost } from '../utils/roomPostsStorage';
+import './RoomPage.css';
 
 interface LocationState {
   showShare?: boolean;
@@ -14,8 +14,6 @@ interface LocationState {
 export default function RoomPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const horizontalPadding = isMobile ? '1rem' : '5rem';
   const [room, setRoom] = useState<RoomRecord | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [posts, setPosts] = useState<RoomPost[]>([]);
@@ -185,24 +183,26 @@ export default function RoomPage() {
 
   if (!room) {
     return (
-      <div style={{ width: '100%', backgroundColor: '#F2F3F5', padding: `2rem ${horizontalPadding}` }}>
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          padding: '2rem',
-          textAlign: 'center',
-          color: '#6b7280',
-        }}>
-          Room not found.
+      <div className="room-page">
+        <div className="feed room-page__content">
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            padding: '2rem',
+            textAlign: 'center',
+            color: '#6b7280',
+          }}>
+            Room not found.
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ width: '100%', backgroundColor: '#F2F3F5', padding: `2rem ${horizontalPadding}` }}>
-      <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="room-page">
+      <div className="feed room-page__content">
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '12px',

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings } from 'lucide-react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '../amplify/data/resource';
@@ -57,7 +56,6 @@ export function MyGarageSection({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<EventWithImageUrl[]>([]);
   const [pastEvents, setPastEvents] = useState<EventWithImageUrl[]>([]);
   const [friendStatus, setFriendStatus] = useState<'none' | 'pending' | 'friends'>('none');
@@ -187,13 +185,10 @@ export function MyGarageSection({
     const resolveImages = async () => {
       if (!profile) {
         setAvatarUrl(null);
-        setCoverUrl(null);
         return;
       }
       const resolvedAvatar = profile.avatarUrl ? await getImageUrl(profile.avatarUrl) : null;
-      const resolvedCover = profile.coverImageUrl ? await getImageUrl(profile.coverImageUrl) : null;
       setAvatarUrl(resolvedAvatar);
-      setCoverUrl(resolvedCover);
     };
     void resolveImages();
   }, [profile]);
@@ -432,130 +427,68 @@ export function MyGarageSection({
   return (
     <div style={{ width: '100%', overflowX: 'hidden', backgroundColor: '#F2F3F5', minHeight: '100vh', padding: `2rem ${horizontalPadding}` }}>
       {/* Profile header */}
-      <section style={{ position: 'relative', marginBottom: '3rem' }}>
-        <div style={{
-          width: '100%',
-          height: isMobile ? '180px' : '240px',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          backgroundColor: '#e5e7eb',
-        }}>
-          <img
-            src={coverUrl || FALLBACKS.profileCover}
-            alt="Profile cover"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        </div>
-
-        {isOwner && (
-          <div style={{
-            position: 'absolute',
-            top: '1rem',
-            right: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            zIndex: 2,
-          }}>
-            <button
-              type="button"
-              aria-label="Settings"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '34px',
-                height: '34px',
-                borderRadius: '10px',
-                border: '1px solid rgba(255,255,255,0.6)',
-                backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                color: '#fff',
-                cursor: 'pointer',
-              }}
-            >
-              <Settings size={16} />
-            </button>
-          </div>
-        )}
-
-        <div style={{
-          position: 'absolute',
-          bottom: isMobile ? '-36px' : '-44px',
-          left: isMobile ? '50%' : '2rem',
-          transform: isMobile ? 'translateX(-50%)' : 'none',
-          width: isMobile ? '90px' : '110px',
-          height: isMobile ? '90px' : '110px',
-          borderRadius: '50%',
-          border: '4px solid #f2f3f5',
-          backgroundColor: '#e5e7eb',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '2rem',
-          fontWeight: 700,
-          color: '#111827',
-        }}>
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={fullName}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
-            fullName.slice(0, 1).toUpperCase()
-          )}
-        </div>
-      </section>
-
-      {/* User identity */}
       <section style={{
         backgroundColor: '#ffffff',
         borderRadius: '12px',
         border: '1px solid #e5e7eb',
         padding: isMobile ? '1.5rem' : '2rem',
-        marginBottom: '1.5rem',
-        marginTop: isMobile ? '3rem' : '2rem',
+        marginBottom: '2rem',
       }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
+          gridTemplateColumns: isMobile ? '1fr' : 'auto 1fr',
           gap: '1.5rem',
           alignItems: 'center',
         }}>
-          <div>
-            <div style={{ fontSize: '18px', fontWeight: 600, color: '#111827' }}>{fullName}</div>
-            {targetProfile?.location && (
-              <div style={{ marginTop: '0.35rem', color: '#6b7280' }}>
-                {targetProfile.location}
-              </div>
+          <div style={{
+            width: isMobile ? '90px' : '110px',
+            height: isMobile ? '90px' : '110px',
+            borderRadius: '50%',
+            border: '4px solid #f2f3f5',
+            backgroundColor: '#e5e7eb',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '2rem',
+            fontWeight: 700,
+            color: '#111827',
+          }}>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={fullName}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              fullName.slice(0, 1).toUpperCase()
             )}
           </div>
-          {!isOwner && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: isMobile ? 'flex-start' : 'flex-end' }}>
-              {friendStatus === 'friends' ? (
-                <button
-                  type="button"
-                  onClick={handleMessageUser}
-                  style={{
-                    padding: '0.55rem 1.2rem',
-                    borderRadius: '999px',
-                    border: '1px solid #111827',
-                    backgroundColor: '#111827',
-                    color: '#fff',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Message user
-                </button>
-              ) : (
-                <>
+
+          <div style={{
+            backgroundColor: '#f9fafb',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            padding: '1.25rem 1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+          }}>
+            <div>
+              <div style={{ fontSize: '18px', fontWeight: 600, color: '#111827' }}>{fullName}</div>
+              {targetProfile?.location && (
+                <div style={{ marginTop: '0.35rem', color: '#6b7280' }}>
+                  {targetProfile.location}
+                </div>
+              )}
+            </div>
+
+            {!isOwner && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {friendStatus === 'friends' ? (
                   <button
                     type="button"
-                    onClick={handleSendFriendRequest}
-                    disabled={friendStatus === 'pending' || friendActionLoading}
+                    onClick={handleMessageUser}
                     style={{
                       padding: '0.55rem 1.2rem',
                       borderRadius: '999px',
@@ -564,77 +497,92 @@ export function MyGarageSection({
                       color: '#fff',
                       fontSize: '0.85rem',
                       fontWeight: 600,
-                      cursor: friendStatus === 'pending' ? 'not-allowed' : 'pointer',
-                      opacity: friendStatus === 'pending' ? 0.7 : 1,
-                    }}
-                  >
-                    {friendStatus === 'pending' ? 'Request pending' : 'Send friend request'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled
-                    style={{
-                      padding: '0.55rem 1.2rem',
-                      borderRadius: '999px',
-                      border: '1px solid #d1d5db',
-                      backgroundColor: '#f3f4f6',
-                      color: '#9ca3af',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      cursor: 'not-allowed',
+                      cursor: 'pointer',
                     }}
                   >
                     Message user
                   </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleSendFriendRequest}
+                      disabled={friendStatus === 'pending' || friendActionLoading}
+                      style={{
+                        padding: '0.55rem 1.2rem',
+                        borderRadius: '999px',
+                        border: '1px solid #111827',
+                        backgroundColor: '#111827',
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: friendStatus === 'pending' ? 'not-allowed' : 'pointer',
+                        opacity: friendStatus === 'pending' ? 0.7 : 1,
+                      }}
+                    >
+                      {friendStatus === 'pending' ? 'Request pending' : 'Send friend request'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      style={{
+                        padding: '0.55rem 1.2rem',
+                        borderRadius: '999px',
+                        border: '1px solid #d1d5db',
+                        backgroundColor: '#f3f4f6',
+                        color: '#9ca3af',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'not-allowed',
+                      }}
+                    >
+                      Message user
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
 
-      {/* Action buttons */}
-      <section style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '0.75rem',
-        marginBottom: '2rem',
-      }}>
-        {isOwner && (
-          <button
-            type="button"
-            style={{
-              padding: '0.55rem 1.2rem',
-              borderRadius: '999px',
-              border: '1px solid #111827',
-              backgroundColor: '#ffffff',
-              color: '#111827',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Edit Profile
-          </button>
-        )}
-        {isOwner && isAdminEmail(userLoginId) && (
-          <button
-            type="button"
-            onClick={() => onSectionChange?.('admin')}
-            style={{
-              padding: '0.55rem 1.2rem',
-              borderRadius: '999px',
-              border: '1px solid #111827',
-              backgroundColor: '#111827',
-              color: '#ffffff',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Admin Console
-          </button>
-        )}
+            {isOwner && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => onSectionChange?.('profile-settings')}
+                  style={{
+                    padding: '0.55rem 1.2rem',
+                    borderRadius: '999px',
+                    border: '1px solid #111827',
+                    backgroundColor: '#ffffff',
+                    color: '#111827',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Edit Profile
+                </button>
+                {isAdminEmail(userLoginId) && (
+                  <button
+                    type="button"
+                    onClick={() => onSectionChange?.('admin')}
+                    style={{
+                      padding: '0.55rem 1.2rem',
+                      borderRadius: '999px',
+                      border: '1px solid #111827',
+                      backgroundColor: '#111827',
+                      color: '#ffffff',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Admin Console
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
       {isOwner && incomingRequests.length > 0 && (
